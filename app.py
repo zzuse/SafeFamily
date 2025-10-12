@@ -2,7 +2,7 @@ from flask import Flask, jsonify
 
 from auth import auth_bp
 from extensions import db, jwt
-from models import User
+from models import TokenBlocklist, User
 from users import user_bp
 
 
@@ -40,5 +40,13 @@ def create_app():
     @jwt.unauthorized_loader
     def my_unauthorized_callback(error):
         return jsonify({"msg": "Missing token", "error": "authorization_required"}), 401
+
+    @jwt.token_in_blocklist_loader
+    def check_if_token_revoked(jwt_header, jwt_payload):
+        jti = jwt_payload["jti"]
+        token = db.session.execute(
+            db.select(TokenBlocklist).filter_by(jti=jti)
+        ).scalar_one_or_none()
+        return token is not None
 
     return app

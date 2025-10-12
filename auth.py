@@ -4,10 +4,11 @@ from flask_jwt_extended import (
     create_refresh_token,
     current_user,
     get_jwt,
+    get_jwt_identity,
     jwt_required,
 )
 
-from models import User
+from models import TokenBlocklist, User
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -62,3 +63,22 @@ def whoami():
             "email": current_user.email,
         }
     ), 200
+
+
+@auth_bp.get("/refresh")
+@jwt_required(refresh=True)
+def refresh_access():
+    current_identity = get_jwt_identity()
+    new_access_token = create_access_token(identity=current_identity)
+    return jsonify({"message": current_identity, "access_token": new_access_token}), 200
+
+
+@auth_bp.get("/logout")
+@jwt_required(verify_type=False)
+def logout():
+    jwt = get_jwt()
+    jti = jwt["jti"]
+    token_type = jwt["type"]
+    token = TokenBlocklist(jti=jti)
+    token.save()
+    return jsonify({"msg": f"{token_type} token has been revoked"}), 200
