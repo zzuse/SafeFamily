@@ -1,0 +1,28 @@
+# deploy/systemd/gunicorn.service
+[Unit]
+Description=Gunicorn daemon for My Project
+Requires=network.target postgresql.service
+After=network.target postgresql.service
+
+[Service]
+Type=notify
+User=myproject
+Group=myproject
+RuntimeDirectory=gunicorn
+WorkingDirectory=/home/myproject/my_project
+Environment="PATH=/home/myproject/my_project/venv/bin"
+EnvironmentFile=/home/myproject/my_project/.env
+
+ExecStart=/home/myproject/my_project/venv/bin/gunicorn \
+    -c /home/myproject/my_project/deploy/gunicorn/gunicorn_config.py \
+    my_project.wsgi:app
+
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

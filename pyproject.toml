@@ -19,6 +19,6 @@ name = "SafeFamily"
 version = "2025.1.0"
 requires-python = ">=3.8"
 description = "A parental control application to help families manage and monitor internet usage."
-authors = [{ name = "Zhen Zhang", email = "zzuse@outlook.com" }]
+authors = [{ name = "zzuse", email = "zzuseme@gmail.com" }]
 license = "MIT"
 license-files = ["LICEN[CS]E.*"]
