@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Gunicorn configuration file for safefamily."""
-# TODOdd: not using this yet
 
+# TODOdd: this file too complicated, used in a simple version instead now.
 import multiprocessing
 
 # Server socket

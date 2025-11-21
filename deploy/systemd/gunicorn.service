@@ -1,4 +1,4 @@
-# deploy/systemd/gunicorn.service
+# Not using this, using a simpler version instead
 [Unit]
 Description=Gunicorn daemon for My Project
 Requires=network.target postgresql.service

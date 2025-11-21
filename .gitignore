@@ -10,3 +10,5 @@ env/
 logs/
 *.log
 venv/
+*.egg-info/
+.python-version

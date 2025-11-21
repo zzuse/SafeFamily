@@ -49,7 +49,7 @@ def receive_log():
     is_filtered = (
         log_data.get("Result", {}).get("IsFiltered") if log_data.get("Result") else None
     )
-    logger.info("Received log: %s", {log_data})
+    logger.debug("Received log: %s", {qh})
 
     try:
         conn = get_db_connection()
