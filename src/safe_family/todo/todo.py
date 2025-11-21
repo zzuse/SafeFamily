@@ -70,8 +70,13 @@ def todo_page():
         selected_user = request.args.get("view_user")
 
     is_holiday = request.form.get("is_holiday", "off")
+    logger.info("is holiday: %s", is_holiday)
+
     slot_type = request.form.get("slot_type", "60")
+    logger.info("slots type: %s", slot_type)
+
     slots = generate_time_slots(slot_type, is_holiday == "on")
+    logger.info("slots size: %d", slots.__len__())
 
     message = ""
 
@@ -96,6 +101,7 @@ def todo_page():
         )
         for slot in slots:
             task = request.form.get(slot, "").strip()
+            logger.debug("Saving task for slot %s: %s", slot, task)
             if task:
                 cur.execute(
                     "INSERT INTO todo_list (username, time_slot, task, date) VALUES (%s, %s, %s, CURRENT_DATE)",
