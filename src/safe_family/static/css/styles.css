@@ -581,6 +581,10 @@ td form button {
   background-color: white;
   border: 1px solid black;
 }
+.done {
+  text-decoration: line-through;
+  color: gray;
+}
 @property --tw-border-style {
   syntax: "*";
   inherits: false;

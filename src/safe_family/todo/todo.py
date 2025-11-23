@@ -3,7 +3,7 @@
 import logging
 from datetime import UTC, datetime, time, timedelta
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 
 from src.safe_family.core.auth import get_current_username, login_required
 from src.safe_family.core.extensions import get_db_connection, local_tz
@@ -111,7 +111,7 @@ def todo_page():
         message = f"Todo list saved for {selected_user} successfully."
     # Fetch today's tasks for selected user
     cur.execute(
-        "SELECT id, time_slot, task FROM todo_list WHERE date = CURRENT_DATE AND username = %s ORDER BY time_slot",
+        "SELECT id, time_slot, task, completed FROM todo_list WHERE date = CURRENT_DATE AND username = %s ORDER BY time_slot",
         (selected_user,),
     )
     today_tasks = cur.fetchall()
@@ -192,6 +192,35 @@ def delete_todo(selected_username, todo_id):
 
     flash("Task deleted successfully!", "success")
     return redirect(url_for("todo.todo_page"))
+
+
+@todo_bp.route(
+    "/todo/mark_done",
+    methods=["POST"],
+)
+@login_required
+def done_todo():
+    """Done a specific to-do item for the selected user."""
+    try:
+        data = request.get_json()
+        todo_id = data.get("id")
+        completed = data.get("completed")
+        logger.info("Todo: %s is %s", todo_id, completed)
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE todo_list SET completed = %s WHERE id = %s",
+            (completed, todo_id),
+        )
+        conn.commit()
+        conn.close()
+
+        flash("update_status successfully!", "success")
+        return jsonify({"success": True})
+    except Exception as e:
+        flash("Error update_status:", "error")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @todo_bp.route("/exec_rules/<string:selected_user_row_id>", methods=["POST"])
