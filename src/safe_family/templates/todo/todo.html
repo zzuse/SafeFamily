@@ -10,33 +10,57 @@
             mandatory
             every day)</div>
     </div>
+    <div class="flex gap-[30px] min-h-[80vh];">
+        <div class="main-content">
+            <div class="card">
+                {% if role == 'admin' %}
+                <form method="get" action="/todo">
+                    <label for="view_user">View User:</label>
+                    <select name="view_user" id="view_user" onchange="this.form.submit()">
+                        {% for u in users_list %}
+                        <option value="{{ u }}" {% if u==selected_user %}selected{% endif %}>{{ u }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+                {% endif %}
 
-    {% if role == 'admin' %}
-    <form method="get" action="/todo">
-        <label for="view_user">View User:</label>
-        <select name="view_user" id="view_user" onchange="this.form.submit()">
-            {% for u in users_list %}
-            <option value="{{ u }}" {% if u==selected_user %}selected{% endif %}>{{ u }}</option>
-            {% endfor %}
-        </select>
-    </form>
-    {% endif %}
+                <form method="POST">
+                    <label for="slot_type">Time Slot Length:</label>
+                    <select name="slot_type" id="slot_type" onchange="this.form.submit()">
+                        <option value="30" {% if slot_type=='30' %}selected{% endif %}>30 minutes</option>
+                        <option value="60" {% if slot_type=='60' %}selected{% endif %}>1 hour</option>
+                    </select>
+                </form>
 
-    <form method="POST">
-        <label for="slot_type">Time Slot Length:</label>
-        <select name="slot_type" id="slot_type" onchange="this.form.submit()">
-            <option value="30" {% if slot_type=='30' %}selected{% endif %}>30 minutes</option>
-            <option value="60" {% if slot_type=='60' %}selected{% endif %}>1 hour</option>
-        </select>
-    </form>
+                <form method="POST">
+                    <label for="is_holiday">Today is a Holiday/School Break/<br>Non-Instructional Day:</label>
+                    <select name="is_holiday" id="is_holiday" onchange="this.form.submit()">
+                        <option value="off" {% if is_holiday=='off' %}selected{% endif %}>OFF</option>
+                        <option value="on" {% if is_holiday=='on' %}selected{% endif %}>ON</option>
+                    </select>
+                </form>
+            </div>
+        </div>
+        <div class="w-3/5 float-right pt-[15px] ">
+            <div id="long-term-container" class="card">
+                <label class=".card-header">Long-Term Goals</label>
 
-    <form method="POST">
-        <label for="is_holiday">Today is a Holiday/School Break/Non-Instructional Day:</label>
-        <select name="is_holiday" id="is_holiday" onchange="this.form.submit()">
-            <option value="off" {% if is_holiday=='off' %}selected{% endif %}>OFF</option>
-            <option value="on" {% if is_holiday=='on' %}selected{% endif %}>ON</option>
-        </select>
-    </form>
+                <form id="add-longterm-form">
+                    <input type="text" id="longterm-task-text" placeholder="New long-term task">
+                    <select id="longterm-priority">
+                        <option value="1">High</option>
+                        <option value="2">Medium-High</option>
+                        <option value="3" selected>Medium</option>
+                        <option value="4">Medium-Low</option>
+                        <option value="5">Low</option>
+                    </select>
+                    <button class="mb-[20px] btn btn-success" type="submit">🏆Add</button>
+                </form>
+
+                <ul id="longterm-list"></ul>
+            </div>
+        </div>
+    </div>
 
     <div class="today-section">
         <div class="card-header">{{ selected_user }}'s To-Do List Today</div>
@@ -160,6 +184,105 @@
                     });
             });
         });
+
+        new Sortable(document.getElementById("longterm-list"), {
+            animation: 150,
+            onEnd: function () {
+                saveNewOrder();
+            }
+        });
+
+        function saveNewOrder() {
+            let ids = [...document.querySelectorAll("#longterm-list li")]
+                .map(li => li.dataset.id);
+
+            fetch("/todo/long_term_reorder", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ order: ids })
+            });
+        }
+
+        const PRIORITY_LABELS = {
+            1: "High",
+            2: "Medium-High",
+            3: "Medium",
+            4: "Medium-Low",
+            5: "Low"
+        };
+
+        async function loadLongTerm() {
+            let r = await fetch("/todo/long_term_list/{{ selected_user_row_id }}", {
+                headers: { "Authorization": "Bearer " + localStorage.getItem("access_token") }
+            });
+            let tasks = await r.json();
+
+            let container = document.getElementById("longterm-list");
+            container.innerHTML = "";
+
+            tasks.forEach(t => {
+                let li = document.createElement("li");
+
+                li.setAttribute("data-id", t.goal_id);
+
+                li.innerHTML = `
+                <input type="text" id="task_${t.goal_id}" value="${t.task}" class="${t.completed ? "done" : ""} mb-[10px]"
+                    style="width: 70%; ">
+                
+                <select id="prio_${t.goal_id}" onchange="updateLongTerm(${t.goal_id})">
+                    ${[1, 2, 3, 4, 5].map(p =>
+                    `<option value="${p}" ${p == t.priority ? "selected" : ""}>${PRIORITY_LABELS[p]}</option>`
+                ).join("")}
+                </select>
+
+                <input type="checkbox" ${t.completed ? "checked" : ""} onchange="updateLongTerm(${t.goal_id})">
+                `;
+
+                container.appendChild(li);
+            });
+        }
+
+        async function updateLongTerm(goal_id) {
+            let body = {
+                goal_id,
+                task: document.getElementById("task_" + goal_id).value,
+                priority: document.getElementById("prio_" + goal_id).value,
+                completed: document.querySelector(`#longterm-list input[type='checkbox'][onchange='updateLongTerm(${goal_id})']`).checked
+            };
+
+            await fetch("/todo/long_term_update", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + localStorage.getItem("access_token")
+                },
+                body: JSON.stringify(body)
+            });
+
+            loadLongTerm();
+        }
+
+        document.getElementById("add-longterm-form").addEventListener("submit", async e => {
+            e.preventDefault();
+            await fetch("/todo/long_term_add", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + localStorage.getItem("access_token")
+                },
+                body: JSON.stringify({
+                    user_id: "{{ selected_user_row_id }}",
+                    task: document.getElementById("longterm-task-text").value,
+                    priority: document.getElementById("longterm-priority").value
+                })
+            });
+
+            document.getElementById("longterm-task-text").value = "";
+            loadLongTerm();
+        });
+
+        loadLongTerm();
+
     </script>
 
     {% if message %}

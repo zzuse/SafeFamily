@@ -13,7 +13,7 @@ from src.safe_family.utils.exceptions import NotificationError
 logger = logging.getLogger(__name__)
 
 
-def send_admin_notification(username, tasks):
+def send_email_notification(username, tasks):
     """Send an email notification to admins about todo list updates."""
     list_literal_string = settings.MAIL_PERSON_LIST
     admin_email_list = ast.literal_eval(list_literal_string)

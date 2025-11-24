@@ -141,7 +141,7 @@ select:focus {
 }
 
 nothingelse {
-    color: #e74c3c;
+    color: #f88d0a;
 }
 
 td form button {
@@ -289,5 +289,5 @@ td form button {
 
 .done {
     text-decoration: line-through;
-    color: gray;
+    opacity: 0.6;
 }

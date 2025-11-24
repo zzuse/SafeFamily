@@ -8,8 +8,8 @@ from flask import Blueprint, flash, jsonify, redirect, render_template, request,
 from src.safe_family.core.auth import get_current_username, login_required
 from src.safe_family.core.extensions import get_db_connection, local_tz
 from src.safe_family.notifications.notifier import (
-    send_admin_notification,
     send_discord_notification,
+    send_email_notification,
 )
 from src.safe_family.rules.scheduler import RULE_FUNCTIONS
 from src.safe_family.utils.constants import Saturday
@@ -93,6 +93,7 @@ def todo_page():
     if not selected_user_row:
         flash("Target user not found", "warning")
         selected_user = username
+    selected_user_id = selected_user_row[1]
     # Save selected user's todo list
     if request.method == "POST" and "save_todo" in request.form:
         cur.execute(
@@ -116,7 +117,7 @@ def todo_page():
     )
     today_tasks = cur.fetchall()
     if request.method == "POST" and message != "":
-        send_admin_notification(
+        send_email_notification(
             selected_user,
             [{"time_slot": t[1], "task": t[2]} for t in today_tasks],
         )
@@ -142,7 +143,7 @@ def todo_page():
         message=message,
         today_tasks=today_tasks,
         show_disable_button=show_disable_button,
-        selected_user_row_id=selected_user_row[1],
+        selected_user_row_id=selected_user_id,
     )
 
 
@@ -166,7 +167,7 @@ def update_todo(selected_username):
         (selected_username,),
     )
     tasks = [{"time_slot": r[0], "task": r[1]} for r in cur.fetchall()]
-    send_admin_notification(selected_username, tasks)
+    send_email_notification(selected_username, tasks)
     send_discord_notification(selected_username, tasks)
     conn.close()
     flash("Task updated successfully!", "success")
@@ -225,9 +226,9 @@ def done_todo():
 
 @todo_bp.route("/exec_rules/<string:selected_user_row_id>", methods=["POST"])
 @login_required
-def exec_rules(selected_user_row_id):
+def exec_rules(selected_user_id: str):
     """Execute assigned rules for the selected user."""
-    user_id = selected_user_row_id
+    user_id = selected_user_id
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute(
@@ -252,3 +253,111 @@ def exec_rules(selected_user_row_id):
     else:
         flash(f"Rule {rule_name} not found in RULE_FUNCTIONS.", "danger")
     return redirect(url_for("todo.todo_page"))
+
+
+# ──────────────────────────────
+# GET all long-term tasks
+# ──────────────────────────────
+@todo_bp.get("/todo/long_term_list/<string:selected_user_id>")
+@login_required
+def get_long_term(selected_user_id: str):
+    """Get all long-term tasks for the selected user."""
+    user_id = selected_user_id
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        SELECT goal_id, task_text, priority, completed
+        FROM long_term_goals
+        WHERE user_id = %s
+        ORDER BY priority ASC, goal_id DESC
+    """,
+        (user_id,),
+    )
+    rows = cur.fetchall()
+
+    conn.close()
+
+    return jsonify(
+        [
+            {"goal_id": r[0], "task": r[1], "priority": r[2], "completed": r[3]}
+            for r in rows
+        ],
+    )
+
+
+# ──────────────────────────────
+# ADD long-term task
+# ──────────────────────────────
+@todo_bp.post("/todo/long_term_add")
+@login_required
+def add_long_term():
+    """Add a new long-term task for the selected user."""
+    data = request.get_json()
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        INSERT INTO long_term_goals (user_id, task_text, priority)
+        VALUES (%s, %s, %s)
+    """,
+        (data["user_id"], data["task"], data["priority"]),
+    )
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"success": True})
+
+
+# ──────────────────────────────
+# UPDATE completion or priority
+# ──────────────────────────────
+@todo_bp.post("/todo/long_term_update")
+@login_required
+def update_long_term_complete():
+    """Update long-term task's completion status or priority."""
+    data = request.get_json()
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        UPDATE long_term_goals
+        SET task_text = %s, priority = %s, completed = %s
+        WHERE goal_id = %s
+    """,
+        (data["task"], data["priority"], data["completed"], data["goal_id"]),
+    )
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"success": True})
+
+
+@todo_bp.post("/todo/long_term_reorder")
+@login_required
+def reorder_long_term():
+    """Reorder long-term tasks based on provided list of IDs."""
+    data = request.get_json()
+    id_list = data["order"]
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    # priority 1 = top item
+    for index, goal_id in enumerate(id_list, start=1):
+        cur.execute(
+            "UPDATE long_term_goals SET priority = %s WHERE goal_id = %s",
+            (index, goal_id),
+        )
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"status": "ok"})

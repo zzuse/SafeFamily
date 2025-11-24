@@ -14,6 +14,8 @@
     --font-weight-semibold: 600;
     --font-weight-bold: 700;
     --radius-lg: 0.5rem;
+    --default-transition-duration: 150ms;
+    --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     --default-font-family: var(--font-sans);
     --default-mono-font-family: var(--font-mono);
   }
@@ -170,6 +172,27 @@
   .static {
     position: static;
   }
+  .float-right {
+    float: right;
+  }
+  .container {
+    width: 100%;
+    @media (width >= 40rem) {
+      max-width: 40rem;
+    }
+    @media (width >= 48rem) {
+      max-width: 48rem;
+    }
+    @media (width >= 64rem) {
+      max-width: 64rem;
+    }
+    @media (width >= 80rem) {
+      max-width: 80rem;
+    }
+    @media (width >= 96rem) {
+      max-width: 96rem;
+    }
+  }
   .mt-1 {
     margin-top: calc(var(--spacing) * 1);
   }
@@ -182,14 +205,23 @@
   .mt-\[30px\] {
     margin-top: 30px;
   }
+  .mb-30 {
+    margin-bottom: calc(var(--spacing) * 30);
+  }
   .mb-\[10px\] {
     margin-bottom: 10px;
   }
   .mb-\[20px\] {
     margin-bottom: 20px;
   }
+  .mb-\[200px\] {
+    margin-bottom: 200px;
+  }
   .block {
     display: block;
+  }
+  .flex {
+    display: flex;
   }
   .grid {
     display: grid;
@@ -199,6 +231,12 @@
   }
   .table {
     display: table;
+  }
+  .w-3 {
+    width: calc(var(--spacing) * 3);
+  }
+  .w-3\/5 {
+    width: calc(3/5 * 100%);
   }
   .w-full {
     width: 100%;
@@ -212,11 +250,35 @@
   .max-w-\[200px\] {
     max-width: 200px;
   }
+  .flex-shrink {
+    flex-shrink: 1;
+  }
+  .flex-grow {
+    flex-grow: 1;
+  }
+  .border-collapse {
+    border-collapse: collapse;
+  }
+  .resize {
+    resize: both;
+  }
   .grid-cols-1 {
     grid-template-columns: repeat(1, minmax(0, 1fr));
   }
   .gap-4 {
     gap: calc(var(--spacing) * 4);
+  }
+  .gap-30 {
+    gap: calc(var(--spacing) * 30);
+  }
+  .gap-\[10px\] {
+    gap: 10px;
+  }
+  .gap-\[30px\] {
+    gap: 30px;
+  }
+  .gap-\[100px\] {
+    gap: 100px;
   }
   .rounded-lg {
     border-radius: var(--radius-lg);
@@ -231,6 +293,9 @@
   .p-4 {
     padding: calc(var(--spacing) * 4);
   }
+  .pt-\[15px\] {
+    padding-top: 15px;
+  }
   .text-center {
     text-align: center;
   }
@@ -241,8 +306,20 @@
   .text-gray-700 {
     color: var(--color-gray-700);
   }
+  .underline {
+    text-decoration-line: underline;
+  }
+  .outline {
+    outline-style: var(--tw-outline-style);
+    outline-width: 1px;
+  }
   .filter {
     filter: var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,);
+  }
+  .transition {
+    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
+    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+    transition-duration: var(--tw-duration, var(--default-transition-duration));
   }
   .md\:grid-cols-2 {
     @media (width >= 48rem) {
@@ -436,7 +513,7 @@ input[type="email"]:focus, input[type="date"]:focus, input[type="time"]:focus, i
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 nothingelse {
-  color: #e74c3c;
+  color: #f88d0a;
 }
 td form button {
   background-color: #e74c3c;
@@ -583,7 +660,7 @@ td form button {
 }
 .done {
   text-decoration: line-through;
-  color: gray;
+  opacity: 0.6;
 }
 @property --tw-border-style {
   syntax: "*";
@@ -593,6 +670,11 @@ td form button {
 @property --tw-font-weight {
   syntax: "*";
   inherits: false;
+}
+@property --tw-outline-style {
+  syntax: "*";
+  inherits: false;
+  initial-value: solid;
 }
 @property --tw-blur {
   syntax: "*";
@@ -667,6 +749,7 @@ td form button {
     *, ::before, ::after, ::backdrop {
       --tw-border-style: solid;
       --tw-font-weight: initial;
+      --tw-outline-style: solid;
       --tw-blur: initial;
       --tw-brightness: initial;
       --tw-contrast: initial;
