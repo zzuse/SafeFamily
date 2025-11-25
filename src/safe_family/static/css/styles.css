@@ -14,8 +14,6 @@
     --font-weight-semibold: 600;
     --font-weight-bold: 700;
     --radius-lg: 0.5rem;
-    --default-transition-duration: 150ms;
-    --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     --default-font-family: var(--font-sans);
     --default-mono-font-family: var(--font-mono);
   }
@@ -172,9 +170,6 @@
   .static {
     position: static;
   }
-  .float-left {
-    float: left;
-  }
   .float-right {
     float: right;
   }
@@ -229,21 +224,6 @@
   .table {
     display: table;
   }
-  .w-1 {
-    width: calc(var(--spacing) * 1);
-  }
-  .w-1\/5 {
-    width: calc(1/5 * 100%);
-  }
-  .w-3 {
-    width: calc(var(--spacing) * 3);
-  }
-  .w-3\/5 {
-    width: calc(3/5 * 100%);
-  }
-  .w-4 {
-    width: calc(var(--spacing) * 4);
-  }
   .w-4\/5 {
     width: calc(4/5 * 100%);
   }
@@ -258,18 +238,6 @@
   }
   .max-w-\[200px\] {
     max-width: 200px;
-  }
-  .flex-shrink {
-    flex-shrink: 1;
-  }
-  .flex-grow {
-    flex-grow: 1;
-  }
-  .border-collapse {
-    border-collapse: collapse;
-  }
-  .resize {
-    resize: both;
   }
   .grid-cols-1 {
     grid-template-columns: repeat(1, minmax(0, 1fr));
@@ -296,9 +264,6 @@
   .pt-\[15px\] {
     padding-top: 15px;
   }
-  .pr-\[15px\] {
-    padding-right: 15px;
-  }
   .text-center {
     text-align: center;
   }
@@ -312,20 +277,8 @@
   .text-gray-700 {
     color: var(--color-gray-700);
   }
-  .underline {
-    text-decoration-line: underline;
-  }
-  .outline {
-    outline-style: var(--tw-outline-style);
-    outline-width: 1px;
-  }
   .filter {
     filter: var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,);
-  }
-  .transition {
-    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
-    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
-    transition-duration: var(--tw-duration, var(--default-transition-duration));
   }
   .md\:grid-cols-2 {
     @media (width >= 48rem) {
@@ -540,6 +493,7 @@ td form button {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 .table-modern th, .table-modern td {
+  border-radius: 8px;
   padding-inline: 15px;
   padding-block: 12px;
   border: 1px solid #ecf0f1;
@@ -692,11 +646,6 @@ td form button {
   syntax: "*";
   inherits: false;
 }
-@property --tw-outline-style {
-  syntax: "*";
-  inherits: false;
-  initial-value: solid;
-}
 @property --tw-blur {
   syntax: "*";
   inherits: false;
@@ -770,7 +719,6 @@ td form button {
     *, ::before, ::after, ::backdrop {
       --tw-border-style: solid;
       --tw-font-weight: initial;
-      --tw-outline-style: solid;
       --tw-blur: initial;
       --tw-brightness: initial;
       --tw-contrast: initial;

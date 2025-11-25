@@ -155,7 +155,7 @@ td form button {
 
 .table-modern th,
 .table-modern td {
-    @apply px-[15px] py-[12px];
+    @apply px-[15px] py-[12px] rounded-[8px];
     border: 1px solid #ecf0f1;
 }
 

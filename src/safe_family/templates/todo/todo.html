@@ -3,15 +3,17 @@
 
 <nothingelse>
     <div class="top-bar">
-        <div class="card-header mt-[20px]">{{ user_name }}'s Daily To-Do Planner {% if role == 'admin' %}(Admin){% endif
+        <div class="card-header mt-[20px]" style="width: 100%;">{{ user_name }}'s Daily To-Do Planner {% if role ==
+            'admin' %}(Admin){%
+            endif
             %}</div>
         <div class="note">Note: To disable all rules, you must confirm that you have finished
             planned homework, and (<b>MATH</b>, <b>PIANO</b>, and <b>BOOKS</b> are
             mandatory
             every day)</div>
     </div>
-    <div class="dashboard-layout">
-        <div class="main-content">
+    <div class="flex gap-[30px] min-h-[80vh];" style="align-items: center; height: 100%;">
+        <div class="main-content" style="flex-direction: column; height: 100%;">
             <div class="card">
                 {% if role == 'admin' %}
                 <form method="get" action="/todo">
@@ -22,8 +24,12 @@
                         {% endfor %}
                     </select>
                 </form>
+                {% else %}
+                <label>User:<br><br></label>
+                <label>{{ selected_user }}</label>
                 {% endif %}
-
+            </div>
+            <div class="card">
                 <form method="POST">
                     <label for="slot_type">Time Slot Length:<br><br></label>
                     <select name="slot_type" id="slot_type" onchange="this.form.submit()">
@@ -31,9 +37,10 @@
                         <option value="60" {% if slot_type=='60' %}selected{% endif %}>1 hour</option>
                     </select>
                 </form>
-
+            </div>
+            <div class="card">
                 <form method="POST">
-                    <label for="is_holiday">Is today a <br>Holiday/<br>School Break/<br>Non-Instructional
+                    <label for="is_holiday">Is today a <br>Holiday/<br>School <br>Break/<br>Non-Instructional
                         <br>Day?<br></label>
                     <select class="btn-area" name="is_holiday" id="is_holiday" onchange="this.form.submit()">
                         <option value="off" {% if is_holiday=='off' %}selected{% endif %}>OFF</option>

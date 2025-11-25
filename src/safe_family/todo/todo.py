@@ -224,7 +224,7 @@ def done_todo():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-@todo_bp.route("/exec_rules/<string:selected_user_row_id>", methods=["POST"])
+@todo_bp.route("/exec_rules/<string:selected_user_id>", methods=["POST"])
 @login_required
 def exec_rules(selected_user_id: str):
     """Execute assigned rules for the selected user."""

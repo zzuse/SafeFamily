@@ -103,7 +103,7 @@
                 <td class="text-center">
                     <select name="rule_{{ user[0] }}">
                         {% for rule in available_rules %}
-                        <option value="{{ rule }}" {% if user.assigned_rule==rule %}selected{% endif %}>
+                        <option value="{{ rule }}" {% if user[2]==rule %}selected{% endif %}>
                             {{ rule }}
                         </option>
                         {% endfor %}
