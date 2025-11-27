@@ -51,8 +51,8 @@
         </div>
         <div class="w-4/5 float-right pt-[15px]">
             <div id="long-term-container" class="card">
-                <label class="card-header" style="width: 80%;">Mid-Term & Long-Term Goals</label>
-                <div class="note mt-[20px]" style="width: 80%;">Track tasks more than 3 days to finish. You can drag the
+                <label class="card-header" style="width: 90%;">Mid-Term & Long-Term Goals</label>
+                <div class="note mt-[20px]" style="width: 90%;">Track tasks more than 3 days to finish. You can drag the
                     list items to sort the long term goals. Finished tasks will automatically dispear after 3 days.
                 </div>
                 <form id="add-longterm-form" class="mt-[30px] gap-x-8">
@@ -199,6 +199,7 @@
             animation: 150,
             onEnd: function () {
                 saveNewOrder();
+                refreshTaskPos();
                 refreshTaskColors();
             }
         });
@@ -222,14 +223,6 @@
             5: "Low"
         };
 
-        const PRIORITY_COLORS = {
-            1: "#c62828",
-            2: "#ff5100",
-            3: "#ff9800",
-            4: "#ffea00",
-            5: "#388e3c"
-        };
-
         /**
          * Map any priority range 1..maxValue into a 1..5 scale.
          * 1 = highest priority
@@ -245,6 +238,17 @@
             return Math.min(5, Math.max(1, scaled)); // clamp safety
         }
 
+        function refreshTaskPos() {
+            const items = document.querySelectorAll("#longterm-list li select option[selected]");
+
+            items.forEach((el, index) => {
+                const pos = index + 1; // new position
+
+                // Re-apply based on new pos
+                el.value = pos;
+            });
+        }
+
         function refreshTaskColors() {
             const items = document.querySelectorAll("#longterm-list li input[type='text']");
             color_length = items.length;
@@ -254,6 +258,8 @@
 
                 // Remove previous color classes
                 el.classList.remove("priority-1", "priority-2", "priority-3", "priority-4", "priority-5");
+                // el.style.background = "#FFFFFF";
+                // el.style.color = "#e6ffed";
 
                 // Re-apply based on new pos
                 level = mapPriorityToFiveLevels(pos, color_length)
@@ -282,13 +288,6 @@
                     }
                 });
 
-                li.addEventListener("click", function (e) {
-                    li.querySelectorAll('input, select').forEach(el => {
-                        el.style.background = PRIORITY_COLORS[mapPriorityToFiveLevels(t.priority, color_length)];
-                        el.style.color = "#e6ffed";
-                    });
-                });
-
                 li.setAttribute("data-id", t.goal_id);
 
                 li.innerHTML = `
@@ -299,7 +298,7 @@
                 <select class="hidden priority-${mapPriorityToFiveLevels(t.priority, color_length)} text-[#ecf0f1]"
                     id="prio_${t.goal_id}" onchange="updateLongTerm(${t.goal_id})">
                     ${[1, 2, 3, 4, 5].map(p =>
-                    `<option value="${p}" ${p == mapPriorityToFiveLevels(t.priority, color_length) ? "selected" : ""}>
+                    `<option value="${t.priority}" ${p == mapPriorityToFiveLevels(t.priority, color_length) ? "selected" : ""}>
                         ${PRIORITY_LABELS[p]}
                     </option>`
                 ).join("")}

@@ -294,23 +294,28 @@ td form button {
 
 /* High = Red */
 .priority-1 {
-    background: #c62828;
+    background: #FFEBEE;
+    color: #C62828;
 }
 
 .priority-2 {
-    background: #ff5100;
+    background: #FFF3E0;
+    color: #EF6C00;
 }
 
 /* Medium = Orange */
 .priority-3 {
-    background: #ff9800;
+    background: #FFFDE7;
+    color: #F9A825;
 }
 
 .priority-4 {
-    background: #ffea00;
+    background: #E8F5E9;
+    color: #2E7D32;
 }
 
 /* Low = Green */
 .priority-5 {
-    background: #388e3c;
+    background: #E3F2FD;
+    color: #1565C0;
 }
