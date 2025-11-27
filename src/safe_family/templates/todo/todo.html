@@ -3,7 +3,9 @@
 
 <nothingelse>
     <div class="top-bar">
-        <div class="card-header mt-[20px]" style="width: 100%;">{{ user_name }}'s Daily To-Do Planner {% if role ==
+        <div class="card-header mt-[20px]" style="font-size: 30px; width: 100%;">{{ user_name }}'s Daily To-Do Planner
+            {% if
+            role ==
             'admin' %}(Admin){%
             endif
             %}</div>
@@ -12,9 +14,10 @@
             mandatory
             every day)</div>
     </div>
-    <div class="flex gap-[30px] min-h-[80vh];" style="align-items: center; height: 100%;">
-        <div class="main-content" style="flex-direction: column; height: 100%;">
-            <div class="card">
+    <div class="longterm-section">
+        <div class="card-header"><label>Daily Configuration</label></div>
+        <div class="flex">
+            <div class="conf">
                 {% if role == 'admin' %}
                 <form method="get" action="/todo">
                     <label for="view_user">View User:<br><br></label>
@@ -29,7 +32,7 @@
                 <label>{{ selected_user }}</label>
                 {% endif %}
             </div>
-            <div class="card">
+            <div class="conf">
                 <form method="POST">
                     <label for="slot_type">Time Slot Length:<br><br></label>
                     <select name="slot_type" id="slot_type" onchange="this.form.submit()">
@@ -38,10 +41,9 @@
                     </select>
                 </form>
             </div>
-            <div class="card">
+            <div class="conf">
                 <form method="POST">
-                    <label for="is_holiday">Is today a <br>Holiday/<br>School <br>Break/<br>Non-Instructional
-                        <br>Day?<br></label>
+                    <label for="is_holiday">Is today a Holiday/School Break/Non-Instructional Day?</label>
                     <select class="btn-area" name="is_holiday" id="is_holiday" onchange="this.form.submit()">
                         <option value="off" {% if is_holiday=='off' %}selected{% endif %}>OFF</option>
                         <option value="on" {% if is_holiday=='on' %}selected{% endif %}>ON</option>
@@ -49,24 +51,31 @@
                 </form>
             </div>
         </div>
-        <div class="w-4/5 float-right pt-[15px]">
-            <div id="long-term-container" class="card">
-                <label class="card-header" style="width: 90%;">Mid-Term & Long-Term Goals</label>
-                <div class="note mt-[20px]" style="width: 90%;">Track tasks more than 3 days to finish. You can drag the
+        <div class="pt-[10px]">
+            <div class="card-header"><label>Mid-Term & Long-Term Goals Tracking</label></div>
+            <div id="long-term-container" class="conf">
+                <div class="note mt-[10px]" style="width: 90%;">Track tasks more than 3 days to finish. You can drag the
                     list items to sort the long term goals. Finished tasks will automatically dispear after 3 days.
                 </div>
-                <form id="add-longterm-form" class="mt-[30px] gap-x-8">
-                    <input type="text" id="longterm-task-text" placeholder="New long-term task">
-                    <select id="longterm-priority">
-                        <option value="1">High</option>
-                        <option value="2">Medium-High</option>
-                        <option value="3" selected>Medium</option>
-                        <option value="4">Medium-Low</option>
-                        <option value="5">Low</option>
-                    </select>
-                    <button class="mb-[20px] btn btn-success" type="submit">🏆 Add (click or Enter)</button>
+                <form id="add-longterm-form">
+                    <div class="flex items-center mt-[10px] space-x-2">
+                        <div>
+                            <input type="text" id="longterm-task-text" placeholder="New long-term task">
+                        </div>
+                        <div class="mt-[20px]">
+                            <select id="longterm-priority">
+                                <option value="1">High</option>
+                                <option value="2">Medium-High</option>
+                                <option value="3" selected>Medium</option>
+                                <option value="4">Medium-Low</option>
+                                <option value="5">Low</option>
+                            </select>
+                        </div>
+                        <div class="btn btn-success">
+                            <button type="submit">🏆 Add (click or Enter)</button>
+                        </div>
+                    </div>
                 </form>
-
                 <ul id="longterm-list"></ul>
             </div>
         </div>

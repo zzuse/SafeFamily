@@ -22,6 +22,13 @@ label {
     @apply font-semibold text-[#333];
 }
 
+.content-container {
+    max-width: 1200px;
+    margin: 20px auto;
+    /* Center the content and add vertical margin */
+    padding: 0 40px;
+}
+
 .dashboard-layout {
     @apply flex gap-[30px] min-h-[80vh];
 }
@@ -36,6 +43,11 @@ label {
 
 .card {
     @apply bg-[white] p-[25px] rounded-[12px] mb-[25px] border-[1px] border-[solid] border-[#eef1f4];
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.conf {
+    @apply p-[15px] rounded-[12px] mb-[10px] border-[1px] border-[solid] border-[#eef1f4];
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
@@ -229,13 +241,6 @@ td form button {
 }
 
 /* Flash Messages and Block Content */
-.content-container {
-    max-width: 1200px;
-    margin: 20px auto;
-    /* Center the content and add vertical margin */
-    padding: 0 40px;
-}
-
 .flash {
     padding: 12px 20px;
     border-radius: 8px;
