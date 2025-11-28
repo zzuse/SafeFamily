@@ -59,10 +59,10 @@
                 </div>
                 <form id="add-longterm-form">
                     <div class="flex items-center mt-[10px] space-x-2">
-                        <div>
+                        <div style="width: 25%">
                             <input type="text" id="longterm-task-text" placeholder="New long-term task">
                         </div>
-                        <div class="mt-[20px]">
+                        <div class="mt-[20px]" style="width: 15%">
                             <select id="longterm-priority">
                                 <option value="1">High</option>
                                 <option value="2">Medium-High</option>
@@ -71,8 +71,11 @@
                                 <option value="5">Low</option>
                             </select>
                         </div>
-                        <div class="btn btn-success">
-                            <button type="submit">🏆 Add (click or Enter)</button>
+                        <div class="btn btn-success" style="width: 20%">
+                            <button type="submit">🏆 Add (or Enter)</button>
+                        </div>
+                        <div style="width: 40%">
+                            <lable><b>Due Date</b> Time Tracking <b>Done</b></label>
                         </div>
                     </div>
                 </form>
@@ -281,43 +284,13 @@
         }
 
         function renderShortDatePicker(container, pgTimestamp, options = {}, goal_id) {
-            // 'MD'→11/27, 'D MMM'→27 Nov, 'MMM D'→ Nov 27, 'D'→ 27
-            const format = options.format || 'MMM D';
-            const locale = options.locale || 'en-US';
-            const emptyText = options.emptyText || 'Due';
-
-            const realInput = document.createElement('input');
-            realInput.type = 'date';
-            realInput.style.display = 'none';
-
-            let dateValue = '';
-            let displayText = emptyText;
-
-            container.dataset.goal_id = goal_id;
-
-            if (pgTimestamp) {
-                const date = new Date(pgTimestamp);
-                if (!isNaN(date)) {
-                    dateValue = date.toISOString().split('T')[0]; // "2025-11-27"
-
-                    const day = date.getDate();
-                    const month = date.getMonth() + 1;
-                    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                    const shortMonth = new Intl.DateTimeFormat(locale, { month: 'short' }).format(date);
-                    const monthNum = month.toString().padStart(2, '0');
-
-                    displayText = format
-                        .replace('D', day)
-                        .replace('MMM', shortMonth)
-                        .replace('MM', monthNum)
-                        .replace('M', locale.startsWith('zh') ? month : shortMonth);
-                }
-            }
-
-            realInput.value = dateValue;
+            options = Object.assign({
+                format: 'MMM D',
+                locale: 'en',
+                emptyText: 'DUE'
+            }, options);
 
             const fakeSpan = document.createElement('span');
-            fakeSpan.textContent = displayText;
             fakeSpan.style.cssText = `
                 cursor: pointer;
                 padding: 6px 12px;
@@ -326,47 +299,65 @@
                 font-size: 14px;
                 background: white;
                 display: inline-block;
-                min-width: 70px;
+                min-width: 80px;
                 text-align: center;
                 user-select: none;
             `;
 
-            // === click fake → open real ===
-            fakeSpan.onclick = () => realInput.showPicker?.() || realInput.click();
+            container.dataset.goal_id = goal_id;
 
-            realInput.addEventListener('change', () => {
-                if (realInput.value) {
-                    const d = new Date(realInput.value + 'T12:00:00'); // 避免时区偏移影响日期
-                    const day = d.getDate();
-                    const shortMonth = new Intl.DateTimeFormat(locale, { month: 'short' }).format(d);
-                    const monthNum = (d.getMonth() + 1).toString().padStart(2, '0');
+            let currentDate = null;
+            if (pgTimestamp) {
+                currentDate = new Date(pgTimestamp);
+                if (isNaN(currentDate)) currentDate = null;
+            }
 
-                    container.dataset.due = realInput.value + 'T12:00:00'
-
-                    fetch(`/todo/longterm_update_due/${container.dataset.goal_id}`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ due_date: container.dataset.due })
-                    });
-
-                    fakeSpan.textContent = format
-                        .replace('D', day)
-                        .replace('MMM', shortMonth)
-                        .replace('MM', monthNum)
-                        .replace('M', locale.startsWith('zh') ? (d.getMonth() + 1) : shortMonth);
+            function updateDisplay() {
+                if (currentDate) {
+                    const formatted = new Intl.DateTimeFormat(options.locale === 'en' ? 'en-US' : 'zh-CN', {
+                        month: 'short',
+                        day: 'numeric'
+                    }).format(currentDate);
+                    fakeSpan.textContent = options.format
+                        .replace('MMM', formatted.split(' ')[0])
+                        .replace('D', formatted.split(' ')[1] || formatted.split(' ')[0]);
                 } else {
-                    fakeSpan.textContent = emptyText;
+                    fakeSpan.textContent = options.emptyText;
+                }
+            }
+            updateDisplay();
+
+            const fp = flatpickr(fakeSpan, {
+                dateFormat: "Y-m-d",
+                defaultDate: currentDate,
+                locale: options.locale === 'zh' ? "zh" : "default",
+                clickOpens: true,
+                allowInput: false,
+                onChange: function (selectedDates, dateStr) {
+                    currentDate = selectedDates[0] || null;
+                    updateDisplay();
+                    container.dataset.due = currentDate.toISOString().split('T')[0] + 'T12:00:00'
+
+                    if (container.dataset.goal_id) {
+                        updateDueDateToServer(container.dataset.goal_id, container.dataset.due);
+                    }
                 }
             });
 
+            function updateDueDateToServer(goalId, dateStr) {
+                fetch(`/todo/longterm_update_due/${goalId}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ due_date: dateStr })
+                });
+            }
+
             container.innerHTML = '';
             container.appendChild(fakeSpan);
-            container.appendChild(realInput);
 
             return {
-                getValue: () => realInput.value,
-                getTimestamp: () => realInput.value ? `${realInput.value}T12:00:00` : null,
-                element: container
+                getValue: () => currentDate ? fp.formatDate(currentDate, "Y-m-d") : null,
+                setValue: (dateStr) => fp.setDate(dateStr, true)
             };
         }
 
@@ -424,8 +415,8 @@
                 li.querySelectorAll('.short-date').forEach(el => {
                     renderShortDatePicker(el, el.dataset.due, {
                         format: 'MMM D',
-                        locale: 'en-US',
-                        emptyText: 'No Due'
+                        locale: 'en',
+                        emptyText: '-'
                     }, t.goal_id);
                 });
 
