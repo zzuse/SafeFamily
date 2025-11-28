@@ -164,6 +164,7 @@
 
         document.querySelectorAll('.complete-checkbox').forEach(cb => {
             cb.addEventListener('change', function () {
+                // Here will find data-task-id field in todo HTML
                 const taskId = this.dataset.taskId;
                 const completed = this.checked;
 
@@ -204,8 +205,11 @@
             });
         });
 
+        // -------- below is not for TODO any more, for Long Term Goal -------
+
         new Sortable(document.getElementById("longterm-list"), {
             animation: 150,
+            handle: ".drag-handle",
             onEnd: function () {
                 saveNewOrder();
                 refreshTaskPos();
@@ -276,6 +280,96 @@
             });
         }
 
+        function renderShortDatePicker(container, pgTimestamp, options = {}, goal_id) {
+            // 'MD'→11/27, 'D MMM'→27 Nov, 'MMM D'→ Nov 27, 'D'→ 27
+            const format = options.format || 'MMM D';
+            const locale = options.locale || 'en-US';
+            const emptyText = options.emptyText || 'Due';
+
+            const realInput = document.createElement('input');
+            realInput.type = 'date';
+            realInput.style.display = 'none';
+
+            let dateValue = '';
+            let displayText = emptyText;
+
+            container.dataset.goal_id = goal_id;
+
+            if (pgTimestamp) {
+                const date = new Date(pgTimestamp);
+                if (!isNaN(date)) {
+                    dateValue = date.toISOString().split('T')[0]; // "2025-11-27"
+
+                    const day = date.getDate();
+                    const month = date.getMonth() + 1;
+                    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    const shortMonth = new Intl.DateTimeFormat(locale, { month: 'short' }).format(date);
+                    const monthNum = month.toString().padStart(2, '0');
+
+                    displayText = format
+                        .replace('D', day)
+                        .replace('MMM', shortMonth)
+                        .replace('MM', monthNum)
+                        .replace('M', locale.startsWith('zh') ? month : shortMonth);
+                }
+            }
+
+            realInput.value = dateValue;
+
+            const fakeSpan = document.createElement('span');
+            fakeSpan.textContent = displayText;
+            fakeSpan.style.cssText = `
+                cursor: pointer;
+                padding: 6px 12px;
+                border: 1px solid #d0d7de;
+                border-radius: 6px;
+                font-size: 14px;
+                background: white;
+                display: inline-block;
+                min-width: 70px;
+                text-align: center;
+                user-select: none;
+            `;
+
+            // === click fake → open real ===
+            fakeSpan.onclick = () => realInput.showPicker?.() || realInput.click();
+
+            realInput.addEventListener('change', () => {
+                if (realInput.value) {
+                    const d = new Date(realInput.value + 'T12:00:00'); // 避免时区偏移影响日期
+                    const day = d.getDate();
+                    const shortMonth = new Intl.DateTimeFormat(locale, { month: 'short' }).format(d);
+                    const monthNum = (d.getMonth() + 1).toString().padStart(2, '0');
+
+                    container.dataset.due = realInput.value + 'T12:00:00'
+
+                    fetch(`/todo/longterm_update_due/${container.dataset.goal_id}`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ due_date: container.dataset.due })
+                    });
+
+                    fakeSpan.textContent = format
+                        .replace('D', day)
+                        .replace('MMM', shortMonth)
+                        .replace('MM', monthNum)
+                        .replace('M', locale.startsWith('zh') ? (d.getMonth() + 1) : shortMonth);
+                } else {
+                    fakeSpan.textContent = emptyText;
+                }
+            });
+
+            container.innerHTML = '';
+            container.appendChild(fakeSpan);
+            container.appendChild(realInput);
+
+            return {
+                getValue: () => realInput.value,
+                getTimestamp: () => realInput.value ? `${realInput.value}T12:00:00` : null,
+                element: container
+            };
+        }
+
         async function loadLongTerm() {
             let r = await fetch("/todo/long_term_list/{{ selected_user_row_id }}", {
                 headers: { "Authorization": "Bearer " + localStorage.getItem("access_token") }
@@ -300,9 +394,9 @@
                 li.setAttribute("data-id", t.goal_id);
 
                 li.innerHTML = `
-                <input type="text" id="task_${t.goal_id}" value="${t.task}" class="${t.completed ? "done" : ""} 
+                <input type="text" id="task_${t.goal_id}" value="${t.task}" class="drag-handle ${t.completed ? "done" : ""}
                     mb-[10px] text-[#ecf0f1] priority-${mapPriorityToFiveLevels(t.priority, color_length)}"
-                    style="width: 90%; ">
+                    style="width: 60%; ">
 
                 <select class="hidden priority-${mapPriorityToFiveLevels(t.priority, color_length)} text-[#ecf0f1]"
                     id="prio_${t.goal_id}" onchange="updateLongTerm(${t.goal_id})">
@@ -313,8 +407,27 @@
                 ).join("")}
                 </select>
 
+                <span class="short-date" data-due="${t.due_date || ''}"></span>
+
+                <span class="time-spent">
+                    ${Math.floor(t.time_spent / 3600)}h
+                    ${Math.floor((t.time_spent % 3600) / 60)}m
+                </span>
+
+                <button class="timer-btn ${t.is_tracking ? "stop" : "start"}">
+                    ${t.is_tracking ? "⏸ Stop" : "▶ Start"}
+                </button>
+
                 <input type="checkbox" ${t.completed ? "checked" : ""} onchange="updateLongTerm(${t.goal_id})">
                 `;
+
+                li.querySelectorAll('.short-date').forEach(el => {
+                    renderShortDatePicker(el, el.dataset.due, {
+                        format: 'MMM D',
+                        locale: 'en-US',
+                        emptyText: 'No Due'
+                    }, t.goal_id);
+                });
 
                 container.appendChild(li);
             });

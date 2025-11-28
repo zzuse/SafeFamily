@@ -14,8 +14,6 @@
     --font-weight-semibold: 600;
     --font-weight-bold: 700;
     --radius-lg: 0.5rem;
-    --default-transition-duration: 150ms;
-    --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     --default-font-family: var(--font-sans);
     --default-mono-font-family: var(--font-mono);
   }
@@ -190,12 +188,6 @@
       max-width: 96rem;
     }
   }
-  .m-2 {
-    margin: calc(var(--spacing) * 2);
-  }
-  .m-8 {
-    margin: calc(var(--spacing) * 8);
-  }
   .mt-1 {
     margin-top: calc(var(--spacing) * 1);
   }
@@ -204,9 +196,6 @@
   }
   .mt-\[10px\] {
     margin-top: 10px;
-  }
-  .mt-\[20\] {
-    margin-top: 20;
   }
   .mt-\[20px\] {
     margin-top: 20px;
@@ -235,14 +224,6 @@
   .table {
     display: table;
   }
-  .size-1 {
-    width: calc(var(--spacing) * 1);
-    height: calc(var(--spacing) * 1);
-  }
-  .size-14 {
-    width: calc(var(--spacing) * 14);
-    height: calc(var(--spacing) * 14);
-  }
   .w-full {
     width: 100%;
   }
@@ -255,47 +236,14 @@
   .max-w-\[200px\] {
     max-width: 200px;
   }
-  .flex-shrink {
-    flex-shrink: 1;
-  }
-  .flex-grow {
-    flex-grow: 1;
-  }
-  .grow {
-    flex-grow: 1;
-  }
-  .border-collapse {
-    border-collapse: collapse;
-  }
-  .resize {
-    resize: both;
-  }
   .grid-cols-1 {
     grid-template-columns: repeat(1, minmax(0, 1fr));
-  }
-  .flex-col {
-    flex-direction: column;
-  }
-  .flex-row {
-    flex-direction: row;
   }
   .items-center {
     align-items: center;
   }
-  .items-stretch {
-    align-items: stretch;
-  }
-  .justify-center {
-    justify-content: center;
-  }
-  .justify-start {
-    justify-content: flex-start;
-  }
   .gap-4 {
     gap: calc(var(--spacing) * 4);
-  }
-  .gap-x-8 {
-    column-gap: calc(var(--spacing) * 8);
   }
   .space-x-2 {
     :where(& > :not(:last-child)) {
@@ -303,32 +251,6 @@
       margin-inline-start: calc(calc(var(--spacing) * 2) * var(--tw-space-x-reverse));
       margin-inline-end: calc(calc(var(--spacing) * 2) * calc(1 - var(--tw-space-x-reverse)));
     }
-  }
-  .space-x-4 {
-    :where(& > :not(:last-child)) {
-      --tw-space-x-reverse: 0;
-      margin-inline-start: calc(calc(var(--spacing) * 4) * var(--tw-space-x-reverse));
-      margin-inline-end: calc(calc(var(--spacing) * 4) * calc(1 - var(--tw-space-x-reverse)));
-    }
-  }
-  .space-x-10 {
-    :where(& > :not(:last-child)) {
-      --tw-space-x-reverse: 0;
-      margin-inline-start: calc(calc(var(--spacing) * 10) * var(--tw-space-x-reverse));
-      margin-inline-end: calc(calc(var(--spacing) * 10) * calc(1 - var(--tw-space-x-reverse)));
-    }
-  }
-  .gap-y-4 {
-    row-gap: calc(var(--spacing) * 4);
-  }
-  .gap-y-8 {
-    row-gap: calc(var(--spacing) * 8);
-  }
-  .gap-y-20 {
-    row-gap: calc(var(--spacing) * 20);
-  }
-  .gap-y-40 {
-    row-gap: calc(var(--spacing) * 40);
   }
   .rounded-lg {
     border-radius: var(--radius-lg);
@@ -342,12 +264,6 @@
   }
   .p-4 {
     padding: calc(var(--spacing) * 4);
-  }
-  .px-\[12px\] {
-    padding-inline: 12px;
-  }
-  .py-\[8px\] {
-    padding-block: 8px;
   }
   .pt-\[10px\] {
     padding-top: 10px;
@@ -365,29 +281,12 @@
   .text-gray-700 {
     color: var(--color-gray-700);
   }
-  .underline {
-    text-decoration-line: underline;
-  }
-  .outline {
-    outline-style: var(--tw-outline-style);
-    outline-width: 1px;
-  }
   .filter {
     filter: var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,);
-  }
-  .transition {
-    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
-    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
-    transition-duration: var(--tw-duration, var(--default-transition-duration));
   }
   .md\:grid-cols-2 {
     @media (width >= 48rem) {
       grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-  .md\:items-center {
-    @media (width >= 48rem) {
-      align-items: center;
     }
   }
 }
@@ -771,11 +670,6 @@ td form button {
   syntax: "*";
   inherits: false;
 }
-@property --tw-outline-style {
-  syntax: "*";
-  inherits: false;
-  initial-value: solid;
-}
 @property --tw-blur {
   syntax: "*";
   inherits: false;
@@ -850,7 +744,6 @@ td form button {
       --tw-space-x-reverse: 0;
       --tw-border-style: solid;
       --tw-font-weight: initial;
-      --tw-outline-style: solid;
       --tw-blur: initial;
       --tw-brightness: initial;
       --tw-contrast: initial;

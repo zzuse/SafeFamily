@@ -268,7 +268,7 @@ def get_long_term(selected_user_id: str):
 
     cur.execute(
         """
-        SELECT goal_id, task_text, priority, completed
+        SELECT goal_id, task_text, priority, completed, to_char(due_date, 'YYYY-MM-DD"T"HH24:MI:SS') AS datetime_local, time_spent
         FROM long_term_goals
         WHERE user_id = %s
         ORDER BY priority ASC, goal_id DESC
@@ -276,12 +276,19 @@ def get_long_term(selected_user_id: str):
         (user_id,),
     )
     rows = cur.fetchall()
-
+    logger.info("Long-term tasks: %s", rows[0])
     conn.close()
 
     return jsonify(
         [
-            {"goal_id": r[0], "task": r[1], "priority": r[2], "completed": r[3]}
+            {
+                "goal_id": r[0],
+                "task": r[1],
+                "priority": r[2],
+                "completed": r[3],
+                "due_date": r[4],
+                "time_spent": r[5],
+            }
             for r in rows
         ],
     )
@@ -360,4 +367,84 @@ def reorder_long_term():
     conn.commit()
     conn.close()
 
+    return jsonify({"status": "ok"})
+
+
+@todo_bp.post("/todo/longterm_start/<int:goal_id>")
+@login_required
+def start_goal_tracking(goal_id: int):
+    """Start goal tracking."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        UPDATE long_term_goals
+        SET is_tracking = TRUE,
+            tracking_start = NOW()
+        WHERE goal_id = %s AND is_tracking = FALSE
+    """,
+        (goal_id,),
+    )
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"status": "started"})
+
+
+@todo_bp.post("/todo/longterm_stop/<int:goal_id>")
+@login_required
+def stop_tracking(goal_id: int):
+    """Stop goal tracking."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    # Calculate elapsed seconds
+    cur.execute(
+        """
+        SELECT tracking_start
+        FROM long_term_goals
+        WHERE goal_id = %s
+    """,
+        (goal_id,),
+    )
+    tracking_start = cur.fetchone()[0]
+
+    if not tracking_start:
+        return jsonify({"error": "not tracking"}), 400
+
+    cur.execute(
+        """
+        UPDATE long_term_goals
+        SET is_tracking = FALSE,
+            time_spent = time_spent + EXTRACT(EPOCH FROM (NOW() - tracking_start)),
+            tracking_start = NULL
+        WHERE goal_id = %s
+    """,
+        (goal_id,),
+    )
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"status": "stopped"})
+
+
+@todo_bp.post("/todo/longterm_update_due/<int:goal_id>")
+def update_due(goal_id: int):
+    """Update long-term task's due date."""
+    due = request.json.get("due_date")
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        UPDATE long_term_goals
+        SET due_date = %s
+        WHERE goal_id = %s
+    """,
+        (due, goal_id),
+    )
+    conn.commit()
+    conn.close()
     return jsonify({"status": "ok"})
