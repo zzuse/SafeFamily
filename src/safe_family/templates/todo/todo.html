@@ -420,6 +420,10 @@
                     }, t.goal_id);
                 });
 
+                li.querySelectorAll('.timer-btn').forEach(el => {
+                    startGoalTracking(el, t.is_tracking, t.goal_id);
+                });
+
                 container.appendChild(li);
             });
         }
@@ -462,6 +466,37 @@
             document.getElementById("longterm-task-text").value = "";
             loadLongTerm();
         });
+
+        function startGoalTracking(btn, is_tracking, goal_id) {
+            btn.dataset.goal_id = goal_id;
+            btn.dataset.is_tracking = String(is_tracking);
+            btn.addEventListener("click", () => {
+                const isTracking = btn.dataset.is_tracking === "true";
+                console.log("Before:", btn.dataset.is_tracking)
+                // update DB
+                const url = isTracking
+                    ? `/todo/longterm_stop/${goal_id}`
+                    : `/todo/longterm_start/${goal_id}`;
+
+                fetch(url, { method: "POST" })
+                    .then(r => r.json())
+                    .then(data => {
+                        console.log("DB updated", data);
+                    });
+                // update UI
+                btn.dataset.is_tracking = String(!isTracking);
+                console.log("After:", btn.dataset.is_tracking)
+                if (btn.dataset.is_tracking === "true") {
+                    btn.classList.remove("start");
+                    btn.classList.add("stop");
+                    btn.innerText = "⏸ Stop";
+                } else {
+                    btn.classList.remove("stop");
+                    btn.classList.add("start");
+                    btn.innerText = "▶ Start";
+                }
+            });
+        }
 
         loadLongTerm();
 

@@ -268,7 +268,7 @@ def get_long_term(selected_user_id: str):
 
     cur.execute(
         """
-        SELECT goal_id, task_text, priority, completed, to_char(due_date, 'YYYY-MM-DD"T"HH24:MI:SS') AS datetime_local, time_spent
+        SELECT goal_id, task_text, priority, completed, to_char(due_date, 'YYYY-MM-DD"T"HH24:MI:SS') AS datetime_local, time_spent, is_tracking
         FROM long_term_goals
         WHERE user_id = %s
         ORDER BY priority ASC, goal_id DESC
@@ -288,6 +288,7 @@ def get_long_term(selected_user_id: str):
                 "completed": r[3],
                 "due_date": r[4],
                 "time_spent": r[5],
+                "is_tracking": r[6],
             }
             for r in rows
         ],

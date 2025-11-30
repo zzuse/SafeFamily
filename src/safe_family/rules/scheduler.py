@@ -98,9 +98,9 @@ def remove_job(rule_id: int):
     job_id = f"rule_{rule_id}"
     try:
         scheduler.remove_job(job_id)
-        print(f"Removed job {job_id}")
+        logger.debug("Removed job %s", job_id)
     except Exception as e:
-        print(f"Job {job_id} not found: {e}")
+        logger.debug("Job %s not found: %s", job_id, str(e))
 
 
 @schedule_rules_bp.route("/schedule_rules", methods=["GET", "POST"])
@@ -144,7 +144,7 @@ def schedule_rules():
             new_rule = cur.fetchone()
             if new_rule:  # always check
                 rule_id = new_rule[0]
-                print("Inserted rule with id:", rule_id)
+                logger.debug("Inserted rule with id: %d", rule_id)
             conn.commit()
             load_schedules()
 
