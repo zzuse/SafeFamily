@@ -1,6 +1,7 @@
 """Scheduler for automated rule execution."""
 
-from datetime import datetime
+import logging
+from datetime import datetime, timedelta
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Blueprint, flash, redirect, render_template, request, url_for
@@ -17,18 +18,19 @@ from src.safe_family.urls.blocker import (
 )
 from src.safe_family.utils.constants import DAYS_IN_WEEK
 
+logger = logging.getLogger(__name__)
 schedule_rules_bp = Blueprint("schedule_rules", __name__, template_folder="templates")
 
 
 # Example mapping of rule names to Python functions
 def run_rule_a():
     """Test Run Rule A."""
-    print("hello A at " + str(datetime.now(local_tz)))
+    logger.info("hello A at %s", str(datetime.now(local_tz)))
 
 
 def run_rule_b():
     """Test Run Rule B."""
-    print("hello B at " + str(datetime.now(local_tz)))
+    logger.info("hello B at %s", str(datetime.now(local_tz)))
 
 
 RULE_FUNCTIONS = {
@@ -52,9 +54,9 @@ def load_schedules():
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute(
-        "SELECT id, rule_name, start_time, day_of_week, enabled FROM schedule_rules WHERE enabled = TRUE",
+        "SELECT id, rule_name, start_time, day_of_week FROM schedule_rules WHERE enabled = TRUE",
     )
-    for rule_id, rule_name, start_time, day_of_week, enabled in cur.fetchall():
+    for rule_id, rule_name, start_time, day_of_week in cur.fetchall():
         if rule_name in RULE_FUNCTIONS:
             func = RULE_FUNCTIONS.get(rule_name)
             if func:
@@ -68,8 +70,30 @@ def load_schedules():
                 )
     cur.close()
 
+    # Still prefer "cron" compare to ("interval", hours=24)
+    scheduler.add_job(
+        archive_completed_tasks,
+        "cron",
+        hour=2,
+        minute=10,
+        day_of_week="*",
+    )
 
-def remove_job(rule_id):
+    # Get all scheduled jobs
+    jobs = scheduler.get_jobs()
+
+    # Iterate through the jobs and print their details
+    logger.info("-" * 20)
+    logger.info("Scheduled Jobs:")
+    for job in jobs:
+        logger.info("  ID:  %s", {job.id})
+        logger.info("  Name: %s", {job.name})
+        logger.info("  Trigger: %s", str(job.trigger))
+        logger.info("  Next Run Time: %s", str(job.next_run_time))
+        logger.info("-" * 20)
+
+
+def remove_job(rule_id: int):
     """Remove a job when a rule is deleted."""
     job_id = f"rule_{rule_id}"
     try:
@@ -191,3 +215,58 @@ def schedule_rules():
         assigned_rules=assigned_rules,
         available_rules=RULE_FUNCTIONS.keys(),
     )
+
+
+def archive_completed_tasks():
+    """Move completed tasks to history table."""
+    logger.info("Start archiving completed tasks...")
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur_his = conn.cursor()
+
+    three_days_ago = datetime.now(local_tz) - timedelta(days=3)
+
+    # 1. Select tasks completed 3+ days ago
+    cur.execute(
+        """
+        SELECT goal_id, user_id, task_text, priority, completed_at
+        FROM long_term_goals
+        WHERE completed = TRUE AND completed_at < %s
+    """,
+        (three_days_ago,),
+    )
+    rows = cur.fetchall()
+
+    if not rows:
+        conn.close()
+        return
+
+    # 2. Insert them into history table
+    for row in rows:
+        try:
+            goal_id, user_id, task_text, priority, completed_at = row
+            cur_his.execute(
+                """
+                INSERT INTO long_term_goals_his (goal_id, user_id, task_text, priority, completed_at)
+                VALUES (%s, %s, %s, %s, %s)
+            """,
+                (
+                    goal_id,
+                    user_id,
+                    task_text,
+                    priority,
+                    completed_at.strftime("%Y-%m-%d %H:%M:%S"),
+                ),
+            )
+            logger.info("Archived task: %s", str(row))
+            # 3. Remove from active table
+            cur.execute(
+                "DELETE FROM long_term_goals WHERE goal_id = %s",
+                (goal_id,),
+            )
+            logger.info("Move goal_id %d to history", goal_id)
+            conn.commit()
+        except Exception as e:
+            logger.info("move to history not success: %s", str(e))
+
+    conn.close()

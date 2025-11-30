@@ -335,7 +335,7 @@ def update_long_term_complete():
     cur.execute(
         """
         UPDATE long_term_goals
-        SET task_text = %s, priority = %s, completed = %s
+        SET task_text = %s, priority = %s, completed = %s, completed_at = NOW()
         WHERE goal_id = %s
     """,
         (data["task"], data["priority"], data["completed"], data["goal_id"]),
@@ -395,7 +395,7 @@ def start_goal_tracking(goal_id: int):
 
 @todo_bp.post("/todo/longterm_stop/<int:goal_id>")
 @login_required
-def stop_tracking(goal_id: int):
+def stop_goal_tracking(goal_id: int):
     """Stop goal tracking."""
     conn = get_db_connection()
     cur = conn.cursor()
