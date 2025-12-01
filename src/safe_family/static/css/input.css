@@ -157,7 +157,7 @@ select:focus {
 }
 
 .timer-btn {
-    @apply p-2 bg-green-500 hover:bg-green-600 text-white uppercase font-medium rounded-lg shadow-md hover:shadow-lg transition-all flex-col items-center justify-center gap-2 whitespace-nowrap;
+    @apply p-2 bg-green-500 hover:bg-green-600 uppercase font-medium rounded-lg shadow-md hover:shadow-lg transition-all flex-col items-center justify-center gap-2 whitespace-nowrap;
 }
 
 nothingelse {

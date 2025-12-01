@@ -81,7 +81,7 @@
                         </div>
                     </div>
                     <button type="submit"
-                        class="h-10 px-6 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 whitespace-nowrap">
+                        class="h-10 px-6 bg-green-500 hover:bg-green-600 text-white uppercase font-medium rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 whitespace-nowrap">
                         <span>🏆</span>
                         <span>Add Task</span>
                     </button>
@@ -426,7 +426,7 @@
                             ${formatSeconds(t.time_spent)}
                         </span>
 
-                        <button class="timer-btn w-1/3 pr-2 ${t.is_tracking ? "stop" : "start"}">
+                        <button class="timer-btn w-1/3 ${t.is_tracking ? "stop text-red-500" : "start text-white"}">
                             ${t.is_tracking ? "⏸ Pause" : "▶ Start"}
                         </button>
                     </div>
@@ -519,11 +519,15 @@
                 // console.log("After:", btn.dataset.is_tracking)
                 if (btn.dataset.is_tracking === "true") {
                     btn.classList.remove("start");
+                    btn.classList.remove("text-white");
                     btn.classList.add("stop");
+                    btn.classList.add("text-red-500");
                     btn.innerText = "⏸ Pause";
                 } else {
                     btn.classList.remove("stop");
+                    btn.classList.remove("text-red-500");
                     btn.classList.add("start");
+                    btn.classList.add("text-white");
                     btn.innerText = "▶ Start";
                 }
             });
