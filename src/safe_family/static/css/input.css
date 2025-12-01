@@ -61,8 +61,12 @@ label {
     @apply flex gap-[10px] items-center mb-[20px];
 }
 
-form select {
-    @apply mb-[20px] items-center gap-[15px];
+#longterm-task-text {
+    @apply w-full h-10 px-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all shadow-sm;
+}
+
+#longterm-priority {
+    @apply w-full h-10 pl-3 pr-8 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent shadow-sm appearance-none cursor-pointer;
 }
 
 input[type="email"],
@@ -150,6 +154,10 @@ select:focus {
 .btn:hover {
     @apply hover:opacity-90 hover:-translate-y-px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.timer-btn {
+    @apply p-2 bg-green-500 hover:bg-green-600 text-white uppercase font-medium rounded-lg shadow-md hover:shadow-lg transition-all flex-col items-center justify-center gap-2 whitespace-nowrap;
 }
 
 nothingelse {
