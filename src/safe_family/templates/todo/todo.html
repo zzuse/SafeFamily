@@ -400,9 +400,8 @@
 
                 <span class="short-date" data-due="${t.due_date || ''}"></span>
 
-                <span class="time-spent">
-                    ${Math.floor(t.time_spent / 3600)}h
-                    ${Math.floor((t.time_spent % 3600) / 60)}m
+                <span class="time-spent" id="time-${t.goal_id}">
+                    ${formatSeconds(t.time_spent)}
                 </span>
 
                 <button class="timer-btn ${t.is_tracking ? "stop" : "start"}">
@@ -467,6 +466,12 @@
             loadLongTerm();
         });
 
+        function formatSeconds(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            return `${h}h ${m}m`;
+        }
+
         function startGoalTracking(btn, is_tracking, goal_id) {
             btn.dataset.goal_id = goal_id;
             btn.dataset.is_tracking = String(is_tracking);
@@ -482,6 +487,10 @@
                     .then(r => r.json())
                     .then(data => {
                         console.log("DB updated", data);
+                        if (data.time_spent !== undefined) {
+                            const timeSpan = document.querySelector(`#time-${goal_id}`);
+                            timeSpan.textContent = formatSeconds(data.time_spent);
+                        }
                     });
                 // update UI
                 btn.dataset.is_tracking = String(!isTracking);

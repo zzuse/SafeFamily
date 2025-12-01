@@ -24,6 +24,8 @@ class User(db.Model):
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
+    # Relationship to goals
+    goals = db.relationship("LongTermGoal", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         """Return a string representation of the User."""
@@ -82,3 +84,50 @@ class TokenBlocklist(db.Model):
         """Save the token blocklist entry to the database."""
         db.session.add(self)
         db.session.commit()
+
+
+class LongTermGoal(db.Model):
+    __tablename__ = "long_term_goals"
+
+    goal_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.String, db.ForeignKey("users.id", onupdate="NO ACTION", ondelete="CASCADE"), nullable=False)
+    task_text = db.Column(db.Text, nullable=False)
+    priority = db.Column(db.Integer, default=3)
+    completed = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=db.func.now())
+    completed_at = db.Column(db.DateTime, nullable=True)
+    due_date = db.Column(db.DateTime, nullable=True)
+    time_spent = db.Column(db.Integer, default=0)
+    is_tracking = db.Column(db.Boolean, default=False)
+    tracking_start = db.Column(db.DateTime, nullable=True)
+
+    # Relationship to user
+    user = db.relationship("User", back_populates="goals")
+
+    def __repr__(self):
+        return f"<LongTermGoal(goal_id={self.goal_id}, user_id={self.user_id}, task_text={self.task_text}, completed={self.completed})>"
+
+    def get_goal(self, goal_id):
+        """Retrieve a goal by ID"""
+        return db.session.query(LongTermGoal).filter(LongTermGoal.goal_id == goal_id).first()
+
+    def stop_tracking(self):
+        """Stop time tracking and update time_spent"""
+        if self.is_tracking and self.tracking_start:
+            self.time_spent += (datetime.now() - self.tracking_start).seconds
+            self.is_tracking = False
+            self.tracking_start = None
+            db.session.commit()
+        return self
+
+    def add_time_spent(self, goal_id, minutes):
+        """Add time spent on a goal"""
+        goal = self.get_goal(goal_id)
+        if goal:
+            goal.time_spent += minutes * 60
+            self.session.commit()
+        return goal
+
+    def close(self):
+        """Close the session"""
+        self.session.close()

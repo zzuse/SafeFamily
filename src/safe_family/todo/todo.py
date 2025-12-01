@@ -13,6 +13,7 @@ from src.safe_family.notifications.notifier import (
 )
 from src.safe_family.rules.scheduler import RULE_FUNCTIONS
 from src.safe_family.utils.constants import Saturday
+from src.safe_family.core.models import LongTermGoal
 
 logger = logging.getLogger(__name__)
 todo_bp = Blueprint("todo", __name__)
@@ -398,38 +399,17 @@ def start_goal_tracking(goal_id: int):
 @login_required
 def stop_goal_tracking(goal_id: int):
     """Stop goal tracking."""
-    conn = get_db_connection()
-    cur = conn.cursor()
+    goal = LongTermGoal.query.get(goal_id)
 
-    # Calculate elapsed seconds
-    cur.execute(
-        """
-        SELECT tracking_start
-        FROM long_term_goals
-        WHERE goal_id = %s
-    """,
-        (goal_id,),
-    )
-    tracking_start = cur.fetchone()[0]
-
-    if not tracking_start:
+    if not goal.tracking_start:
         return jsonify({"error": "not tracking"}), 400
 
-    cur.execute(
-        """
-        UPDATE long_term_goals
-        SET is_tracking = FALSE,
-            time_spent = time_spent + EXTRACT(EPOCH FROM (NOW() - tracking_start)),
-            tracking_start = NULL
-        WHERE goal_id = %s
-    """,
-        (goal_id,),
-    )
+    goal = goal.stop_tracking()
 
-    conn.commit()
-    conn.close()
-
-    return jsonify({"status": "stopped"})
+    return jsonify({
+        "status": "stopped",
+        "time_spent": goal.time_spent
+    })
 
 
 @todo_bp.post("/todo/longterm_update_due/<int:goal_id>")
