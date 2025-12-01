@@ -229,7 +229,7 @@ def archive_completed_tasks():
     # 1. Select tasks completed 3+ days ago
     cur.execute(
         """
-        SELECT goal_id, user_id, task_text, priority, completed_at
+        SELECT goal_id, user_id, task_text, priority, completed_at, time_spent
         FROM long_term_goals
         WHERE completed = TRUE AND completed_at < %s
     """,
@@ -244,10 +244,10 @@ def archive_completed_tasks():
     # 2. Insert them into history table
     for row in rows:
         try:
-            goal_id, user_id, task_text, priority, completed_at = row
+            goal_id, user_id, task_text, priority, completed_at, time_spent = row
             cur_his.execute(
                 """
-                INSERT INTO long_term_goals_his (goal_id, user_id, task_text, priority, completed_at)
+                INSERT INTO long_term_goals_his (goal_id, user_id, task_text, priority, completed_at, time_spent)
                 VALUES (%s, %s, %s, %s, %s)
             """,
                 (
@@ -256,6 +256,7 @@ def archive_completed_tasks():
                     task_text,
                     priority,
                     completed_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    time_spent,
                 ),
             )
             logger.info("Archived task: %s", str(row))
