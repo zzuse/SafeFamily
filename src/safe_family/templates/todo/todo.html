@@ -285,7 +285,7 @@
 
         function renderShortDatePicker(container, pgTimestamp, options = {}, goal_id) {
             options = Object.assign({
-                format: 'MMM D',
+                format: 'MMM DDD',
                 locale: 'en',
                 emptyText: 'DUE'
             }, options);
@@ -318,12 +318,14 @@
                         month: 'short',
                         day: 'numeric'
                     }).format(currentDate);
+                    // console.log("formatted data ", formatted)
                     fakeSpan.textContent = options.format
                         .replace('MMM', formatted.split(' ')[0])
-                        .replace('D', formatted.split(' ')[1] || formatted.split(' ')[0]);
+                        .replace('DDD', formatted.split(' ')[1] || formatted.split(' ')[0]);
                 } else {
                     fakeSpan.textContent = options.emptyText;
                 }
+                // console.log("fakeSpan ", fakeSpan);
             }
             updateDisplay();
 
@@ -413,7 +415,7 @@
 
                 li.querySelectorAll('.short-date').forEach(el => {
                     renderShortDatePicker(el, el.dataset.due, {
-                        format: 'MMM D',
+                        format: 'MMM DDD',
                         locale: 'en',
                         emptyText: '-'
                     }, t.goal_id);
@@ -477,7 +479,7 @@
             btn.dataset.is_tracking = String(is_tracking);
             btn.addEventListener("click", () => {
                 const isTracking = btn.dataset.is_tracking === "true";
-                console.log("Before:", btn.dataset.is_tracking)
+                // console.log("Before:", btn.dataset.is_tracking)
                 // update DB
                 const url = isTracking
                     ? `/todo/longterm_stop/${goal_id}`
@@ -486,7 +488,7 @@
                 fetch(url, { method: "POST" })
                     .then(r => r.json())
                     .then(data => {
-                        console.log("DB updated", data);
+                        // console.log("DB updated", data);
                         if (data.time_spent !== undefined) {
                             const timeSpan = document.querySelector(`#time-${goal_id}`);
                             timeSpan.textContent = formatSeconds(data.time_spent);
@@ -494,7 +496,7 @@
                     });
                 // update UI
                 btn.dataset.is_tracking = String(!isTracking);
-                console.log("After:", btn.dataset.is_tracking)
+                // console.log("After:", btn.dataset.is_tracking)
                 if (btn.dataset.is_tracking === "true") {
                     btn.classList.remove("start");
                     btn.classList.add("stop");
