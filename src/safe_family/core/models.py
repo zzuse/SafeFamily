@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from src.safe_family.core.extensions import db
+from src.safe_family.core.extensions import db, local_tz
 
 
 class User(db.Model):
@@ -39,15 +39,15 @@ class User(db.Model):
         """Return the user ID."""
         return self.id
 
-    def set_password(self, password):
+    def set_password(self, password: str):
         """Set the user's password."""
         self.password_hash = generate_password_hash(password)
 
-    def check_password(self, password):
+    def check_password(self, password: str):
         """Check if the provided password matches the stored password hash."""
         return check_password_hash(self.password_hash, password)
 
-    def change_password(self, old_password, new_password):
+    def change_password(self, old_password: str, new_password: str):
         """Change the user's password."""
         if self.check_password(old_password):
             self.password_hash = generate_password_hash(new_password)
@@ -56,7 +56,7 @@ class User(db.Model):
         return False
 
     @classmethod
-    def get_user_by_username(cls, username):
+    def get_user_by_username(cls, username: str):
         """Get a user by their username."""
         return cls.query.filter_by(username=username).first()
 
@@ -91,6 +91,8 @@ class TokenBlocklist(db.Model):
 
 
 class LongTermGoal(db.Model):
+    """ORM of LONG_TERM_GOALS."""
+
     __tablename__ = "long_term_goals"
 
     goal_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -112,10 +114,11 @@ class LongTermGoal(db.Model):
     # Relationship to user
     user = db.relationship("User", back_populates="goals")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
+        """Show String View."""
         return f"<LongTermGoal(goal_id={self.goal_id}, user_id={self.user_id}, task_text={self.task_text}, completed={self.completed})>"
 
-    def get_goal(self, goal_id):
+    def get_goal(self, goal_id: int):
         """Retrieve a goal by ID."""
         return (
             db.session.query(LongTermGoal)
@@ -126,21 +129,23 @@ class LongTermGoal(db.Model):
     def stop_tracking(self):
         """Stop time tracking and update time_spent."""
         if self.is_tracking and self.tracking_start:
-            self.time_spent += (datetime.now() - self.tracking_start).seconds
+            self.time_spent += (
+                datetime.now(local_tz) - local_tz.localize(self.tracking_start)
+            ).seconds
             self.is_tracking = False
             self.tracking_start = None
             db.session.commit()
         return self
 
-    def add_time_spent(self, goal_id, minutes):
+    def add_time_spent(self, goal_id: int, minutes: int):
         """Add time spent on a goal."""
         goal = self.get_goal(goal_id)
         if goal:
             goal.time_spent += minutes * 60
-            self.session.commit()
+            db.session.commit()
         return goal
 
     def delete_goal(self):
         """Delete goal."""
-        self.session.delete(self)
-        self.session.commit()
+        db.session.delete(self)
+        db.session.commit()

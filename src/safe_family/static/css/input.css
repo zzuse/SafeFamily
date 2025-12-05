@@ -332,3 +332,60 @@ td form button {
     background: #E3F2FD;
     color: #1565C0;
 }
+
+.menu-container {
+    position: relative;
+    display: inline-block;
+}
+
+.menu-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px;
+}
+
+.menu-popup {
+    position: absolute;
+    right: 0;
+    top: 25px;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 5px 0;
+    min-width: 120px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 20;
+}
+
+.menu-item {
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.menu-item:hover {
+    background: #eee;
+}
+
+.help-btn {
+    cursor: pointer;
+    font-size: 14px;
+    margin-left: 6px;
+    color: #050000;
+}
+
+.help-btn:hover {
+    color: #000;
+}
+
+.help-popup {
+    position: absolute;
+    background: #fffdf5;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 10px 14px;
+    max-width: 240px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    z-index: 50;
+}

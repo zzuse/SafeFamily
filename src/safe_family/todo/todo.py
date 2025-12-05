@@ -442,7 +442,7 @@ def update_due(goal_id: int):
     return jsonify({"status": "ok"})
 
 
-@todo_bp.post("/longterm_delete/<int:goal_id>")
+@todo_bp.post("/todo/longterm_delete/<int:goal_id>")
 def longterm_delete(goal_id: int):
     """Delete goal."""
     goal = LongTermGoal.query.get(goal_id)

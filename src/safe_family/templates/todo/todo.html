@@ -86,9 +86,15 @@
                         <span>Add Task</span>
                     </button>
                 </form>
-                <div class="grid grid-cols-5 text-sm font-bold text-gray-500 border-b border-gray-200 pb-2 mb-2 px-2">
-                    <div class="col-span-3 text-center uppercase">Task Name</div>
-                    <div class="col-span-2 flex justify-between items-center text-center uppercase">
+                <div class="grid grid-cols-26 text-sm font-bold text-gray-500 border-b border-gray-200 pb-2 mb-2 px-2">
+                    <div class="col-span-1 text-left">
+                        <span class="help-btn">?</span>
+                        <div class="help-popup hidden">
+                            <p>Complete:? <br><b>You can toggle the multi select input to finish the task.</b></p>
+                        </div>
+                    </div>
+                    <div class="col-span-15 text-center uppercase">Task Name</div>
+                    <div class="col-span-10 flex justify-between items-center text-center uppercase">
                         <span class="w-1/3">Due</span>
                         <span class="w-1/3">Track</span>
                         <span class="w-1/3 pr-2">Action</span>
@@ -224,6 +230,26 @@
         });
 
         // -------- below is not for TODO any more, for Long Term Goal -------
+
+        function attachHelperPopups() {
+            document.querySelectorAll(".help-btn").forEach(btn => {
+                btn.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    const popup = btn.nextElementSibling;
+                    popup.classList.toggle("hidden");
+                });
+                btn.addEventListener("mouseenter", () => {
+                    btn.nextElementSibling.classList.remove("hidden");
+                });
+                btn.addEventListener("mouseleave", () => {
+                    btn.nextElementSibling.classList.add("hidden");
+                });
+            });
+
+            document.addEventListener("click", () => {
+                document.querySelectorAll(".help-popup").forEach(p => p.classList.add("hidden"));
+            });
+        }
 
         new Sortable(document.getElementById("longterm-list"), {
             animation: 150,
@@ -429,13 +455,20 @@
                         <button class="timer-btn w-1/3 ${t.is_tracking ? "stop text-red-500" : "start text-white"}">
                             ${t.is_tracking ? "⏸ Pause" : "▶ Start"}
                         </button>
-                        <button class="text-gray-400 hover:text-gray-600 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis-vertical w-5 h-5" aria-hidden="true">
-                                <circle cx="12" cy="12" r="1"></circle>
-                                <circle cx="12" cy="5" r="1"></circle>
-                                <circle cx="12" cy="19" r="1"></circle>
-                            </svg>
-                        </button>
+                        <div class="menu-container">
+                            <button class="menu-btn text-gray-400 hover:text-gray-600 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis-vertical w-5 h-5" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="1"></circle>
+                                    <circle cx="12" cy="5" r="1"></circle>
+                                    <circle cx="12" cy="19" r="1"></circle>
+                                </svg>
+                            </button>
+                            <div class="menu-popup hidden">
+                                <div class="menu-item delete-item" data-goal-id="${t.goal_id}">
+                                    ❌ Delete
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 `;
@@ -450,6 +483,26 @@
 
                 li.querySelectorAll('.timer-btn').forEach(el => {
                     startGoalTracking(el, t.is_tracking, t.goal_id);
+                });
+
+                // Toggle popup
+                li.querySelectorAll(".menu-btn").forEach(btn => {
+                    btn.addEventListener("click", (e) => {
+                        e.stopPropagation();
+                        console.log("haha")
+                        const popup = btn.nextElementSibling;
+                        popup.classList.toggle("hidden");
+                    });
+                });
+
+                // Delete item
+                li.querySelectorAll(".delete-item").forEach(item => {
+                    item.addEventListener("click", handleDeleteGoal);
+                });
+
+                // Close popups when clicking outside
+                document.addEventListener("click", () => {
+                    document.querySelectorAll(".menu-popup").forEach(p => p.classList.add("hidden"));
                 });
 
                 container.appendChild(li);
@@ -552,7 +605,22 @@
             });
         }
 
+        function handleDeleteGoal(e) {
+            const goalId = e.target.dataset.goalId;
+
+            fetch(`/todo/longterm_delete/${goalId}`, { method: "POST" })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        const li = document.querySelector(`li[data-id="${goalId}"]`);
+                        if (li) li.remove();
+                    }
+                })
+                .catch(err => console.error("Delete error:", err));
+        }
+
         loadLongTerm();
+        attachHelperPopups();
 
     </script>
 
