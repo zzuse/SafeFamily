@@ -86,15 +86,15 @@
                         <span>Add Task</span>
                     </button>
                 </form>
-                <div class="grid grid-cols-26 text-sm font-bold text-gray-500 border-b border-gray-200 pb-2 mb-2 px-2">
+                <div class="grid grid-cols-41 text-sm font-bold text-gray-500 border-b border-gray-200 pb-2 mb-2 px-2">
                     <div class="col-span-1 text-left">
                         <span class="help-btn">?</span>
                         <div class="help-popup hidden">
-                            <p>Complete:? <br><b>You can toggle the multi select input to finish the task.</b></p>
+                            <p>Complete? <br><b>You can toggle the multi select input to finish the task.</b></p>
                         </div>
                     </div>
-                    <div class="col-span-15 text-center uppercase">Task Name</div>
-                    <div class="col-span-10 flex justify-between items-center text-center uppercase">
+                    <div class="col-span-23 text-center uppercase">Task Name</div>
+                    <div class="col-span-17 flex justify-between items-center text-center uppercase">
                         <span class="w-1/3">Due</span>
                         <span class="w-1/3">Track</span>
                         <span class="w-1/3 pr-2">Action</span>
@@ -421,7 +421,7 @@
                 li.addEventListener("keydown", function (e) {
                     if (e.key === 'Enter') {
                         e.preventDefault();
-                        updateLongTerm(t.goal_id);
+                        updateLongTerm(t.goal_id, color_length);
                     }
                 });
 
@@ -430,14 +430,14 @@
                 li.innerHTML = `
                 <div class="grid grid-cols-5">
                     <div class="col-span-3 justify-between items-center text-center">
-                        <input type="checkbox" ${t.completed ? "checked" : ""} onchange="updateLongTerm(${t.goal_id})">
+                        <input type="checkbox" ${t.completed ? "checked" : ""} onchange="updateLongTerm(${t.goal_id}, ${color_length})">
 
                         <input type="text" id="task_${t.goal_id}" value="${t.task}" class="drag-handle ${t.completed ? "done" : ""}
                             text-[#ecf0f1] priority-${mapPriorityToFiveLevels(t.priority, color_length)}"
                             style="width: 95%; ">
 
                         <select class="hidden priority-${mapPriorityToFiveLevels(t.priority, color_length)} text-[#ecf0f1]"
-                            id="prio_${t.goal_id}" onchange="updateLongTerm(${t.goal_id})">
+                            id="prio_${t.goal_id}" onchange="updateLongTerm(${t.goal_id}, ${color_length})">
                             ${[1, 2, 3, 4, 5].map(p =>
                     `<option value="${t.priority}" ${p == mapPriorityToFiveLevels(t.priority, color_length) ? "selected" : ""}>
                                 ${PRIORITY_LABELS[p]}
@@ -509,12 +509,13 @@
             });
         }
 
-        async function updateLongTerm(goal_id) {
+        async function updateLongTerm(goal_id, color_length) {
             let body = {
                 goal_id,
+                color_length,
                 task: document.getElementById("task_" + goal_id).value,
                 priority: document.getElementById("prio_" + goal_id).value,
-                completed: document.querySelector(`#longterm-list input[type='checkbox'][onchange='updateLongTerm(${goal_id})']`).checked
+                completed: document.querySelector(`#longterm-list input[type='checkbox'][onchange='updateLongTerm(${goal_id}, ${color_length})']`).checked,
             };
 
             await fetch("/todo/long_term_update", {

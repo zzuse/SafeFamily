@@ -335,8 +335,10 @@ def update_long_term_complete():
     conn = get_db_connection()
     cur = conn.cursor()
     completed_at = None
+    logger.debug("Updating long-term task: %s", data)
     if data["completed"]:
         completed_at = datetime.now(local_tz)
+        data["priority"] = data["color_length"] + 1
     cur.execute(
         """
         UPDATE long_term_goals

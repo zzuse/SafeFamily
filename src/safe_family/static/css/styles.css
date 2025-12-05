@@ -209,11 +209,11 @@
   .col-span-3 {
     grid-column: span 3 / span 3;
   }
-  .col-span-10 {
-    grid-column: span 10 / span 10;
+  .col-span-17 {
+    grid-column: span 17 / span 17;
   }
-  .col-span-15 {
-    grid-column: span 15 / span 15;
+  .col-span-23 {
+    grid-column: span 23 / span 23;
   }
   .container {
     width: 100%;
@@ -311,8 +311,8 @@
   .grid-cols-5 {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
-  .grid-cols-26 {
-    grid-template-columns: repeat(26, minmax(0, 1fr));
+  .grid-cols-41 {
+    grid-template-columns: repeat(41, minmax(0, 1fr));
   }
   .flex-col {
     flex-direction: column;
