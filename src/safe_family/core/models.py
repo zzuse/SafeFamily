@@ -1,7 +1,7 @@
 """Core models for Safe Family application."""
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -18,14 +18,18 @@ class User(db.Model):
     email = db.Column(db.String(), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(20))
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     updated_at = db.Column(
         db.DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
     # Relationship to goals
-    goals = db.relationship("LongTermGoal", back_populates="user", cascade="all, delete-orphan")
+    goals = db.relationship(
+        "LongTermGoal",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:
         """Return a string representation of the User."""
@@ -74,7 +78,7 @@ class TokenBlocklist(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     jti = db.Column(db.String(), nullable=False, index=True)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
     def __repr__(self) -> str:
         """Return a string representation of the TokenBlocklist."""
@@ -90,7 +94,11 @@ class LongTermGoal(db.Model):
     __tablename__ = "long_term_goals"
 
     goal_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.String, db.ForeignKey("users.id", onupdate="NO ACTION", ondelete="CASCADE"), nullable=False)
+    user_id = db.Column(
+        db.String,
+        db.ForeignKey("users.id", onupdate="NO ACTION", ondelete="CASCADE"),
+        nullable=False,
+    )
     task_text = db.Column(db.Text, nullable=False)
     priority = db.Column(db.Integer, default=3)
     completed = db.Column(db.Boolean, default=False)
@@ -108,11 +116,15 @@ class LongTermGoal(db.Model):
         return f"<LongTermGoal(goal_id={self.goal_id}, user_id={self.user_id}, task_text={self.task_text}, completed={self.completed})>"
 
     def get_goal(self, goal_id):
-        """Retrieve a goal by ID"""
-        return db.session.query(LongTermGoal).filter(LongTermGoal.goal_id == goal_id).first()
+        """Retrieve a goal by ID."""
+        return (
+            db.session.query(LongTermGoal)
+            .filter(LongTermGoal.goal_id == goal_id)
+            .first()
+        )
 
     def stop_tracking(self):
-        """Stop time tracking and update time_spent"""
+        """Stop time tracking and update time_spent."""
         if self.is_tracking and self.tracking_start:
             self.time_spent += (datetime.now() - self.tracking_start).seconds
             self.is_tracking = False
@@ -121,13 +133,14 @@ class LongTermGoal(db.Model):
         return self
 
     def add_time_spent(self, goal_id, minutes):
-        """Add time spent on a goal"""
+        """Add time spent on a goal."""
         goal = self.get_goal(goal_id)
         if goal:
             goal.time_spent += minutes * 60
             self.session.commit()
         return goal
 
-    def close(self):
-        """Close the session"""
-        self.session.close()
+    def delete_goal(self):
+        """Delete goal."""
+        self.session.delete(self)
+        self.session.commit()

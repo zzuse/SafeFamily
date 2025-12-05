@@ -7,21 +7,22 @@ from flask import Blueprint, flash, jsonify, redirect, render_template, request,
 
 from src.safe_family.core.auth import get_current_username, login_required
 from src.safe_family.core.extensions import get_db_connection, local_tz
+from src.safe_family.core.models import LongTermGoal
 from src.safe_family.notifications.notifier import (
     send_discord_notification,
     send_email_notification,
 )
 from src.safe_family.rules.scheduler import RULE_FUNCTIONS
 from src.safe_family.utils.constants import Saturday
-from src.safe_family.core.models import LongTermGoal
 
 logger = logging.getLogger(__name__)
 todo_bp = Blueprint("todo", __name__)
 
 
-def generate_time_slots(slot_type: str, is_holiday: bool = False) -> list[str]:
+def generate_time_slots(slot_type: str, holiday: str) -> list[str]:
     """Return list of time slots based on weekday/weekend and duration."""
     today = datetime.now(local_tz).today()
+    is_holiday = holiday == "on"
     is_weekend = today.weekday() >= Saturday
 
     if is_weekend or is_holiday:
@@ -76,7 +77,7 @@ def todo_page():
     slot_type = request.form.get("slot_type", "60")
     logger.info("slots type: %s", slot_type)
 
-    slots = generate_time_slots(slot_type, is_holiday == "on")
+    slots = generate_time_slots(slot_type, is_holiday)
     logger.info("slots size: %d", slots.__len__())
 
     message = ""
@@ -150,7 +151,7 @@ def todo_page():
 
 @todo_bp.route("/update_todo/<string:selected_username>", methods=["POST"])
 @login_required
-def update_todo(selected_username):
+def update_todo(selected_username: str):
     """Update tasks for the selected user."""
     todo_ids = request.form.getlist("todo_id")
 
@@ -333,14 +334,22 @@ def update_long_term_complete():
 
     conn = get_db_connection()
     cur = conn.cursor()
-
+    completed_at = None
+    if data["completed"]:
+        completed_at = datetime.now(local_tz)
     cur.execute(
         """
         UPDATE long_term_goals
-        SET task_text = %s, priority = %s, completed = %s, completed_at = NOW()
+        SET task_text = %s, priority = %s, completed = %s, completed_at = %s
         WHERE goal_id = %s
     """,
-        (data["task"], data["priority"], data["completed"], data["goal_id"]),
+        (
+            data["task"],
+            data["priority"],
+            data["completed"],
+            completed_at,
+            data["goal_id"],
+        ),
     )
 
     conn.commit()
@@ -406,10 +415,12 @@ def stop_goal_tracking(goal_id: int):
 
     goal = goal.stop_tracking()
 
-    return jsonify({
-        "status": "stopped",
-        "time_spent": goal.time_spent
-    })
+    return jsonify(
+        {
+            "status": "stopped",
+            "time_spent": goal.time_spent,
+        },
+    )
 
 
 @todo_bp.post("/todo/longterm_update_due/<int:goal_id>")
@@ -429,3 +440,14 @@ def update_due(goal_id: int):
     conn.commit()
     conn.close()
     return jsonify({"status": "ok"})
+
+
+@todo_bp.post("/longterm_delete/<int:goal_id>")
+def longterm_delete(goal_id: int):
+    """Delete goal."""
+    goal = LongTermGoal.query.get(goal_id)
+    if goal is None:
+        return jsonify({"success": False, "error": "Not found"}), 404
+
+    goal.delete_goal()
+    return jsonify({"success": True})
