@@ -6,12 +6,12 @@ body {
 }
 
 nav {
-    @apply bg-[#2c3e50] px-[40px] py-[15px] flex justify-start items-center;
+    @apply bg-[#2c3e50] px-[40px] py-[15px] flex justify-end items-center;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 nav a {
-    @apply text-[#ecf0f1] no-underline mr-[30px] font-semibold text-[1rem] [transition:color_0.3s_ease];
+    @apply text-[#ecf0f1] uppercase no-underline mr-[30px] font-semibold text-[1rem] [transition:color_0.3s_ease];
 }
 
 nav a:hover {

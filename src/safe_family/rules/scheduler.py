@@ -248,7 +248,7 @@ def archive_completed_tasks():
             cur_his.execute(
                 """
                 INSERT INTO long_term_goals_his (goal_id, user_id, task_text, priority, completed_at, time_spent)
-                VALUES (%s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s)
             """,
                 (
                     goal_id,
