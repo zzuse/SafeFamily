@@ -8,13 +8,12 @@
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
       "Courier New", monospace;
     --color-red-500: oklch(63.7% 0.237 25.331);
+    --color-orange-600: oklch(64.6% 0.222 41.116);
     --color-green-500: oklch(72.3% 0.219 149.579);
     --color-green-600: oklch(62.7% 0.194 149.214);
     --color-gray-50: oklch(98.5% 0.002 247.839);
-    --color-gray-200: oklch(92.8% 0.006 264.531);
     --color-gray-300: oklch(87.2% 0.01 258.338);
     --color-gray-400: oklch(70.7% 0.022 261.325);
-    --color-gray-500: oklch(55.1% 0.027 264.364);
     --color-gray-600: oklch(44.6% 0.03 256.802);
     --color-gray-700: oklch(37.3% 0.034 259.733);
     --color-white: #fff;
@@ -241,15 +240,6 @@
   .mt-\[20px\] {
     margin-top: 20px;
   }
-  .mr-\[10px\] {
-    margin-right: 10px;
-  }
-  .mb-2 {
-    margin-bottom: calc(var(--spacing) * 2);
-  }
-  .mb-4 {
-    margin-bottom: calc(var(--spacing) * 4);
-  }
   .mb-6 {
     margin-bottom: calc(var(--spacing) * 6);
   }
@@ -307,6 +297,12 @@
   .max-w-\[200px\] {
     max-width: 200px;
   }
+  .min-w-10 {
+    min-width: calc(var(--spacing) * 10);
+  }
+  .min-w-20 {
+    min-width: calc(var(--spacing) * 20);
+  }
   .flex-shrink {
     flex-shrink: 1;
   }
@@ -358,34 +354,6 @@
   .gap-6 {
     gap: calc(var(--spacing) * 6);
   }
-  .space-y-2 {
-    :where(& > :not(:last-child)) {
-      --tw-space-y-reverse: 0;
-      margin-block-start: calc(calc(var(--spacing) * 2) * var(--tw-space-y-reverse));
-      margin-block-end: calc(calc(var(--spacing) * 2) * calc(1 - var(--tw-space-y-reverse)));
-    }
-  }
-  .space-y-3 {
-    :where(& > :not(:last-child)) {
-      --tw-space-y-reverse: 0;
-      margin-block-start: calc(calc(var(--spacing) * 3) * var(--tw-space-y-reverse));
-      margin-block-end: calc(calc(var(--spacing) * 3) * calc(1 - var(--tw-space-y-reverse)));
-    }
-  }
-  .space-y-5 {
-    :where(& > :not(:last-child)) {
-      --tw-space-y-reverse: 0;
-      margin-block-start: calc(calc(var(--spacing) * 5) * var(--tw-space-y-reverse));
-      margin-block-end: calc(calc(var(--spacing) * 5) * calc(1 - var(--tw-space-y-reverse)));
-    }
-  }
-  .space-y-6 {
-    :where(& > :not(:last-child)) {
-      --tw-space-y-reverse: 0;
-      margin-block-start: calc(calc(var(--spacing) * 6) * var(--tw-space-y-reverse));
-      margin-block-end: calc(calc(var(--spacing) * 6) * calc(1 - var(--tw-space-y-reverse)));
-    }
-  }
   .rounded-lg {
     border-radius: var(--radius-lg);
   }
@@ -399,9 +367,6 @@
   .border-b {
     border-bottom-style: var(--tw-border-style);
     border-bottom-width: 1px;
-  }
-  .border-gray-200 {
-    border-color: var(--color-gray-200);
   }
   .bg-gray-50 {
     background-color: var(--color-gray-50);
@@ -430,9 +395,6 @@
   .pr-2 {
     padding-right: calc(var(--spacing) * 2);
   }
-  .pb-2 {
-    padding-bottom: calc(var(--spacing) * 2);
-  }
   .text-center {
     text-align: center;
   }
@@ -458,17 +420,20 @@
   .whitespace-nowrap {
     white-space: nowrap;
   }
+  .text-\[\#2C1212\] {
+    color: #2C1212;
+  }
   .text-\[\#ecf0f1\] {
     color: #ecf0f1;
   }
   .text-gray-400 {
     color: var(--color-gray-400);
   }
-  .text-gray-500 {
-    color: var(--color-gray-500);
-  }
   .text-gray-700 {
     color: var(--color-gray-700);
+  }
+  .text-green-500 {
+    color: var(--color-green-500);
   }
   .text-red-500 {
     color: var(--color-red-500);
@@ -534,19 +499,9 @@
       }
     }
   }
-  .md\:w-20 {
-    @media (width >= 48rem) {
-      width: calc(var(--spacing) * 20);
-    }
-  }
   .md\:w-40 {
     @media (width >= 48rem) {
       width: calc(var(--spacing) * 40);
-    }
-  }
-  .md\:w-60 {
-    @media (width >= 48rem) {
-      width: calc(var(--spacing) * 60);
     }
   }
   .md\:grid-cols-2 {
@@ -582,7 +537,6 @@ body {
   font-family: sans-serif;
   background-color: var(--bg-main);
   color: var(--text-light);
-  line-height: 1.6;
 }
 .container {
   width: 90%;
@@ -669,18 +623,6 @@ body {
   grid-template-columns: repeat(3, 1fr);
   gap: 30px;
   padding-bottom: 50px;
-}
-@media (max-width: 768px) {
-  .site-header {
-    flex-direction: column;
-    gap: 20px;
-  }
-  .content-grid {
-    grid-template-columns: 1fr;
-  }
-  .hero-placeholder {
-    height: 250px;
-  }
 }
 section {
   color: var(--highlight-orange);
@@ -990,7 +932,6 @@ input[type="email"]:focus, input[type="date"]:focus, input[type="time"]:focus, i
   justify-content: center;
   gap: calc(var(--spacing) * 2);
   border-radius: var(--radius-lg);
-  background-color: var(--color-green-500);
   padding: calc(var(--spacing) * 2);
   --tw-font-weight: var(--font-weight-medium);
   font-weight: var(--font-weight-medium);
@@ -1003,7 +944,7 @@ input[type="email"]:focus, input[type="date"]:focus, input[type="time"]:focus, i
   transition-duration: var(--tw-duration, var(--default-transition-duration));
   &:hover {
     @media (hover: hover) {
-      background-color: var(--color-green-600);
+      background-color: var(--color-orange-600);
     }
   }
   &:hover {
@@ -1012,6 +953,7 @@ input[type="email"]:focus, input[type="date"]:focus, input[type="time"]:focus, i
       box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
     }
   }
+  background-color: var(--highlight-orange);
 }
 td form button {
   background-color: #e74c3c;
@@ -1053,24 +995,24 @@ td form button {
   opacity: 0.6;
 }
 .priority-1 {
-  background: #FFEBEE;
-  color: #C62828;
+  background: #2C1212;
+  color: #EF5350;
 }
 .priority-2 {
-  background: #FFF3E0;
-  color: #EF6C00;
+  background: #3E1F0A;
+  color: #FF9800;
 }
 .priority-3 {
-  background: #FFFDE7;
-  color: #F9A825;
+  background: #332805;
+  color: #FDD835;
 }
 .priority-4 {
-  background: #E8F5E9;
-  color: #2E7D32;
+  background: #0D2B14;
+  color: #66BB6A;
 }
 .priority-5 {
-  background: #E3F2FD;
-  color: #1565C0;
+  background: #0D2145;
+  color: #42A5F5;
 }
 .menu-container {
   position: relative;
@@ -1139,11 +1081,6 @@ td form button {
 @property --tw-skew-y {
   syntax: "*";
   inherits: false;
-}
-@property --tw-space-y-reverse {
-  syntax: "*";
-  inherits: false;
-  initial-value: 0;
 }
 @property --tw-border-style {
   syntax: "*";
@@ -1300,7 +1237,6 @@ td form button {
       --tw-rotate-z: initial;
       --tw-skew-x: initial;
       --tw-skew-y: initial;
-      --tw-space-y-reverse: 0;
       --tw-border-style: solid;
       --tw-font-weight: initial;
       --tw-shadow: 0 0 #0000;

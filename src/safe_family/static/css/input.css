@@ -25,7 +25,7 @@ body {
     font-family: sans-serif;
     background-color: var(--bg-main);
     color: var(--text-light);
-    line-height: 1.6;
+    /* line-height: 1.6; */
 }
 
 .container {
@@ -148,7 +148,7 @@ body {
     padding-bottom: 50px;
 }
 
-@media (max-width: 768px) {
+/* @media (max-width: 768px) {
     .site-header {
         flex-direction: column;
         gap: 20px;
@@ -156,13 +156,12 @@ body {
 
     .content-grid {
         grid-template-columns: 1fr;
-        /* Stack columns vertically */
     }
 
     .hero-placeholder {
         height: 250px;
     }
-}
+} */
 
 section {
     color: var(--highlight-orange);
@@ -393,7 +392,8 @@ select:focus {
 }
 
 .timer-btn {
-    @apply p-2 bg-green-500 hover:bg-green-600 uppercase font-medium rounded-lg shadow-md hover:shadow-lg transition-all flex-col items-center justify-center gap-2 whitespace-nowrap;
+    @apply p-2 hover:bg-orange-600 uppercase font-medium rounded-lg shadow-md hover:shadow-lg transition-all flex-col items-center justify-center gap-2 whitespace-nowrap;
+    background-color: var(--highlight-orange)
 }
 
 
@@ -436,30 +436,30 @@ td form button {
 
 /* High = Red */
 .priority-1 {
-    background: #FFEBEE;
-    color: #C62828;
+    background: #2C1212;
+    color: #EF5350;
 }
 
 .priority-2 {
-    background: #FFF3E0;
-    color: #EF6C00;
+    background: #3E1F0A;
+    color: #FF9800;
 }
 
 /* Medium = Orange */
 .priority-3 {
-    background: #FFFDE7;
-    color: #F9A825;
+    background: #332805;
+    color: #FDD835;
 }
 
 .priority-4 {
-    background: #E8F5E9;
-    color: #2E7D32;
+    background: #0D2B14;
+    color: #66BB6A;
 }
 
 /* Low = Green */
 .priority-5 {
-    background: #E3F2FD;
-    color: #1565C0;
+    background: #0D2145;
+    color: #42A5F5;
 }
 
 .menu-container {
