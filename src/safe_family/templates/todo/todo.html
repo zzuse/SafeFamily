@@ -1,41 +1,122 @@
 {% extends "base.html" %}
 {% block content %}
 
-<nothingelse>
+<section>
     <div class="top-bar">
-        <div class="card-header mt-[20px]" style="font-size: 30px; width: 100%;">Welcome back, {{ user_name }}!
-            {% if
-            role ==
-            'admin' %}(Admin){%
-            endif
-            %}</div>
+        <div class="card-header" style="width: 100%;">Welcome back, {{ user_name }}!
+            {% if role == 'admin' %}(Admin){% endif %}
+        </div>
         <div class="note">Note: To disable all rules, you must confirm that you have finished
             planned homework, and (<b>MATH</b>, <b>PIANO</b>, and <b>BOOKS</b> are
             mandatory
             every day)</div>
+        <div class="note font-semibold">
+            {% if role == 'admin' %}
+            <form method="get" action="/todo">
+                <label for="view_user">View User:</label>
+                <select name="view_user" id="view_user" onchange="this.form.submit()">
+                    {% for u in users_list %}
+                    <option value="{{ u }}" {% if u==selected_user %}selected{% endif %}>{{ u }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+            {% endif %}
+        </div>
     </div>
-    <div class="longterm-section">
 
-        {% if role == 'admin' %}
-        <form method="get" action="/todo">
-            <label for="view_user">View User:</label>
-            <select name="view_user" id="view_user" onchange="this.form.submit()">
-                {% for u in users_list %}
-                <option value="{{ u }}" {% if u==selected_user %}selected{% endif %}>{{ u }}</option>
+    <div class="today-section">
+        <div class="card-header">{{ selected_user }}'s To-Do List Today</div>
+        {% if today_tasks %}
+        <form method="POST" action="/update_todo/{{ selected_user }}" class="task-update-form">
+            <table class="table-modern">
+                <tr>
+                    <th>Time Slot</th>
+                    <th>Task</th>
+                    <th>Done</th>
+                </tr>
+                {% for todo_id, time_slot, task, completed in today_tasks %}
+                <tr>
+                    <td>{{ time_slot }}</td>
+                    <td>
+                        <input type="hidden" name="todo_id" value="{{ todo_id }}">
+                        <input type="text" name="task_{{ todo_id }}" value="{{ task }}"
+                            class=" {% if completed %}done{% endif %} text-center" style="width: 90%;" />
+                    </td>
+                    <td>
+                        <input type="checkbox" class="complete-checkbox" name="completed_{{ todo_id }}"
+                            data-task-id="{{ todo_id }}" {% if completed %}checked{% endif %} />
+                    </td>
+                </tr>
                 {% endfor %}
-            </select>
+            </table>
+            <div class="note">Note: Maintaining accurate records after completing each
+                task.(means:modify)
+            </div>
+            <div class="btn-area">
+                <button class="btn" type="submit" title="Save changes to all tasks">💾 Modify
+                    All</button>
+            </div>
         </form>
         {% else %}
-        <label class="hidden">Welcome back, {{ selected_user }}!</label>
+        <p class="message">No tasks saved for today.</p>
         {% endif %}
 
+        <div class="card-header">Plan New To-Do List for {{ selected_user }}</div>
+
+        <form method="POST" id="todoForm" class="planner-form">
+            <input type="hidden" name="slot_type" value="{{ slot_type }}">
+            <input type="hidden" name="is_holiday" value="{{ is_holiday }}">
+            <table class="table-modern">
+                <tr>
+                    <th>Time Slot</th>
+                    <th>Task</th>
+                    <th class="transparent">--------</th>
+                </tr>
+                {% for slot in slots %}
+                <tr>
+                    <td>{{ slot }}</td>
+                    <td><input type="text" name="{{ slot }}" class="task-input text-center"
+                            placeholder="MainTask[SubProblem]/MainTask[SubProblem]" required style="width: 90%;">
+                    </td>
+                    <td>--------</td>
+                </tr>
+                {% endfor %}
+            </table>
+            <div class="btn-area">
+                <button class="btn" type="submit" name="save_todo" title="This will overwrite the previous list.">🏄🏻
+                    Delete Previous
+                    and
+                    Save
+                    New To-Do
+                    List</button>
+            </div>
+        </form>
+
+        <div class="btn-area">
+            {% if show_disable_button %}
+            <form action="/exec_rules/{{ selected_user_row_id }}"
+                onsubmit="return confirm('Are you sure you brush toilet, take out the garbage, and wash the dishes?');"
+                method="POST">
+                <button class="btn btn-failure" type="submit" title="Disable all rules after mandatory cleanup">🛑
+                    Disable
+                    All Rules</button>
+            </form>
+            {% else %}
+            <p class="note" style="background-color: transparent;">Not proper time to disable rules
+                (button
+                available between 4 PM and 6 PM)</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="longterm-section">
         <div class="pt-[10px]">
-            <div class="card-header"><label>Mid-Term & Long-Term Goals Tracking</label></div>
-            <div id="long-term-container" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <div class="note mb-[10px]" style="width: 90%;">Track tasks more than 3 days to finish. You can drag the
+            <div class="card-header">Mid-Term & Long-Term Goals Tracking</div>
+            <div id="long-term-container" class="flex flex-col gap-6 p-6 rounded-xl shadow-sm border">
+                <div class="note"> Track tasks more than 3 days to finish. You can drag the
                     list items to sort the long term goals. Finished tasks will automatically dispear after 3 days.
                 </div>
-                <form id="add-longterm-form" class="flex flex-col md:flex-row gap-3 items-stretch md:items-center mb-6">
+                <form id="add-longterm-form" class="flex md:flex-row gap-3 items-stretch md:items-center mb-6">
                     <div class="flex-grow">
                         <input type="text" id="longterm-task-text" placeholder="New Target[Problem] Format">
                     </div>
@@ -59,14 +140,14 @@
                         </div>
                     </div>
                     <button type="submit"
-                        class="h-10 px-6 bg-green-500 hover:bg-green-600 text-white uppercase font-medium rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 whitespace-nowrap">
+                        class="md:w-40 h-10 px-6 bg-green-500 hover:bg-green-600 text-white uppercase font-small rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 whitespace-nowrap">
                         <span>🏆</span>
                         <span>Add Task</span>
                     </button>
                 </form>
-                <div class="grid grid-cols-41 text-sm font-bold text-gray-500 border-b border-gray-200 pb-2 mb-2 px-2">
+                <div class="grid grid-cols-41 text-sm font-bold border-b">
                     <div class="col-span-1 text-left">
-                        <span class="help-btn">?</span>
+                        <span class="help-btn">✅</span>
                         <div class="help-popup hidden">
                             <p>Complete? <br><b>You can toggle the multi select input to finish the task.</b></p>
                         </div>
@@ -75,80 +156,15 @@
                     <div class="col-span-17 flex justify-between items-center text-center uppercase">
                         <span class="w-1/3">Due</span>
                         <span class="w-1/3">Track</span>
-                        <span class="w-1/3 pr-2">Action</span>
+                        <span class="w-1/3 pr-2">Actions</span>
                     </div>
                 </div>
-                <ul id="longterm-list" class="space-y-2"></ul>
+                <div>
+                    <ul id="longterm-list"></ul>
+                </div>
             </div>
         </div>
     </div>
-
-    <div class="today-section">
-        <div class="card-header mt-[20px]">{{ selected_user }}'s To-Do List Today</div>
-        {% if today_tasks %}
-        <form method="POST" action="/update_todo/{{ selected_user }}" class="task-update-form">
-            <table class="table-modern">
-                <tr>
-                    <th>Time Slot</th>
-                    <th>Task</th>
-                    <th>Done</th>
-                </tr>
-                {% for todo_id, time_slot, task, completed in today_tasks %}
-                <tr>
-                    <td class="text-center">{{ time_slot }}</td>
-                    <td>
-                        <input type="hidden" name="todo_id" value="{{ todo_id }}">
-                        <input type="text" name="task_{{ todo_id }}" value="{{ task }}"
-                            class=" {% if completed %}done{% endif %}" style="width: 90%;" />
-                    </td>
-                    <td class="text-center">
-                        <input type="checkbox" class="complete-checkbox" name="completed_{{ todo_id }}"
-                            data-task-id="{{ todo_id }}" {% if completed %}checked{% endif %} />
-                    </td>
-                </tr>
-                {% endfor %}
-            </table>
-            <div class="note">Note: Maintaining accurate records after completing each
-                task.(means:modify)
-            </div>
-            <div class="btn-area">
-                <button class="btn btn-success" type="submit" title="Save changes to all tasks">💾 Modify
-                    All</button>
-            </div>
-        </form>
-        {% else %}
-        <p class="message">No tasks saved for today.</p>
-        {% endif %}
-    </div>
-
-    <div class="card-header mt-[30px]">Plan New To-Do List for {{ selected_user }}</div>
-
-    <form method="POST" id="todoForm" class="planner-form">
-        <input type="hidden" name="slot_type" value="{{ slot_type }}">
-        <input type="hidden" name="is_holiday" value="{{ is_holiday }}">
-        <table class="table-modern">
-            <tr>
-                <th>Time Slot</th>
-                <th>Task</th>
-            </tr>
-            {% for slot in slots %}
-            <tr>
-                <td class="text-center">{{ slot }}</td>
-                <td><input type="text" name="{{ slot }}" class="task-input text-center"
-                        placeholder="MainTask[SubProblem]/MainTask[SubProblem]" required style="width: 90%;">
-                </td>
-            </tr>
-            {% endfor %}
-        </table>
-        <div class="btn-area">
-            <button class="btn btn-success" type="submit" name="save_todo"
-                title="This will overwrite the previous list.">🏄🏻 Delete Previous
-                and
-                Save
-                New To-Do
-                List</button>
-        </div>
-    </form>
 
     <script>
         document.getElementById("todoForm").addEventListener("submit", function (e) {
@@ -316,7 +332,6 @@
                 border: 1px solid #d0d7de;
                 border-radius: 6px;
                 font-size: 14px;
-                background: white;
                 display: inline-block;
                 min-width: 80px;
                 text-align: center;
@@ -412,7 +427,7 @@
 
                         <input type="text" id="task_${t.goal_id}" value="${t.task}" class="drag-handle ${t.completed ? "done" : ""}
                             text-[#ecf0f1] priority-${mapPriorityToFiveLevels(t.priority, color_length)}"
-                            style="width: 95%; ">
+                            style="width: 95%; margin-bottom: 5px; margin-top: 5px;">
 
                         <select class="hidden priority-${mapPriorityToFiveLevels(t.priority, color_length)} text-[#ecf0f1]"
                             id="prio_${t.goal_id}" onchange="updateLongTerm(${t.goal_id}, ${color_length})">
@@ -603,24 +618,7 @@
 
     </script>
 
-
-    <div class="btn-area">
-        {% if show_disable_button %}
-        <form action="/exec_rules/{{ selected_user_row_id }}"
-            onsubmit="return confirm('Are you sure you brush toilet, take out the garbage, and wash the dishes?');"
-            method="POST">
-            <button class="btn btn-failure" type="submit" title="Disable all rules after mandatory cleanup">🛑
-                Disable
-                All Rules</button>
-        </form>
-        {% else %}
-        <p class="note" style="color:#7f8c8d; background-color: transparent;">Not proper time to disable rules
-            (button
-            available between 4 PM and 6 PM)</p>
-        {% endif %}
-    </div>
-
-    <div class="card-header"><label>Configuration</label></div>
+    <div class="card-header">Configuration</div>
     <form method="POST">
         <label for="slot_type">Time Slot Length:</label>
         <select name="slot_type" id="slot_type" onchange="this.form.submit()">
@@ -635,12 +633,6 @@
             <option value="on" {% if is_holiday=='on' %}selected{% endif %}>ON</option>
         </select>
     </form>
-    <div class="bottom-bar">
-        <p style="margin: 0;">Daily To-Do Planner by zzuse</p>
-    </div>
 
-    {% if message %}
-    <div class="message">{{ message }}</div>
-    {% endif %}
-</nothingelse>
+</section>
 {% endblock %}

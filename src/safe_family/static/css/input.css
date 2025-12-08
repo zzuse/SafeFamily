@@ -1,25 +1,276 @@
 @import "tailwindcss";
 
+:root {
+    --bg-main: #0a192f;
+    /* Deep Blue Background */
+    --bg-secondary: #172a45;
+    /* Slightly Lighter Blue for sections */
+    --text-cyan: #64ffda;
+    /* Cyan for titles/low-attention text */
+    --text-light: #8892b0;
+    /* Light Blue for paragraph text */
+    --highlight-orange: #ff6b00;
+    /* Bright Orange for high attention */
+    --not-important: #2c3e50;
+}
+
+/* --- Global Resets --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
 body {
-    @apply m-0 bg-[#f4f7fa] text-[#333];
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text-light);
+    line-height: 1.6;
 }
 
-nav {
-    @apply bg-[#2c3e50] px-[40px] py-[15px] flex justify-end items-center;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 0 auto;
+    /* Centers the content */
 }
 
-nav a {
-    @apply text-[#ecf0f1] uppercase no-underline mr-[30px] font-semibold text-[1rem] [transition:color_0.3s_ease];
+.site-header {
+    /* Flexbox for layout: Logo on left, Nav on right */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 0;
+    margin-bottom: 20px;
 }
 
-nav a:hover {
-    @apply hover:text-[#3498db];
+.logo {
+    font-size: 32px;
+    font-weight: bold;
+    color: var(--text-cyan);
+    /* Cyan Logo */
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
-label {
-    @apply font-semibold text-[#333];
+.main-nav ul {
+    list-style: none;
+    /* Remove bullet points */
+    display: flex;
+    /* Horizontal layout for links */
+    gap: 30px;
+    /* Space between links */
+}
+
+.main-nav a {
+    text-decoration: none;
+    /* Remove underline */
+    color: var(--text-cyan);
+    /* Cyan Links */
+    font-weight: bold;
+    font-size: 16px;
+    text-transform: uppercase;
+    transition: color 0.3s ease;
+}
+
+/* Hover effect for navigation links */
+.main-nav a:hover {
+    color: var(--highlight-orange);
+    /* Turn Orange on hover */
+}
+
+/* Flash messages */
+.message {
+    color: #27ae60 !important;
+    /* Professional green for success message */
+    margin-top: 15px;
+    font-weight: 600;
+    padding: 10px;
+    background-color: #e6ffed;
+    border-radius: 4px;
+}
+
+.flash {
+    padding: 12px 20px;
+    border-radius: 8px;
+    /* Softer rounded corners */
+    margin-bottom: 15px;
+    /* Spacing between messages */
+    font-weight: 500;
+    border-left: 5px solid;
+    /* A solid line for better visual impact */
+}
+
+.info {
+    background-color: #e7f3fe;
+    color: #3178c6;
+    border-left-color: #3178c6;
+}
+
+.success {
+    background-color: #e6ffed;
+    color: #1a7e3c;
+    border-left-color: #1a7e3c;
+}
+
+.danger {
+    background-color: #ffe8e6;
+    color: #cc0000;
+    border-left-color: #cc0000;
+}
+
+.warning {
+    background-color: #fff8e1;
+    color: #b08d00;
+    border-left-color: #b08d00;
+}
+
+/* Flash message ends */
+
+.hero-placeholder {
+    width: 100%;
+    height: 400px;
+    background-color: #020c1b;
+    /* Very dark blue placeholder */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 30px;
+    border: 2px solid var(--bg-secondary);
+    /* Subtle border */
+}
+
+.content-grid {
+    display: grid;
+    /* Create three equal-width columns */
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+    padding-bottom: 50px;
+}
+
+@media (max-width: 768px) {
+    .site-header {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .content-grid {
+        grid-template-columns: 1fr;
+        /* Stack columns vertically */
+    }
+
+    .hero-placeholder {
+        height: 250px;
+    }
+}
+
+section {
+    color: var(--highlight-orange);
+}
+
+.top-bar {
+    margin-bottom: 30px;
+    display: flex;
+    flex-direction: column;
+    /* Stack elements vertically on small screens */
+    align-items: flex-start;
+    gap: 10px;
+    /* Space between the title and the note */
+}
+
+.note {
+    font-size: 0.9em;
+    /* Slightly darker gray for better readability */
+    padding: 10px;
+    color: var(--text-light);
+    background-color: var(--bg-secondary);
+    /* Light background for the note box */
+    border-radius: 12px;
+}
+
+.footer {
+    padding-top: 20px;
+    padding-bottom: 20px;
+    border-top: 1px solid;
+    text-align: center;
+}
+
+.card {
+    @apply p-[25px] rounded-[12px] mb-[25px] border-[1px] border-[solid] border-[#eef1f4];
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    background-color: var(--bg-secondary)
+}
+
+.card-header {
+    @apply text-[1.5rem] font-bold mt-[20px] mb-[20px] pb-[10px];
+    border-bottom: 2px solid #3498db;
+    color: var(--text-cyan);
+}
+
+.label {
+    @apply font-semibold mt-[20px];
+}
+
+/* table style */
+.table-modern {
+    @apply mx-[0] my-[20px] w-full rounded-[8px] border-collapse [border-spacing:0] text-[0.95rem];
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.table-modern th,
+.table-modern td {
+    @apply px-[15px] py-[12px] text-center rounded-[8px];
+}
+
+.table-modern th {
+    @apply px-[15px] py-3 font-semibold;
+    background-color: var(--bg-secondary)
+}
+
+.table-modern thead tr th {
+    @apply bg-[#ecf0f1] text-[#333] font-semibold border-b-[none] px-[10px] py-[8px];
+}
+
+.table-modern tr:nth-child(even) td {
+    @apply bg-[#43689B];
+}
+
+.table-modern tr:hover {
+    @apply hover:bg-[#1872F0];
+}
+
+.table-modern td {
+    @apply border-b-[1px_solid_#ecf0f1];
+    background-color: var(--bg-secondary);
+}
+
+.signup-button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    /* High Attention Orange Background */
+    background-color: var(--highlight-orange);
+    color: #ffffff;
+    /* White text for contrast */
+    font-size: 24px;
+    font-weight: bold;
+    text-decoration: none;
+    text-transform: uppercase;
+    border-radius: 4px;
+    /* Slight rounded corners */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    transition: background-color 0.3s ease, transform 0.1s ease;
+}
+
+.signup-button:hover {
+    background-color: #e65c00;
+    /* Darker Orange on hover */
+}
+
+.signup-button:active {
+    transform: scale(0.98);
+    /* Slight click effect */
 }
 
 .content-container {
@@ -39,21 +290,6 @@ label {
 
 .sidebar {
     @apply w-[300px] pt-[15px] flex-shrink-0 overflow-y-auto;
-}
-
-.card {
-    @apply bg-[white] p-[25px] rounded-[12px] mb-[25px] border-[1px] border-[solid] border-[#eef1f4];
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-.conf {
-    @apply p-[15px] rounded-[12px] mb-[10px] border-[1px] border-[solid] border-[#eef1f4];
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-.card-header {
-    @apply text-[1.4rem] font-bold text-[#2c3e50] mb-[20px] pb-[10px];
-    border-bottom: 2px solid #3498db;
 }
 
 .date-selector,
@@ -160,44 +396,12 @@ select:focus {
     @apply p-2 bg-green-500 hover:bg-green-600 uppercase font-medium rounded-lg shadow-md hover:shadow-lg transition-all flex-col items-center justify-center gap-2 whitespace-nowrap;
 }
 
-nothingelse {
-    color: #f88d0a;
-}
 
 td form button {
     @apply bg-[#e74c3c] text-[white] px-[10px] py-[5px] text-[0.9em] uppercase;
 }
 
-.table-modern {
-    @apply mx-[0] my-[20px] w-full rounded-[8px] border-collapse [border-spacing:0] text-[0.95rem];
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
 
-.table-modern th,
-.table-modern td {
-    @apply px-[15px] py-[12px] rounded-[8px];
-    border: 1px solid #ecf0f1;
-}
-
-.table-modern th {
-    @apply px-[15px] py-3 bg-[#34495e] text-[white] text-center font-semibold;
-}
-
-.table-modern thead tr th {
-    @apply bg-[#ecf0f1] text-[#333] font-semibold border-b-[none] px-[10px] py-[8px];
-}
-
-.table-modern tr:nth-child(even) td {
-    @apply bg-[#f9f9f9];
-}
-
-.table-modern tr:hover {
-    @apply hover:bg-[#f0f0ff];
-}
-
-.table-modern td {
-    @apply border-b-[1px_solid_#ecf0f1] bg-[white];
-}
 
 .table-action-delete {
     @apply bg-none border-[none] text-[#e74c3c] font-semibold cursor-pointer p-[5px];
@@ -208,81 +412,6 @@ td form button {
 }
 
 /* Top and Bottom Bars */
-
-.top-bar {
-    margin-bottom: 30px;
-    display: flex;
-    flex-direction: column;
-    /* Stack elements vertically on small screens */
-    align-items: flex-start;
-    gap: 10px;
-    /* Space between the title and the note */
-}
-
-/* General Message */
-.message {
-    color: #27ae60 !important;
-    /* Professional green for success message */
-    margin-top: 15px;
-    font-weight: 600;
-    padding: 10px;
-    background-color: #e6ffed;
-    border-radius: 4px;
-}
-
-.note {
-    font-size: 0.9em;
-    color: #7f8c8d !important;
-    /* Slightly darker gray for better readability */
-    padding: 10px;
-    background-color: #ecf0f1;
-    /* Light background for the note box */
-    border-radius: 6px;
-}
-
-.bottom-bar {
-    margin-top: 60px;
-    padding-top: 20px;
-    border-top: 1px solid #ddd;
-    text-align: center;
-    color: #7f8c8d;
-}
-
-/* Flash Messages and Block Content */
-.flash {
-    padding: 12px 20px;
-    border-radius: 8px;
-    /* Softer rounded corners */
-    margin-bottom: 15px;
-    /* Spacing between messages */
-    font-weight: 500;
-    border-left: 5px solid;
-    /* A solid line for better visual impact */
-}
-
-.info {
-    background-color: #e7f3fe;
-    color: #3178c6;
-    border-left-color: #3178c6;
-}
-
-.success {
-    background-color: #e6ffed;
-    color: #1a7e3c;
-    border-left-color: #1a7e3c;
-}
-
-.danger {
-    background-color: #ffe8e6;
-    color: #cc0000;
-    border-left-color: #cc0000;
-}
-
-.warning {
-    background-color: #fff8e1;
-    color: #b08d00;
-    border-left-color: #b08d00;
-}
 
 .one {
     display: box;
@@ -350,7 +479,7 @@ td form button {
     position: absolute;
     right: 0;
     top: 25px;
-    background: white;
+    background: var(--bg-secondary);
     border: 1px solid #ccc;
     border-radius: 6px;
     padding: 5px 0;
@@ -365,18 +494,17 @@ td form button {
 }
 
 .menu-item:hover {
-    background: #eee;
+    background: #100a0a;
 }
 
 .help-btn {
     cursor: pointer;
     font-size: 14px;
     margin-left: 6px;
-    color: #050000;
 }
 
 .help-btn:hover {
-    color: #000;
+    background-color: transparent;
 }
 
 .help-popup {

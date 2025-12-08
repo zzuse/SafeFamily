@@ -1,8 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <title>{{ title or "Dashboard" }}</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title or "All in AI" }}</title>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -11,25 +13,32 @@
 </head>
 
 <body>
-    <nav>
-        {% if session.access_token %}
-        <a href="{{ url_for('suspicious.view_suspicious') }}">HOME</a>
-        <a href="{{ url_for('todo.todo_page') }}">TODO</a>
-        <a href="{{ url_for('auth.session_logout') }}">Logout</a>
-        {% else %}
-        <a href="{{ url_for('auth.show_login_form') }}">Login</a>
-        <a href="{{ url_for('auth.session_register') }}">Register</a>
-        {% endif %}
-    </nav>
-
-    <div class="content-container">
+    <div class="container">
+        <header class="site-header">
+            <div class="logo">ZZUSE™</div>
+            <nav class="main-nav">
+                <ul>
+                    {% if session.access_token %}
+                    <li><a href="{{ url_for('suspicious.view_suspicious') }}">HOME</a></li>
+                    <li><a href="{{ url_for('todo.todo_page') }}">TODO</a></li>
+                    <li><a href="{{ url_for('auth.session_logout') }}">Logout</a></li>
+                    {% else %}
+                    <li><a href="{{ url_for('auth.show_login_form') }}">Login</a></li>
+                    <li><a href="{{ url_for('auth.session_register') }}">Register</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </header>
         {% for category, message in get_flashed_messages(with_categories=True) %}
         <div class="flash {{ category }}">{{ message }}</div>
         {% endfor %}
 
         {% block content %}{% endblock %}
-    </div>
 
+        <div class="footer">
+            <p style="margin: 0;">Copyright 2025-2026 All rights reserved | ❤️ by ZZUSE™</p>
+        </div>
+    </div>
 </body>
 
 </html>
