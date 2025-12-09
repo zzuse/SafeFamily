@@ -163,7 +163,7 @@ def session_register():
             return render_template("register.html")
         flash("Registration successful! Please log in.", "success")
         return redirect("/auth/login-ui")
-    return render_template("register.html")
+    return render_template("/auth/register.html")
 
 
 @auth_bp.post("/session-login")

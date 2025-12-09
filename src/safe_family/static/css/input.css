@@ -164,7 +164,7 @@ body {
 } */
 
 section {
-    color: var(--highlight-orange);
+    color: var(--text-light);
 }
 
 .top-bar {
@@ -227,15 +227,15 @@ section {
 }
 
 .table-modern thead tr th {
-    @apply bg-[#ecf0f1] text-[#333] font-semibold border-b-[none] px-[10px] py-[8px];
+    @apply font-semibold border-b-[none] px-[10px] py-[8px];
 }
 
 .table-modern tr:nth-child(even) td {
-    @apply bg-[#43689B];
+    @apply bg-purple-500/10;
 }
 
 .table-modern tr:hover {
-    @apply hover:bg-[#1872F0];
+    @apply hover:bg-green-500/10;
 }
 
 .table-modern td {
@@ -297,11 +297,11 @@ section {
 }
 
 #longterm-task-text {
-    @apply w-full h-10 px-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all shadow-sm;
+    @apply w-full h-10 px-3 rounded-lg border-[1px] focus:outline-none focus:ring-1 focus:ring-green-300 focus:border-transparent transition-all shadow-sm;
 }
 
 #longterm-priority {
-    @apply w-full h-10 pl-3 pr-8 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent shadow-sm appearance-none cursor-pointer;
+    @apply w-full h-10 pl-3 rounded-lg border-[1px] focus:outline-none focus:ring-1 focus:ring-green-300 focus:border-transparent shadow-sm appearance-none cursor-pointer;
 }
 
 input[type="email"],
@@ -311,7 +311,7 @@ input[type="password"],
 input[type="text"],
 textarea,
 select {
-    @apply px-[12px] py-[8px] border-[1px] border-[solid] border-[#bdc3c7] rounded-[4px] text-[1rem] [transition:border-color_0.3s];
+    @apply px-[12px] py-[8px] border-[1px] border-[solid] rounded-[4px] text-[1rem] [transition:border-color_0.3s];
 }
 
 input[type="email"]:focus,
@@ -392,8 +392,8 @@ select:focus {
 }
 
 .timer-btn {
-    @apply p-2 hover:bg-orange-600 uppercase font-medium rounded-lg shadow-md hover:shadow-lg transition-all flex-col items-center justify-center gap-2 whitespace-nowrap;
-    background-color: var(--highlight-orange)
+    @apply p-2 hover:bg-purple-500/10 uppercase font-medium rounded-lg shadow-md hover:shadow-lg transition-all flex-col items-center justify-center gap-2 whitespace-nowrap;
+    background-color: var(--bg-secondary)
 }
 
 
@@ -436,30 +436,25 @@ td form button {
 
 /* High = Red */
 .priority-1 {
-    background: #2C1212;
-    color: #EF5350;
+    @apply bg-red-500/10 text-red-300;
 }
 
 .priority-2 {
-    background: #3E1F0A;
-    color: #FF9800;
+    @apply bg-orange-500/10 text-orange-300;
 }
 
 /* Medium = Orange */
 .priority-3 {
-    background: #332805;
-    color: #FDD835;
+    @apply bg-yellow-400/10 text-yellow-200;
 }
 
 .priority-4 {
-    background: #0D2B14;
-    color: #66BB6A;
+    @apply bg-green-500/10 text-green-300;
 }
 
 /* Low = Green */
 .priority-5 {
-    background: #0D2145;
-    color: #42A5F5;
+    @apply bg-blue-600/20 text-blue-300;
 }
 
 .menu-container {
