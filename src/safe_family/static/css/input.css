@@ -434,7 +434,7 @@ td form button {
     opacity: 0.6;
 }
 
-/* High = Red */
+/* Priority Colors */
 .priority-1 {
     @apply bg-red-500/10 text-red-300;
 }
@@ -457,6 +457,7 @@ td form button {
     @apply bg-blue-600/20 text-blue-300;
 }
 
+/* Three dot popup menus */
 .menu-container {
     position: relative;
     display: inline-block;
@@ -492,6 +493,7 @@ td form button {
     background: #100a0a;
 }
 
+/* Helper popup  */
 .help-btn {
     cursor: pointer;
     font-size: 14px;
@@ -511,4 +513,18 @@ td form button {
     max-width: 240px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
     z-index: 50;
+}
+
+/* I want to keep this cause it makes whole page not editable  */
+#mobile-editor-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
 }

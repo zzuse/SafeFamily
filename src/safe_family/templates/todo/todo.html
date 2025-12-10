@@ -146,7 +146,7 @@
                     <button type="submit"
                         class="w-1/5 h-10 px-6 bg-[#172a45] hover:bg-purple-500/10 text-purple-300 uppercase font-small rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 whitespace-nowrap">
                         <span>🏆</span>
-                        <span>Add Task</span>
+                        <span>Add</span>
                     </button>
                 </form>
                 <div class="grid grid-cols-41 text-sm font-bold border-b">
@@ -251,6 +251,7 @@
 
         new Sortable(document.getElementById("longterm-list"), {
             animation: 150,
+            delay: 400,
             handle: ".drag-handle",
             onEnd: function () {
                 saveNewOrder();
@@ -426,7 +427,7 @@
                 li.innerHTML = `
                 <div class="grid grid-cols-5">
                     <div class="col-span-3 justify-between items-center text-center">
-                        <input type="checkbox" ${t.completed ? "checked" : ""} onchange="updateLongTerm(${t.goal_id}, ${color_length})">
+                        <input type="checkbox" id="check_${t.goal_id}" ${t.completed ? "checked" : ""} onchange="updateLongTerm(${t.goal_id}, ${color_length})">
 
                         <input type="text" id="task_${t.goal_id}" value="${t.task}" class="drag-handle ${t.completed ? "done" : ""}
                             text-[#ecf0f1] priority-${mapPriorityToFiveLevels(t.priority, color_length)}"
@@ -635,6 +636,5 @@
             <option value="on" {% if is_holiday=='on' %}selected{% endif %}>ON</option>
         </select>
     </form>
-
 </section>
 {% endblock %}
