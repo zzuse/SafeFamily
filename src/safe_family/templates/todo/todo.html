@@ -10,8 +10,8 @@
             planned homework, and (<b>MATH</b>, <b>PIANO</b>, and <b>BOOKS</b> are
             mandatory
             every day)</div>
+        {% if role == 'admin' %}
         <div class="note font-semibold">
-            {% if role == 'admin' %}
             <form method="get" action="/todo">
                 <label for="view_user">View User:</label>
                 <select name="view_user" id="view_user" onchange="this.form.submit()">
@@ -20,8 +20,8 @@
                     {% endfor %}
                 </select>
             </form>
-            {% endif %}
         </div>
+        {% endif %}
     </div>
 
     <div class="today-section">
@@ -100,7 +100,8 @@
             <form action="/exec_rules/{{ selected_user_row_id }}"
                 onsubmit="return confirm('Are you sure you brush toilet, take out the garbage, and wash the dishes?');"
                 method="POST">
-                <button class="btn btn-failure" type="submit" title="Disable all rules after mandatory cleanup">🛑
+                <button class="btn border bg-orange-500/10 text-[#ff6b00]" type="submit"
+                    title="Disable all rules after mandatory cleanup">🛑
                     Disable
                     All Rules</button>
             </form>

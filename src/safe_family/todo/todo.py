@@ -12,7 +12,7 @@ from src.safe_family.notifications.notifier import (
     send_discord_notification,
     send_email_notification,
 )
-from src.safe_family.rules.scheduler import RULE_FUNCTIONS
+from src.safe_family.rules.scheduler import RULE_FUNCTIONS, load_schedules
 from src.safe_family.utils.constants import Saturday
 
 logger = logging.getLogger(__name__)
@@ -239,7 +239,6 @@ def exec_rules(selected_user_id: str):
     )
     row = cur.fetchone()
     rule_name = row[0] if row else None
-    conn.close()
 
     if not rule_name:
         flash("No rule assigned to the user.", "warning")
@@ -254,6 +253,15 @@ def exec_rules(selected_user_id: str):
             flash(f"Error executing {rule_name}: {e}", "danger")
     else:
         flash(f"Rule {rule_name} not found in RULE_FUNCTIONS.", "danger")
+
+    # For pre-configured rule only, I want to make the network rule back in one hour later
+    if rule_name == "Rule disable all":
+        cur.execute(
+            "UPDATE schedule_rules SET start_time = NOW() + INTERVAL '1 hour' WHERE id = 15",
+        )
+        conn.commit()
+        load_schedules()
+    conn.close()
     return redirect(url_for("todo.todo_page"))
 
 
