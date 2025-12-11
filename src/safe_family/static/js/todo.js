@@ -256,8 +256,8 @@ async function loadLongTerm() {
         li.setAttribute("data-id", t.goal_id);
 
         li.innerHTML = `
-                <div class="grid grid-cols-5">
-                    <div class="col-span-3 justify-between items-center text-center">
+                <div class="grid grid-cols-46">
+                    <div class="col-span-24 justify-between items-center text-center">
                         <input type="checkbox" id="check_${t.goal_id}" ${t.completed ? "checked" : ""} onchange="updateLongTerm(${t.goal_id}, ${color_length})">
 
                         <input type="text" id="task_${t.goal_id}" value="${t.task}" class="drag-handle ${t.completed ? "done" : ""}
@@ -273,17 +273,17 @@ async function loadLongTerm() {
         ).join("")}
                         </select>
                     </div>
-                    <div class="col-span-2 flex justify-between items-center text-center">
-                        <span class="short-date w-1/3" data-due="${t.due_date || ''}"></span>
+                    <div class="col-span-22 flex justify-between items-center text-center">
+                        <span class="short-date w-3/11" data-due="${t.due_date || ''}"></span>
 
-                        <span class="time-spent w-1/3 min-w-10" id="time-${t.goal_id}">
+                        <span class="time-spent w-3/11 min-w-10" id="time-${t.goal_id}">
                             ${formatSeconds(t.time_spent)}
                         </span>
 
-                        <button class="timer-btn w-1/3 min-w-20 ${t.is_tracking ? "stop text-purple-300" : "start text-green-300"}">
+                        <button class="timer-btn w-4/11 min-w-20 ${t.is_tracking ? "stop text-purple-300" : "start text-green-300"}">
                             ${t.is_tracking ? "⏸ Pause" : "▶ Start"}
                         </button>
-                        <div class="menu-container">
+                        <div class="menu-container w-1/11">
                             <button class="menu-btn text-gray-400 hover:text-gray-600 transition-colors">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis-vertical w-5 h-5" aria-hidden="true">
                                     <circle cx="12" cy="12" r="1"></circle>
