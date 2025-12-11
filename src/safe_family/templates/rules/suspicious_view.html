@@ -3,19 +3,23 @@
 <div class="dashboard-layout">
     <div class="main-content">
         <div class="card">
-            <div class="card-header mt-[20px]">
+            <div class="card-header">
                 Suspicious Logs for {{ date }}
             </div>
 
-            <div class="btn-group input-group">
-                <form method="get" action="/suspicious" class="date-selector">
-                    <label for="date-select">Select date:</label>
-                    <input type="date" style="min-width: 150px;" id="date-select" name="date" value="{{ date }}">
-                    <button class="btn btn-secondary" type="submit">
-                        Go
-                    </button>
+            <div class="btn-group">
+                <form method="get" action="/suspicious" class="input-group gap-3">
+                    <input type="text" id="date-select" name="date" value="{{ date }}" />
+                    <button type="submit" class="btn btn-secondary"> Go </button>
                 </form>
             </div>
+            <script>
+                flatpickr("#date-select", {
+                    altInput: true,
+                    altFormat: "F j, Y",
+                    dateFormat: "Y-m-d",
+                });
+            </script>
 
             <table class="table-modern">
                 <thead>
@@ -33,7 +37,7 @@
                         </td>
                         <td>{{ row[2] }}</td>
                         <td>
-                            <form method="post" action="/tag_block">
+                            <form method="post" action="/tag_block" class="flex gap-2">
                                 <input type="hidden" name="qh" value="{{ row[1] }}">
                                 <input type="hidden" name="date" value="{{ date }}">
                                 <select name="type">
@@ -41,7 +45,7 @@
                                     <option value="{{ t }}">{{ t }} </option>
                                     {% endfor %}
                                 </select>
-                                <button class="btn" type="submit">
+                                <button class="btn btn-primary" type="submit">
                                     Tag
                                 </button>
                             </form>
@@ -51,10 +55,10 @@
                 </tbody>
             </table>
 
-            <div class="link-active">
+            <div class="link-active flex items-center gap-2">
                 {% if page > 1 %}
                 <a class="btn" style="color: white; background-color: #3498db;"
-                    href="?date={{ date }}&page={{ page - 1 }}">Previous</a>
+                    href="?date={{ date }}&page={{ page - 1 }}">Prev</a>
                 {% endif %}
                 <span>Page {{ page }}</span>
                 {% if (page * limit) < total %} <a class="btn" style="color: white; background-color: #3498db;"
@@ -92,14 +96,14 @@
                                 <input type="text" name="qh" value="{{ row[1] }}">
                             </td>
                             <td>
-                                <select name="type">
+                                <select name="type" class="h-10">
                                     {% for t in block_types %}
                                     <option value="{{ t }}" {% if t==row[2] %}selected{% endif %}>{{ t }}
                                     </option>
                                     {% endfor %}
                                 </select>
                             </td>
-                            <td><button class="btn btn-danger"><a
+                            <td><button class="btn btn-secondary"><a
                                         href="/delete_block/{{ row[0] }}?date={{ date }}">Delete</a></button>
                             </td>
                             <td>
@@ -110,7 +114,7 @@
                     {% endfor %}
                 </tbody>
             </table>
-            <div class="link-active">
+            <div class="link-active flex items-center gap-2">
                 {% if block_page > 1 %}
                 <a href="?date={{ date }}&page={{ page }}&block_page={{ block_page - 1 }}&rule_page={{ rule_page }}"
                     class="btn" style="color: white; background-color: #3498db;">Prev</a>
@@ -134,7 +138,7 @@
             <div class="btn-group">
                 <form action="/rules_toggle/enable_all">
                     <button type="submit" class="btn btn-primary">
-                        Enable All Rules(Except AI, Scratch and Unity)
+                        Enable All Rules( Except AI, Scratch and Unity)
                     </button>
                 </form>
                 <form action="/rules_toggle/disable_all"
@@ -189,14 +193,14 @@
 
         <div class="card">
             <div class="card-header">Add Block List</div>
-            <form method="post" action="/add_block">
-                <div class="w-full mb-[20px]">
+            <form method="post" action="/add_block" class="flex flex-col gap-3">
+                <div class="w-full">
                     <textarea name="qh" id="qh" placeholder="Add one block per line..." type="text" class="w-full"
                         required></textarea>
                 </div>
-                <div class="mb-[10px]">
+                <div>
                     <label for="block_type">Type:</label>
-                    <select name="type" id="block_type">
+                    <select class="h-10" name="type" id="block_type">
                         {% for t in block_types %}
                         <option value=" {{ t }}">{{ t }}
                         </option>
@@ -209,9 +213,9 @@
 
         <div class="card">
             <div class="card-header">Add New Rules</div>
-            <form method="post" action="/update_filter_rule">
+            <form method="post" action="/update_filter_rule" class="flex flex-col gap-3">
                 <input type="hidden" name="date" value="{{ date }}">
-                <textarea name="rule" placeholder="Add one rule per line..." class="w-full mb-[20px]"></textarea>
+                <textarea name="rule" placeholder="Add one rule per line..."></textarea>
                 <button type="submit" class="btn btn-primary">
                     Add Rules
                 </button>
@@ -243,7 +247,7 @@
                 </tbody>
             </table>
 
-            <div class="link-active">
+            <div class="link-active flex items-center gap-2 ">
                 {% if rule_page > 1 %}
                 <a class="btn" style="color: white; background-color: #3498db;"
                     href="?date={{ date }}&page={{ page }}&rule_page={{ rule_page - 1 }}&block_page={{ block_page }}">

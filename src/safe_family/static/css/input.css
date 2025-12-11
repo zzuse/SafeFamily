@@ -284,16 +284,11 @@ section {
 }
 
 .main-content {
-    @apply flex-grow min-w-[0] pt-[15px] overflow-y-auto overflow-x-auto;
+    @apply flex-grow min-w-[40] pt-[15px] overflow-y-auto;
 }
 
 .sidebar {
-    @apply w-[300px] pt-[15px] flex-shrink-0 overflow-y-auto;
-}
-
-.date-selector,
-.search-input-group {
-    @apply flex gap-[10px] items-center mb-[20px];
+    @apply min-w-[30] pt-[15px] overflow-y-auto;
 }
 
 #longterm-task-text {
@@ -330,14 +325,11 @@ select:focus {
 .input-group {
     display: flex;
     flex-direction: column;
-    margin: 12px 0;
     font-size: 0.95rem;
 }
 
 .input-group label {
-    margin-bottom: 6px;
     font-weight: 500;
-    color: #374151;
 }
 
 .input-group input {
@@ -408,7 +400,7 @@ td form button {
 }
 
 .link-active {
-    @apply text-[#7f8c8d] text-[0.85rem] mt-[15px];
+    @apply text-[#7f8c8d] text-[0.85rem];
 }
 
 /* Top and Bottom Bars */

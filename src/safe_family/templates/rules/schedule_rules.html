@@ -2,7 +2,7 @@
 {% block content %}
 
 <div class="card">
-    <div class="card-header mt-[20px]">Rule Management</div>
+    <div class="card-header">Rule Management</div>
     <table class="table-modern">
         <tr>
             <th>ID</th>
@@ -21,7 +21,7 @@
             <td>{{ rule[3] or "-" }}</td>
 
             <td>
-                <form method="POST" class="input-group">
+                <form method="POST" class="input-group flex gap-2">
                     <input type="hidden" name="action" value="update">
                     <input type="hidden" name="rule_id" value="{{ rule[0] }}">
                     <input type="time" name="start_time" value="{{ rule[2] }}">
@@ -71,8 +71,8 @@
         {% endfor %}
     </table>
 
-    <div class="card-header mt-[20px]">Add New Schedule Rule</div>
-    <form method="POST" class="input-group">
+    <div class="card-header">Add New Schedule Rule</div>
+    <form method="POST" class="input-group flex gap-2">
         <input type="hidden" name="action" value="add">
         <label for="rule_name">Rule Name:</label>
         <select name="rule_name" id="rule_name">
@@ -89,7 +89,7 @@
 </div>
 
 <div class="card">
-    <div class="card-header mt-[20px]">Assign Rules to Users</div>
+    <div class="card-header">Assign Rules to Users</div>
     <form method="POST">
         <input type="hidden" name="action" value="assign">
         <table class="table-modern">
@@ -112,7 +112,7 @@
             </tr>
             {% endfor %}
         </table>
-        <button class="btn btn-primary" type="submit">Assignment Rule</button>
+        <button class="btn btn-danger" type="submit">Assignment Rule</button>
     </form>
 </div>
 
