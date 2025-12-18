@@ -1,0 +1,28 @@
+#!/bin/sh /etc/rc.common
+# OpenWRT Service Script for Log Parser
+START=99
+STOP=10
+
+SERVICE_NAME="log_poster"
+SCRIPT="/root/incr_log.sh"
+PID_FILE="/var/run/$SERVICE_NAME.pid"
+
+start() {
+    echo "Starting $SERVICE_NAME..."
+    $SCRIPT &
+    echo $! > $PID_FILE
+}
+
+stop() {
+    echo "Stopping $SERVICE_NAME..."
+    if [ -f "$PID_FILE" ]; then
+        kill $(cat $PID_FILE)
+        rm -f $PID_FILE
+    fi
+}
+
+restart() {
+    stop
+    sleep 1
+    start
+}

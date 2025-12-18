@@ -131,7 +131,7 @@ def log_analysis(start_time: datetime, end_time: datetime):
     )
 
     # Step 1: Fetch yesterday's logs
-    query = "SELECT qh FROM logs WHERE timestamp >= %s AND timestamp < %s AND ip in ('10.0.0.142','10.0.0.118','10.0.0.223') "
+    query = "SELECT qh FROM logs WHERE timestamp >= %s AND timestamp < %s "
     df = pd.read_sql(query, conn, params=(start_time, end_time))
 
     # Step 2: Count occurrences of each qh
