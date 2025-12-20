@@ -9,6 +9,10 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from src.safe_family.auto_git.auto_git import rule_auto_commit
 from src.safe_family.core.auth import admin_required
 from src.safe_family.core.extensions import get_db_connection, local_tz
+from src.safe_family.urls.analyzer import (
+    get_time_range,
+    log_analysis,
+)
 from src.safe_family.urls.blocker import (
     rule_allow_traffic_all,
     rule_disable_all,
@@ -76,6 +80,13 @@ def load_schedules():
         "cron",
         hour=2,
         minute=10,
+        day_of_week="*",
+    )
+    scheduler.add_job(
+        analyze_logs,
+        "cron",
+        hour=0,
+        minute=20,
         day_of_week="*",
     )
 
@@ -271,3 +282,14 @@ def archive_completed_tasks():
             logger.info("move to history not success: %s", str(e))
 
     conn.close()
+
+
+def analyze_logs():
+    """Analyze logs."""
+    now = datetime.now(local_tz)
+    start_time, end_time = get_time_range(
+        range="yesterday",
+        custom=None,
+        now=now,
+    )
+    log_analysis(start_time, end_time)

@@ -22,3 +22,10 @@ description = "A parental control application to help families manage and monito
 authors = [{ name = "zzuse", email = "zzuseme@gmail.com" }]
 license = "MIT"
 license-files = ["LICEN[CS]E.*"]
+
+[project.scripts]
+analyze-urls = "safe_family.cli.analyze:main"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"

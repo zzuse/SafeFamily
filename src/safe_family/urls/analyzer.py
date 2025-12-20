@@ -73,7 +73,8 @@ def get_time_range(
         now = datetime.now(local_tz)
 
     if range and custom:
-        raise ValueError("Cannot specify both --range and --custom")
+        msg = "Cannot specify both range and custom"
+        raise ValueError(msg)
 
     if range == "yesterday":
         start_time = (now - timedelta(days=1)).replace(
@@ -94,18 +95,22 @@ def get_time_range(
 
     elif custom:
         if len(custom) != 2:
-            raise ValueError("Custom range must provide exactly two timestamps")
+            msg = "Custom range must provide exactly two timestamps"
+            raise ValueError(msg)
         try:
             start_time = datetime.strptime(custom[0], "%Y-%m-%dT%H:%M:%S")
             end_time = datetime.strptime(custom[1], "%Y-%m-%dT%H:%M:%S")
         except ValueError as e:
-            raise ValueError(f"Invalid datetime format. Use 'YYYY-MM-DDTHH:MM:SS': {e}")
+            msg = "Invalid datetime format. Use 'YYYY-MM-DDTHH:MM:SS'"
+            raise ValueError(msg, e) from e
 
     else:
-        raise ValueError("Must specify either --range or --custom")
+        msg = "Must specify either range or custom"
+        raise ValueError(msg)
 
     if start_time >= end_time:
-        raise ValueError("start_time must be earlier than end_time")
+        msg = "start_time must be earlier than end_time"
+        raise ValueError(msg)
 
     return start_time, end_time
 
@@ -150,7 +155,7 @@ def log_analysis(start_time: datetime, end_time: datetime):
     filter_patterns = [row[0] for row in cur.fetchall()]
 
     # Function to check if a qh matches any pattern in filter_rule
-    def is_matched(qh_value) -> bool:
+    def is_matched(qh_value: str) -> bool:
         return any(fnmatch.fnmatch(qh_value, pattern) for pattern in filter_patterns)
 
     # Step 5: After filter, identify suspicious entries

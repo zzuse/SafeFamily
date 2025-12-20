@@ -4,7 +4,7 @@ START=99
 STOP=10
 
 SERVICE_NAME="log_poster"
-SCRIPT="/root/incr_log.sh"
+SCRIPT="/root/log_poster.sh"
 PID_FILE="/var/run/$SERVICE_NAME.pid"
 
 start() {

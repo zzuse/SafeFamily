@@ -1,9 +1,12 @@
-#!/usr/bin/env python3
-"""Convenience script to run URL analyzer."""
+#!/usr/bin/env python
+"""Convenience script to run URL analyzer.
+
+e.g.: python -m safe_family.cli.analyze --range last_5min
+"""
 
 import sys
 
-from safe_family.cli.analyze import main
+from src.safe_family.cli.analyze import main
 
 if __name__ == "__main__":
     sys.exit(main())
