@@ -19,9 +19,13 @@ logger = logging.getLogger(__name__)
 todo_bp = Blueprint("todo", __name__)
 
 
-def generate_time_slots(slot_type: str, holiday: str) -> list[str]:
+def generate_time_slots(
+    slot_type: str,
+    holiday: str,
+    today: datetime | None = None,
+) -> list[str]:
     """Return list of time slots based on weekday/weekend and duration."""
-    today = datetime.now(local_tz).today()
+    today = today or datetime.now(local_tz)
     is_holiday = holiday == "on"
     is_weekend = today.weekday() >= Saturday
 
