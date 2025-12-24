@@ -24,3 +24,13 @@ def store_sum():
     This route redirects users to the store_sum page.
     """
     return render_template("miscellaneous/store_sum.html")
+
+
+@root_bp.route("/ninja")
+@login_required
+def ninja_nightmare():
+    """Redirect to the store_sum page.
+
+    This route redirects users to the store_sum page.
+    """
+    return render_template("miscellaneous/ninja_nightmare.html")

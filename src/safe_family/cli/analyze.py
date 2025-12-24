@@ -1,5 +1,5 @@
 # CLI wrapper with __main__
-# src/my_project/cli/analyze.py
+# python -m safe_family.cli.analyze --range last_5min
 """CLI for URL analysis."""
 
 import argparse
