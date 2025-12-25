@@ -52,6 +52,10 @@ def app(monkeypatch):
     from src.safe_family import core
 
     monkeypatch.setattr(core.extensions, "get_db_connection", lambda: fake_conn)
+    monkeypatch.setattr(
+        "config.settings.settings.SQLALCHEMY_DATABASE_URI",
+        "sqlite:///:memory:",
+    )
     flask_app = create_app()
     with flask_app.app_context():
         yield flask_app
