@@ -58,6 +58,204 @@ document.querySelectorAll('.complete-checkbox').forEach(cb => {
     });
 });
 
+function parseSlotEndTime(timeSlot) {
+    if (!timeSlot) return null;
+    const parts = timeSlot.split("-");
+    if (parts.length < 2) return null;
+    const end = parts[1].trim();
+    const [hours, minutes] = end.split(":").map(Number);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+    const endTime = new Date();
+    endTime.setHours(hours, minutes, 0, 0);
+    return endTime;
+}
+
+function parseSlotStartTime(timeSlot) {
+    if (!timeSlot) return null;
+    const parts = timeSlot.split("-");
+    if (parts.length < 2) return null;
+    const start = parts[0].trim();
+    const [hours, minutes] = start.split(":").map(Number);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+    const startTime = new Date();
+    startTime.setHours(hours, minutes, 0, 0);
+    return startTime;
+}
+
+function updateSlotProgress() {
+    const now = new Date();
+    document.querySelectorAll(".time-slot-cell").forEach(cell => {
+        const timeSlot = cell.dataset.timeSlot;
+        const startTime = parseSlotStartTime(timeSlot);
+        const endTime = parseSlotEndTime(timeSlot);
+        if (!startTime || !endTime) return;
+
+        const total = endTime - startTime;
+        if (total <= 0) return;
+
+        let progress = (now - startTime) / total;
+        if (progress < 0) progress = 0;
+        if (progress > 1) progress = 1;
+        cell.style.setProperty("--slot-fill", `${Math.round(progress * 100)}%`);
+        cell.dataset.slotProgress = progress.toFixed(3);
+    });
+}
+
+function normalizeStatusLabel(status) {
+    if (!status) return "";
+    return status.replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function setupTaskFeedbackModal() {
+    const modal = document.getElementById("task-feedback-modal");
+    if (!modal) return;
+
+    const titleTime = modal.querySelector(".task-feedback-time");
+    const titleName = modal.querySelector(".task-feedback-name");
+    const statusButtons = modal.querySelectorAll(".feedback-option");
+    const laterButton = modal.querySelector(".feedback-later");
+    const queue = [];
+    const queuedIds = new Set();
+    let activeItem = null;
+
+    function collectOverdueTasks() {
+        const now = new Date();
+        document.querySelectorAll(".todo-row").forEach(row => {
+            const timeSlot = row.dataset.timeSlot;
+            const status = (row.dataset.status || "").trim();
+            const completed = row.dataset.completed === "true";
+            if (!timeSlot || status || completed) return;
+            const endTime = parseSlotEndTime(timeSlot);
+            if (!endTime) return;
+            if (now >= endTime && !queuedIds.has(row.dataset.todoId)) {
+                queue.push({
+                    id: row.dataset.todoId,
+                    timeSlot,
+                    task: row.dataset.task || "",
+                });
+                queuedIds.add(row.dataset.todoId);
+            }
+        });
+    }
+
+    function openModal(item) {
+        activeItem = item;
+        titleTime.textContent = item.timeSlot;
+        titleName.textContent = item.task ? `- ${item.task}` : "";
+        modal.classList.add("active");
+        modal.setAttribute("aria-hidden", "false");
+    }
+
+    function closeModal() {
+        modal.classList.remove("active");
+        modal.setAttribute("aria-hidden", "true");
+        activeItem = null;
+    }
+
+    function showNext() {
+        if (activeItem || queue.length === 0) return;
+        openModal(queue.shift());
+    }
+
+    function updateRowStatus(todoId, status) {
+        const row = document.querySelector(`.todo-row[data-todo-id="${todoId}"]`);
+        if (!row) return;
+        queuedIds.delete(todoId);
+        const statusEl = row.querySelector(".task-status");
+        if (statusEl) {
+            statusEl.dataset.status = status;
+            statusEl.textContent = normalizeStatusLabel(status);
+        }
+        row.dataset.status = status;
+        const checkbox = row.querySelector(".complete-checkbox");
+        const taskInput = row.querySelector(`input[name="task_${todoId}"]`);
+        const isDone = status === "done";
+        row.dataset.completed = isDone ? "true" : "false";
+        if (checkbox) checkbox.checked = isDone;
+        if (taskInput) {
+            taskInput.classList.toggle("done", isDone);
+        }
+    }
+
+    statusButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+            if (!activeItem) return;
+            const status = btn.dataset.status;
+            fetch("/todo/mark_status", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    id: activeItem.id,
+                    status,
+                })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        updateRowStatus(activeItem.id, status);
+                        closeModal();
+                        showNext();
+                    } else {
+                        alert("Status update failed.");
+                    }
+                })
+                .catch(err => {
+                    console.error("Status update error:", err);
+                    alert("Error updating status.");
+                });
+        });
+    });
+
+    if (laterButton) {
+        laterButton.addEventListener("click", () => {
+            if (!activeItem) {
+                closeModal();
+                return;
+            }
+
+            const resumeItem = { ...activeItem };
+            const taskInput = document.querySelector(`input[name="task_${resumeItem.id}"]`);
+            closeModal();
+
+            if (!taskInput) {
+                openModal(resumeItem);
+                return;
+            }
+
+            taskInput.focus();
+            taskInput.select();
+
+            const reopenModal = () => {
+                taskInput.removeEventListener("blur", reopenModal);
+                taskInput.removeEventListener("keydown", handleKeydown);
+                openModal(resumeItem);
+            };
+
+            const handleKeydown = (event) => {
+                if (event.key === "Enter") {
+                    event.preventDefault();
+                    reopenModal();
+                }
+            };
+
+            taskInput.addEventListener("blur", reopenModal);
+            taskInput.addEventListener("keydown", handleKeydown);
+        });
+    }
+
+    collectOverdueTasks();
+    showNext();
+    setInterval(() => {
+        if (activeItem) return;
+        collectOverdueTasks();
+        showNext();
+    }, 60000);
+}
+
+setupTaskFeedbackModal();
+updateSlotProgress();
+setInterval(updateSlotProgress, 60000);
+
 // -------- below is not for TODO any more, for Long Term Goal -------
 
 function attachHelperPopups() {

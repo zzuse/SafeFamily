@@ -118,7 +118,12 @@ def todo_page():
         message = f"Todo list saved for {selected_user} successfully."
     # Fetch today's tasks for selected user
     cur.execute(
-        "SELECT id, time_slot, task, completed FROM todo_list WHERE date = CURRENT_DATE AND username = %s ORDER BY time_slot",
+        """
+        SELECT id, time_slot, task, completed, COALESCE(completion_status, '')
+        FROM todo_list
+        WHERE date = CURRENT_DATE AND username = %s
+        ORDER BY time_slot
+        """,
         (selected_user,),
     )
     today_tasks = cur.fetchall()
@@ -217,8 +222,8 @@ def done_todo():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
-            "UPDATE todo_list SET completed = %s WHERE id = %s",
-            (completed, todo_id),
+            "UPDATE todo_list SET completed = %s, completion_status = %s WHERE id = %s",
+            (completed, "done" if completed else None, todo_id),
         )
         conn.commit()
         conn.close()
@@ -227,6 +232,32 @@ def done_todo():
         return jsonify({"success": True})
     except Exception as e:
         flash("Error update_status:", "error")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@todo_bp.route("/todo/mark_status", methods=["POST"])
+@login_required
+def mark_todo_status():
+    """Store completion status feedback for a to-do item."""
+    try:
+        data = request.get_json()
+        todo_id = data.get("id")
+        status = (data.get("status") or "").strip().lower()
+        allowed = {"skipped", "partially done", "mostly done", "done"}
+        if status not in allowed:
+            return jsonify({"success": False, "error": "invalid status"}), 400
+
+        completed = status == "done"
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE todo_list SET completion_status = %s, completed = %s WHERE id = %s",
+            (status, completed, todo_id),
+        )
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True})
+    except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
 

@@ -34,9 +34,15 @@
                     <th>Task</th>
                     <th>Done</th>
                 </tr>
-                {% for todo_id, time_slot, task, completed in today_tasks %}
-                <tr>
-                    <td>{{ time_slot }}</td>
+                {% for todo_id, time_slot, task, completed, completion_status in today_tasks %}
+                <tr class="todo-row" data-todo-id="{{ todo_id }}" data-time-slot="{{ time_slot }}"
+                    data-task="{{ task }}" data-completed="{{ 'true' if completed else 'false' }}"
+                    data-status="{{ completion_status }}">
+                    <td class="time-slot-cell"
+                        data-time-slot="{{ time_slot }}"
+                        style="--slot-progress: {{ (loop.index0 / (today_tasks|length - 1)) if today_tasks|length > 1 else 0 }}; --slot-fill: 0%;">
+                        {{ time_slot }}
+                    </td>
                     <td>
                         <input type="hidden" name="todo_id" value="{{ todo_id }}">
                         <input type="text" name="task_{{ todo_id }}" value="{{ task }}"
@@ -46,6 +52,9 @@
                     <td>
                         <input type="checkbox" class="complete-checkbox" name="completed_{{ todo_id }}"
                             data-task-id="{{ todo_id }}" {% if completed %}checked{% endif %} />
+                        <div class="task-status" data-status="{{ completion_status }}">
+                            {{ completion_status }}
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -168,6 +177,23 @@
                     <ul id="longterm-list"></ul>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div id="task-feedback-modal" class="task-feedback-modal" aria-hidden="true">
+        <div class="task-feedback-panel">
+            <div class="task-feedback-title">How did this task go?</div>
+            <div class="task-feedback-meta">
+                <span class="task-feedback-time"></span>
+                <span class="task-feedback-name"></span>
+            </div>
+            <div class="task-feedback-actions">
+                <button type="button" class="feedback-option" data-status="skipped">Skipped</button>
+                <button type="button" class="feedback-option" data-status="partially done">Partially Done</button>
+                <button type="button" class="feedback-option" data-status="mostly done">Mostly Done</button>
+                <button type="button" class="feedback-option" data-status="done">Done</button>
+            </div>
+            <button type="button" class="feedback-later" data-action="later">Plan Something Else, Check Later</button>
         </div>
     </div>
 
