@@ -13,3 +13,4 @@ venv/
 *.egg-info/
 .python-version
 node_modules/
+.coverage

@@ -13,6 +13,19 @@ lint.ignore = [
     "BLE001",
 ]
 
+[tool.coverage.run]
+branch = true
+source = ["src"]
+omit = ["src/safe_family/templates/miscellaneous/*"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 80
+
+[tool.pytest.ini_options]
+addopts = "-q --disable-warnings --cov --cov-report=term-missing"
+
 
 [project]
 name = "SafeFamily"
