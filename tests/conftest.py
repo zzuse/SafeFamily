@@ -57,6 +57,7 @@ def app(monkeypatch):
         "sqlite:///:memory:",
     )
     flask_app = create_app()
+    flask_app.config["SECRET_KEY"] = "test"
     with flask_app.app_context():
         yield flask_app
 
