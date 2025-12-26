@@ -6,7 +6,7 @@ import requests
 from flask import Blueprint, flash, redirect
 
 from config.settings import settings
-from src.safe_family.core.auth import admin_required
+from src.safe_family.core.auth import admin_required, login_required
 from src.safe_family.utils.constants import HTTP_OK
 
 logger = logging.getLogger(__name__)
@@ -245,6 +245,20 @@ def rule_enable_ai():
             "name": "AI",
             "url": "https://raw.githubusercontent.com/zzuse/adguard_home_rule/refs/heads/main/block_ai.txt",
             "enabled": True,
+        },
+        "whitelist": False,
+    }
+    return json_post(json_data)
+
+
+def rule_disable_ai():
+    """Disable only AI blocking rule."""
+    json_data = {
+        "url": "https://raw.githubusercontent.com/zzuse/adguard_home_rule/refs/heads/main/block_ai.txt",
+        "data": {
+            "name": "AI",
+            "url": "https://raw.githubusercontent.com/zzuse/adguard_home_rule/refs/heads/main/block_ai.txt",
+            "enabled": False,
         },
         "whitelist": False,
     }
@@ -514,6 +528,18 @@ def rules_toggle_disable():
     response = rule_disable_all()
     flash(
         "rules disabled all.",
+        (response.status_code == HTTP_OK and "success") or "danger",
+    )
+    return redirect("/")
+
+
+@rules_toggle_bp.route("/rules_toggle/disable_ai", methods=["POST"])
+@login_required
+def rules_disable_ai():
+    """Disable AI rules."""
+    response = rule_disable_ai()
+    flash(
+        "Open AI.",
         (response.status_code == HTTP_OK and "success") or "danger",
     )
     return redirect("/")

@@ -69,8 +69,16 @@
                     All</button>
             </div>
         </form>
+        <div class="btn-area">
+            <form action="/rules_toggle/disable_ai"
+                onsubmit="return confirm('Are you sure you have made good plan today?');" method="POST">
+                <button class="btn border bg-orange-500/10 text-[#ff6b00]" type="submit" title="Open AI">🤖
+                    Open AI
+                </button>
+            </form>
+        </div>
         {% else %}
-        <p class="message">No tasks saved for today.</p>
+        <p class="message">No tasks saved for today, results in no *AI* websites enabled.</p>
         {% endif %}
 
         <div class="card-header">Plan New To-Do List for {{ selected_user }}</div>

@@ -17,6 +17,7 @@ from src.safe_family.urls.blocker import (
     rule_allow_traffic_all,
     rule_disable_all,
     rule_enable_ai,
+    rule_disable_ai,
     rule_enable_all_except_ai,
     rule_stop_traffic_all,
 )
@@ -41,6 +42,7 @@ RULE_FUNCTIONS = {
     "Rule enable all except AI": rule_enable_all_except_ai,
     "Rule disable all": rule_disable_all,
     "Rule enable AI": rule_enable_ai,
+    "Rule disable AI": rule_disable_ai,
     "Rule stop traffic all": rule_stop_traffic_all,
     "Rule allow traffic all": rule_allow_traffic_all,
     "Rule auto commit": rule_auto_commit,
