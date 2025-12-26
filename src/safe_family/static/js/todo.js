@@ -21,6 +21,14 @@ document.querySelectorAll('.complete-checkbox').forEach(cb => {
         // Here will find data-task-id field in todo HTML
         const taskId = this.dataset.taskId;
         const completed = this.checked;
+        const row = this.closest(".todo-row");
+        const status = row ? (row.dataset.status || "").trim() : "";
+        const timeSlot = row ? row.dataset.timeSlot : "";
+        const endTime = parseSlotEndTime(timeSlot);
+        if (status || (endTime && new Date() >= endTime && completed === false)) {
+            this.checked = true;
+            return;
+        }
 
         fetch("/todo/mark_done", {
             method: "POST",
@@ -99,6 +107,41 @@ function updateSlotProgress() {
         if (progress > 1) progress = 1;
         cell.style.setProperty("--slot-fill", `${Math.round(progress * 100)}%`);
         cell.dataset.slotProgress = progress.toFixed(3);
+
+        const row = cell.closest(".todo-row");
+        if (!row) return;
+        const checkbox = row.querySelector(".complete-checkbox");
+        const status = (row.dataset.status || "").trim();
+        const completed = row.dataset.completed === "true";
+        const taskInput = row.querySelector(`input[name="task_${row.dataset.todoId}"]`);
+        if (now >= endTime) {
+            if (checkbox) {
+                checkbox.checked = true;
+                checkbox.disabled = true;
+            }
+            if (!completed) {
+                fetch("/todo/mark_done", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ id: row.dataset.todoId, completed: true })
+                })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            row.dataset.completed = "true";
+                            if (taskInput) {
+                                taskInput.classList.add("done");
+                            }
+                        }
+                    })
+                    .catch(err => console.error("Auto-complete error:", err));
+            }
+        } else if (checkbox && !status) {
+            checkbox.disabled = false;
+        }
+        if (checkbox && status) {
+            checkbox.disabled = true;
+        }
     });
 }
 
@@ -124,8 +167,7 @@ function setupTaskFeedbackModal() {
         document.querySelectorAll(".todo-row").forEach(row => {
             const timeSlot = row.dataset.timeSlot;
             const status = (row.dataset.status || "").trim();
-            const completed = row.dataset.completed === "true";
-            if (!timeSlot || status || completed) return;
+            if (!timeSlot || status) return;
             const endTime = parseSlotEndTime(timeSlot);
             if (!endTime) return;
             if (now >= endTime && !queuedIds.has(row.dataset.todoId)) {
@@ -168,13 +210,14 @@ function setupTaskFeedbackModal() {
             statusEl.textContent = normalizeStatusLabel(status);
         }
         row.dataset.status = status;
-        const checkbox = row.querySelector(".complete-checkbox");
         const taskInput = row.querySelector(`input[name="task_${todoId}"]`);
-        const isDone = status === "done";
-        row.dataset.completed = isDone ? "true" : "false";
-        if (checkbox) checkbox.checked = isDone;
+        const checkbox = row.querySelector(".complete-checkbox");
+        if (checkbox) {
+            checkbox.checked = true;
+            checkbox.disabled = true;
+        }
         if (taskInput) {
-            taskInput.classList.toggle("done", isDone);
+            taskInput.classList.add("done");
         }
     }
 

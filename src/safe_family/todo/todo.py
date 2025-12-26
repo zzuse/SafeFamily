@@ -212,7 +212,7 @@ def delete_todo(selected_username, todo_id):
 )
 @login_required
 def done_todo():
-    """Done a specific to-do item for the selected user."""
+    """Automatic mark completed for to-do item for the selected user."""
     try:
         data = request.get_json()
         todo_id = data.get("id")
@@ -222,8 +222,35 @@ def done_todo():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
-            "UPDATE todo_list SET completed = %s, completion_status = %s WHERE id = %s",
-            (completed, "done" if completed else None, todo_id),
+            "SELECT time_slot FROM todo_list WHERE id = %s",
+            (todo_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"success": False, "error": "not found"}), 404
+
+        time_slot = row[0]
+        try:
+            _, end_str = [t.strip() for t in time_slot.split("-")]
+            end_time = datetime.strptime(end_str, "%H:%M").time()
+        except (ValueError, AttributeError):
+            conn.close()
+            return jsonify({"success": False, "error": "invalid time slot"}), 400
+
+        now = datetime.now(local_tz)
+        end_dt = now.replace(
+            hour=end_time.hour,
+            minute=end_time.minute,
+            second=0,
+            microsecond=0,
+        )
+        if now >= end_dt and completed is False:
+            completed = True
+
+        cur.execute(
+            "UPDATE todo_list SET completed = %s WHERE id = %s",
+            (completed, todo_id),
         )
         conn.commit()
         conn.close()
@@ -334,12 +361,43 @@ def mark_todo_status():
         if status not in allowed:
             return jsonify({"success": False, "error": "invalid status"}), 400
 
-        completed = status == "done"
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
+            "SELECT completion_status, time_slot FROM todo_list WHERE id = %s",
+            (todo_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"success": False, "error": "not found"}), 404
+
+        existing_status, time_slot = row
+        if existing_status:
+            conn.close()
+            return jsonify({"success": False, "error": "status locked"}), 400
+
+        try:
+            _, end_str = [t.strip() for t in time_slot.split("-")]
+            end_time = datetime.strptime(end_str, "%H:%M").time()
+        except (ValueError, AttributeError):
+            conn.close()
+            return jsonify({"success": False, "error": "invalid time slot"}), 400
+
+        now = datetime.now(local_tz)
+        end_dt = now.replace(
+            hour=end_time.hour,
+            minute=end_time.minute,
+            second=0,
+            microsecond=0,
+        )
+        if now < end_dt:
+            conn.close()
+            return jsonify({"success": False, "error": "too early"}), 400
+
+        cur.execute(
             "UPDATE todo_list SET completion_status = %s, completed = %s WHERE id = %s",
-            (status, completed, todo_id),
+            (status, True, todo_id),
         )
         conn.commit()
         conn.close()
