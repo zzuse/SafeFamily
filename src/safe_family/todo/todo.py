@@ -357,7 +357,7 @@ def mark_todo_status():
         data = request.get_json()
         todo_id = data.get("id")
         status = (data.get("status") or "").strip().lower()
-        allowed = {"skipped", "partially done", "mostly done", "done"}
+        allowed = {"skipped", "partially done", "half done", "mostly done", "done"}
         if status not in allowed:
             return jsonify({"success": False, "error": "invalid status"}), 400
 

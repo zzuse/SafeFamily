@@ -162,7 +162,37 @@ function setupTaskFeedbackModal() {
     const laterButton = modal.querySelector(".feedback-later");
     const queue = [];
     const queuedIds = new Set();
+    const notifiedIds = new Set();
     let activeItem = null;
+
+    function maybeRequestNotificationPermission() {
+        if (!("Notification" in window)) return;
+        if (Notification.permission !== "default") return;
+        Notification.requestPermission().catch(err => {
+            console.warn("Notification permission request failed:", err);
+        });
+    }
+
+    function sendTaskFeedbackNotification(item) {
+        if (!("Notification" in window)) return;
+        if (Notification.permission !== "granted") return;
+        if (notifiedIds.has(item.id)) return;
+
+        const body = item.task ? `${item.timeSlot} - ${item.task}` : item.timeSlot;
+        const notification = new Notification("Task feedback needed", {
+            body,
+            icon: "/static/icons/task-feedback-notification.svg",
+            tag: `task-feedback-${item.id}`,
+            renotify: true,
+            requireInteraction: true,
+        });
+
+        notification.onclick = () => {
+            window.focus();
+        };
+
+        notifiedIds.add(item.id);
+    }
 
     function collectOverdueTasks() {
         const now = new Date();
@@ -189,6 +219,7 @@ function setupTaskFeedbackModal() {
         titleName.textContent = item.task ? `- ${item.task}` : "";
         modal.classList.add("active");
         modal.setAttribute("aria-hidden", "false");
+        sendTaskFeedbackNotification(item);
     }
 
     function closeModal() {
@@ -291,6 +322,7 @@ function setupTaskFeedbackModal() {
 
     collectOverdueTasks();
     showNext();
+    document.addEventListener("click", maybeRequestNotificationPermission, { once: true });
     setInterval(() => {
         if (activeItem) return;
         collectOverdueTasks();

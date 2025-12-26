@@ -502,6 +502,10 @@ td form button {
     color: #fbbf24;
 }
 
+.task-status[data-status="half done"] {
+    color: #38bdf8;
+}
+
 .task-status[data-status="mostly done"] {
     color: #60a5fa;
 }
