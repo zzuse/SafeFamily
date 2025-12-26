@@ -235,6 +235,93 @@ def done_todo():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@todo_bp.post("/todo/split_slot")
+@login_required
+def split_slot():
+    """Split a one-hour slot into two 30-minute slots for today."""
+    try:
+        data = request.get_json()
+        todo_id = data.get("id")
+        selected_user = data.get("username")
+        current_user = get_current_username()
+        if current_user is None:
+            return jsonify({"success": False, "error": "not authorized"}), 401
+
+        if current_user.role != "admin" and current_user.username != selected_user:
+            return jsonify({"success": False, "error": "forbidden"}), 403
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT username, time_slot, task, completed
+            FROM todo_list
+            WHERE id = %s AND date = CURRENT_DATE
+            """,
+            (todo_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"success": False, "error": "not found"}), 404
+
+        username, time_slot, task, completed = row
+        if username != selected_user:
+            conn.close()
+            return jsonify({"success": False, "error": "user mismatch"}), 400
+        if completed:
+            conn.close()
+            return jsonify({"success": False, "error": "already completed"}), 400
+
+        try:
+            start_str, end_str = [t.strip() for t in time_slot.split("-")]
+            start_dt = datetime.strptime(start_str, "%H:%M")
+            end_dt = datetime.strptime(end_str, "%H:%M")
+        except (ValueError, AttributeError):
+            conn.close()
+            return jsonify({"success": False, "error": "invalid time slot"}), 400
+
+        duration = end_dt - start_dt
+        if duration != timedelta(minutes=60):
+            conn.close()
+            return jsonify({"success": False, "error": "slot not 60 minutes"}), 400
+
+        mid_dt = start_dt + timedelta(minutes=30)
+        first_slot = f"{start_dt.strftime('%H:%M')} - {mid_dt.strftime('%H:%M')}"
+        second_slot = f"{mid_dt.strftime('%H:%M')} - {end_dt.strftime('%H:%M')}"
+
+        cur.execute(
+            """
+            SELECT 1
+            FROM todo_list
+            WHERE date = CURRENT_DATE
+              AND username = %s
+              AND time_slot = %s
+            """,
+            (username, second_slot),
+        )
+        if cur.fetchone():
+            conn.close()
+            return jsonify({"success": False, "error": "slot already exists"}), 400
+
+        cur.execute(
+            "UPDATE todo_list SET time_slot = %s WHERE id = %s",
+            (first_slot, todo_id),
+        )
+        cur.execute(
+            """
+            INSERT INTO todo_list (username, time_slot, task, date, completed, completion_status)
+            VALUES (%s, %s, %s, CURRENT_DATE, %s, %s)
+            """,
+            (username, second_slot, "", False, None),
+        )
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @todo_bp.route("/todo/mark_status", methods=["POST"])
 @login_required
 def mark_todo_status():

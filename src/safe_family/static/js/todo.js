@@ -1,6 +1,7 @@
 
 const element = document.getElementById("bridge-element");
 const selected_user_row_id = element.dataset.value; // Access data-value
+const selected_user_name = element.dataset.user;
 
 document.getElementById("todoForm").addEventListener("submit", function (e) {
     const inputs = document.querySelectorAll(".task-input");
@@ -255,6 +256,53 @@ function setupTaskFeedbackModal() {
 setupTaskFeedbackModal();
 updateSlotProgress();
 setInterval(updateSlotProgress, 60000);
+
+function getSlotDurationMinutes(timeSlot) {
+    const startTime = parseSlotStartTime(timeSlot);
+    const endTime = parseSlotEndTime(timeSlot);
+    if (!startTime || !endTime) return null;
+    return Math.round((endTime - startTime) / 60000);
+}
+
+function setupSplitSlotButtons() {
+    document.querySelectorAll(".split-slot-btn").forEach(btn => {
+        const row = btn.closest(".todo-row");
+        const timeSlot = row ? row.dataset.timeSlot : "";
+        const duration = getSlotDurationMinutes(timeSlot);
+        if (duration !== 60) {
+            btn.disabled = true;
+            btn.title = "Only 60-minute slots can be split.";
+        }
+
+        btn.addEventListener("click", () => {
+            if (!row) return;
+            const todoId = btn.dataset.todoId;
+            if (!todoId || btn.disabled) return;
+            fetch("/todo/split_slot", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    id: todoId,
+                    username: selected_user_name
+                })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert(data.error || "Split failed.");
+                    }
+                })
+                .catch(err => {
+                    console.error("Split error:", err);
+                    alert("Error splitting slot.");
+                });
+        });
+    });
+}
+
+setupSplitSlotButtons();
 
 // -------- below is not for TODO any more, for Long Term Goal -------
 

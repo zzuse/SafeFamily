@@ -38,16 +38,17 @@
                 <tr class="todo-row" data-todo-id="{{ todo_id }}" data-time-slot="{{ time_slot }}"
                     data-task="{{ task }}" data-completed="{{ 'true' if completed else 'false' }}"
                     data-status="{{ completion_status }}">
-                    <td class="time-slot-cell"
-                        data-time-slot="{{ time_slot }}"
+                    <td class="time-slot-cell" data-time-slot="{{ time_slot }}"
                         style="--slot-progress: {{ (loop.index0 / (today_tasks|length - 1)) if today_tasks|length > 1 else 0 }}; --slot-fill: 0%;">
                         {{ time_slot }}
                     </td>
-                    <td>
+                    <td class="task-cell">
                         <input type="hidden" name="todo_id" value="{{ todo_id }}">
                         <input type="text" name="task_{{ todo_id }}" value="{{ task }}"
                             class=" {% if completed %}done{% endif %} text-center bg-orange-500/10 text-[#ff6b00]"
                             style="width: 90%;" />
+                        <button type="button" class="split-slot-btn" data-todo-id="{{ todo_id }}"
+                            aria-label="Split this slot into 30 minute blocks">+</button>
                     </td>
                     <td>
                         <input type="checkbox" class="complete-checkbox" name="completed_{{ todo_id }}"
@@ -87,7 +88,7 @@
                 <tr>
                     <td>{{ slot }}</td>
                     <td><input type="text" name="{{ slot }}" class="task-input text-center"
-                            placeholder="MainTask[SubProblem]/MainTask[SubProblem]" required style="width: 90%;">
+                            placeholder="MainTask[SubProblem]" required style="width: 90%;">
                     </td>
                     <td>--------</td>
                 </tr>
@@ -197,7 +198,7 @@
         </div>
     </div>
 
-    <div id="bridge-element" data-value="{{ selected_user_row_id }}"></div>
+    <div id="bridge-element" data-value="{{ selected_user_row_id }}" data-user="{{ selected_user }}"></div>
     <script src="{{ url_for('static', filename='js/todo.js') }}"></script>
 
     <div class="card-header">Configuration</div>
