@@ -979,6 +979,32 @@ td form button {
   mix-blend-mode: screen;
   pointer-events: none;
 }
+.time-slot-cell::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.9) 45%, transparent 70%);
+  background-size: 200% 100%;
+  opacity: 0;
+  animation: none;
+  clip-path: inset(0 calc(100% - var(--slot-fill)) 0 0);
+  pointer-events: none;
+}
+.time-slot-cell.is-active::before {
+  opacity: 0.85;
+  animation: slot-scan 1.75s linear infinite;
+}
+@keyframes slot-scan {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 100% 0;
+  }
+}
 .task-status {
   margin-top: 6px;
   font-size: 0.7rem;

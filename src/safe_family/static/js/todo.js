@@ -114,6 +114,8 @@ function updateSlotProgress() {
         const status = (row.dataset.status || "").trim();
         const completed = row.dataset.completed === "true";
         const taskInput = row.querySelector(`input[name="task_${row.dataset.todoId}"]`);
+        const isActive = now >= startTime && now < endTime && !completed;
+        cell.classList.toggle("is-active", isActive);
         if (now >= endTime) {
             if (checkbox) {
                 checkbox.checked = true;
