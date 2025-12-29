@@ -13,6 +13,7 @@ from src.safe_family.urls.analyzer import (
     get_time_range,
     log_analysis,
 )
+from src.safe_family.notifications.notifier import send_hammerspoon_alert
 from src.safe_family.urls.blocker import (
     rule_allow_traffic_all,
     rule_disable_all,
@@ -51,6 +52,8 @@ RULE_FUNCTIONS = {
 # 0-6 → Sunday to Saturday (APScheduler uses 0=Monday, 6=Sunday).
 scheduler = BackgroundScheduler()
 scheduler.start()
+_NOTIFIED_TASK_IDS: set[int] = set()
+_NOTIFIED_DATE: str | None = None
 
 
 def load_schedules():
@@ -91,6 +94,13 @@ def load_schedules():
         minute=20,
         day_of_week="*",
     )
+    scheduler.add_job(
+        notify_overdue_task_feedback,
+        "interval",
+        minutes=1,
+        id="notify_overdue_task_feedback",
+        replace_existing=True,
+    )
 
     # Get all scheduled jobs
     jobs = scheduler.get_jobs()
@@ -114,6 +124,60 @@ def remove_job(rule_id: int):
         logger.debug("Removed job %s", job_id)
     except Exception as e:
         logger.debug("Job %s not found: %s", job_id, str(e))
+
+
+def notify_overdue_task_feedback():
+    """Send a desktop alert when task feedback is overdue."""
+    global _NOTIFIED_DATE
+    today = datetime.now(local_tz).date().isoformat()
+    if _NOTIFIED_DATE != today:
+        _NOTIFIED_DATE = today
+        _NOTIFIED_TASK_IDS.clear()
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT id, username, time_slot, task
+        FROM todo_list
+        WHERE date = CURRENT_DATE
+          AND COALESCE(completion_status, '') = ''
+        """,
+    )
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    now = datetime.now(local_tz)
+    for todo_id, username, time_slot, task in rows:
+        if todo_id in _NOTIFIED_TASK_IDS:
+            continue
+        try:
+            _, end_str = [t.strip() for t in time_slot.split("-")]
+            end_time = datetime.strptime(end_str, "%H:%M").time()
+        except (ValueError, AttributeError):
+            continue
+
+        end_dt = now.replace(
+            hour=end_time.hour,
+            minute=end_time.minute,
+            second=0,
+            microsecond=0,
+        )
+        if now < end_dt:
+            continue
+
+        if time_slot and task:
+            message = f"Task feedback needed: {username} {time_slot} - {task}"
+        elif time_slot:
+            message = f"Task feedback needed: {username} {time_slot}"
+        elif task:
+            message = f"Task feedback needed: {username} - {task}"
+        else:
+            message = f"Task feedback needed: {username}"
+
+        send_hammerspoon_alert(message)
+        _NOTIFIED_TASK_IDS.add(todo_id)
 
 
 @schedule_rules_bp.route("/schedule_rules", methods=["GET", "POST"])

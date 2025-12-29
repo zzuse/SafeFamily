@@ -36,7 +36,9 @@ def send_discord_notification(username, tasks):
     title = f"📝 **{username}** just updated their Todo List:\n"
     content = ""
     for t in tasks:
-        content += f"- {t['time_slot']}: {t['task']}\n"
+        status = (t.get("completion_status") or "").strip()
+        status_label = status.title() if status else "Pending"
+        content += f"- {t['time_slot']}: {t['task']} ({status_label})\n"
 
     data = {
         "embeds": [
@@ -53,3 +55,16 @@ def send_discord_notification(username, tasks):
         logger.info(data)
     except NotificationError:
         logger.exception("❌ Discord message failed:")
+
+
+def send_hammerspoon_alert(message: str):
+    """Send a local desktop alert via Hammerspoon HTTP server."""
+    alert_url = settings.HAMMERSPOON_ALERT_URL
+    if not alert_url:
+        return
+
+    payload = {"message": message}
+    try:
+        requests.post(alert_url, json=payload, timeout=2)
+    except requests.RequestException:
+        logger.exception("❌ Hammerspoon alert failed:")

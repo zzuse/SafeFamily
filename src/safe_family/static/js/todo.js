@@ -5,7 +5,7 @@ const selected_user_name = element.dataset.user;
 
 document.getElementById("todoForm").addEventListener("submit", function (e) {
     const inputs = document.querySelectorAll(".task-input");
-    const pattern = /^([^\[\]/]+\[[^\[\]]+\])(\s*\/\s*[^\[\]/]+\[[^\[\]]+\])*$/; // matches: main[sub]
+    const pattern = /^([^\[\]/]+\[[^\[\]]+\])$/; // matches: main[sub]
     for (const input of inputs) {
         if (input.value.trim() !== "" && !pattern.test(input.value.trim())) {
             e.preventDefault();
@@ -163,6 +163,7 @@ function setupTaskFeedbackModal() {
     const queue = [];
     const queuedIds = new Set();
     const notifiedIds = new Set();
+    const serverNotifiedIds = new Set();
     let activeItem = null;
 
     function maybeRequestNotificationPermission() {
@@ -194,6 +195,21 @@ function setupTaskFeedbackModal() {
         notifiedIds.add(item.id);
     }
 
+    function sendTaskFeedbackServerAlert(item) {
+        if (serverNotifiedIds.has(item.id)) return;
+        fetch("/todo/notify_feedback", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                time_slot: item.timeSlot,
+                task: item.task || "",
+            }),
+        }).catch(err => {
+            console.warn("Server alert failed:", err);
+        });
+        serverNotifiedIds.add(item.id);
+    }
+
     function collectOverdueTasks() {
         const now = new Date();
         document.querySelectorAll(".todo-row").forEach(row => {
@@ -220,6 +236,7 @@ function setupTaskFeedbackModal() {
         modal.classList.add("active");
         modal.setAttribute("aria-hidden", "false");
         sendTaskFeedbackNotification(item);
+        sendTaskFeedbackServerAlert(item);
     }
 
     function closeModal() {

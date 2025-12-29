@@ -42,6 +42,10 @@ class Settings:
 
     # Other settings can be added here as needed
     DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
+    HAMMERSPOON_ALERT_URL = os.environ.get(
+        "HAMMERSPOON_ALERT_URL",
+        "http://localhost:9181/alert",
+    )
 
 
 settings = Settings()

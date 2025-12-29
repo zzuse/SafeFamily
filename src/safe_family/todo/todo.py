@@ -11,6 +11,7 @@ from src.safe_family.core.models import LongTermGoal
 from src.safe_family.notifications.notifier import (
     send_discord_notification,
     send_email_notification,
+    send_hammerspoon_alert,
 )
 from src.safe_family.rules.scheduler import RULE_FUNCTIONS, load_schedules
 from src.safe_family.utils.constants import Saturday
@@ -134,7 +135,14 @@ def todo_page():
         )
         send_discord_notification(
             selected_user,
-            [{"time_slot": r[1], "task": r[2]} for r in today_tasks],
+            [
+                {
+                    "time_slot": r[1],
+                    "task": r[2],
+                    "completion_status": r[4],
+                }
+                for r in today_tasks
+            ],
         )
     cur.close()
     conn.close()
@@ -174,10 +182,18 @@ def update_todo(selected_username: str):
         )
     conn.commit()
     cur.execute(
-        "SELECT time_slot, task FROM todo_list WHERE date = CURRENT_DATE AND username = %s ORDER BY time_slot",
+        """
+        SELECT time_slot, task, COALESCE(completion_status, '')
+        FROM todo_list
+        WHERE date = CURRENT_DATE AND username = %s
+        ORDER BY time_slot
+        """,
         (selected_username,),
     )
-    tasks = [{"time_slot": r[0], "task": r[1]} for r in cur.fetchall()]
+    tasks = [
+        {"time_slot": r[0], "task": r[1], "completion_status": r[2]}
+        for r in cur.fetchall()
+    ]
     send_email_notification(selected_username, tasks)
     send_discord_notification(selected_username, tasks)
     conn.close()
@@ -364,7 +380,7 @@ def mark_todo_status():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
-            "SELECT completion_status, time_slot FROM todo_list WHERE id = %s",
+            "SELECT completion_status, time_slot, username, task FROM todo_list WHERE id = %s",
             (todo_id,),
         )
         row = cur.fetchone()
@@ -372,7 +388,7 @@ def mark_todo_status():
             conn.close()
             return jsonify({"success": False, "error": "not found"}), 404
 
-        existing_status, time_slot = row
+        existing_status, time_slot, task_owner, task_name = row
         if existing_status:
             conn.close()
             return jsonify({"success": False, "error": "status locked"}), 400
@@ -400,10 +416,41 @@ def mark_todo_status():
             (status, True, todo_id),
         )
         conn.commit()
+        send_discord_notification(
+            task_owner,
+            [
+                {
+                    "time_slot": time_slot,
+                    "task": task_name,
+                    "completion_status": status,
+                }
+            ],
+        )
         conn.close()
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+@todo_bp.post("/todo/notify_feedback")
+@login_required
+def notify_feedback():
+    """Send a local desktop alert when task feedback is due."""
+    data = request.get_json() or {}
+    time_slot = (data.get("time_slot") or "").strip()
+    task = (data.get("task") or "").strip()
+
+    if time_slot and task:
+        message = f"Task feedback needed: {time_slot} - {task}"
+    elif time_slot:
+        message = f"Task feedback needed: {time_slot}"
+    elif task:
+        message = f"Task feedback needed: {task}"
+    else:
+        message = "Task feedback needed"
+
+    send_hammerspoon_alert(message)
+    return jsonify({"success": True})
 
 
 @todo_bp.route("/exec_rules/<string:selected_user_id>", methods=["POST"])
