@@ -222,7 +222,7 @@ def rule_enable_all_except_ai():
             "snapchat",
             "discord",
             "youtube",
-            "roblox",
+            # "roblox",
         ],
         "schedule": {
             "time_zone": "UTC",

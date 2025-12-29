@@ -302,6 +302,30 @@
             z-index: 5;
         }
 
+        #killsCounter {
+            position: absolute;
+            top: 58px;
+            right: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 2px 2px 0 #000;
+            display: none;
+            color: #fff;
+            z-index: 5;
+        }
+
+        #timeCounter {
+            position: absolute;
+            top: 86px;
+            right: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 2px 2px 0 #000;
+            display: none;
+            color: #fff;
+            z-index: 5;
+        }
+
         .build-notify {
             position: absolute;
             top: 50%;
@@ -343,6 +367,38 @@
             padding: 40px;
             align-items: flex-start;
             overflow-y: auto;
+        }
+
+        .index-title {
+            font-size: 34px;
+            color: #8e44ad;
+            letter-spacing: 2px;
+            text-shadow: 0 0 18px rgba(142, 68, 173, 0.45);
+            margin: 0 0 10px;
+        }
+
+        .index-tabs {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 0 0 12px;
+            width: min(900px, 94vw);
+        }
+
+        .tab-btn {
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 2px solid #444;
+            background: rgba(0, 0, 0, 0.35);
+            color: #fff;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .tab-btn.active {
+            border-color: #8e44ad;
+            box-shadow: 0 0 0 3px rgba(142, 68, 173, 0.2);
         }
 
         .index-grid {
@@ -489,6 +545,240 @@
             font-weight: bold;
             color: #2ecc71;
         }
+
+
+
+        /* Upgrades */
+        #upgradesScreen {
+            display: none;
+            background: rgba(5, 5, 5, 0.95);
+            z-index: 30;
+            padding: 40px;
+            align-items: flex-start;
+            overflow-y: auto;
+        }
+
+        .upgrade-card {
+            background: #222;
+            border: 1px solid #444;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .upgrade-name {
+            font-size: 20px;
+            font-weight: 900;
+            color: #fff;
+        }
+
+        .upgrade-desc {
+            color: #aaa;
+            margin-top: 4px;
+            font-size: 13px;
+            line-height: 1.35;
+        }
+
+        .upgrade-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+
+        .upgrade-pill {
+            font-weight: 900;
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: 2px solid #777;
+            color: #ddd;
+        }
+
+        .upgrade-pill.good {
+            border-color: #2ecc71;
+            color: #2ecc71;
+        }
+
+        .upgrade-buy {
+            background: #f1c40f;
+            color: #000;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-weight: 900;
+            cursor: pointer;
+        }
+
+        .upgrade-buy:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* ===== UI FIXES (scroll + titles + back buttons) ===== */
+        #achievementsScreen,
+        #upgradesScreen,
+        #enemyIndexScreen {
+            justify-content: flex-start;
+            align-items: center;
+            padding-top: 90px;
+            padding-bottom: 160px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        #achievementsScreen h1,
+        #upgradesScreen h1 {
+            margin-top: 0 !important;
+            color: #8e44ad;
+        }
+
+        #enemyIndexScreen h2 {
+            color: #8e44ad !important;
+        }
+
+        .back-nav {
+            position: sticky;
+            top: 20px;
+            z-index: 200;
+            align-self: flex-start;
+        }
+
+
+        /* --- INDEX polish --- */
+        #enemyIndexScreen {
+            justify-content: flex-start;
+            padding: 42px 22px 70px;
+            overflow-y: auto;
+            background: radial-gradient(1200px 700px at 50% 0%, rgba(142, 68, 173, 0.18), rgba(0, 0, 0, 0.88) 60%), rgba(0, 0, 0, 0.85);
+        }
+
+        #enemyIndexScreen .back-nav {
+            position: sticky;
+            top: 12px;
+            align-self: flex-start;
+            z-index: 50;
+            margin-bottom: 10px;
+        }
+
+        .index-tabs {
+            position: sticky;
+            top: 58px;
+            z-index: 45;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: min(1120px, 94vw);
+            padding: 10px 12px;
+            border-radius: 18px;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            margin: 4px 0 10px;
+        }
+
+        #indexSubTitle {
+            width: min(1120px, 94vw);
+            margin: 10px 0 18px;
+            text-align: center;
+        }
+
+        #enemyIndexGrid {
+            width: min(1120px, 94vw) !important;
+            padding-bottom: 80px;
+        }
+
+        .index-card {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.15));
+            border: 1px solid rgba(255, 255, 255, 0.13);
+            border-radius: 16px;
+            padding: 14px 14px 12px;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+        }
+
+        .index-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+
+        .index-name {
+            font-size: 18px;
+            font-weight: 900;
+            letter-spacing: 0.6px;
+        }
+
+        .index-sub {
+            font-size: 12px;
+            opacity: 0.78;
+            margin-top: 2px;
+        }
+
+        .index-desc {
+            font-size: 13px;
+            line-height: 1.35;
+            opacity: 0.9;
+            margin: 8px 0 10px;
+        }
+
+        .index-swatch {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.12);
+            flex: 0 0 auto;
+            margin-top: 4px;
+        }
+
+        .index-statgrid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px 12px;
+            margin-top: 6px;
+        }
+
+        .index-stat {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 6px 8px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.10);
+            background: rgba(0, 0, 0, 0.26);
+            font-size: 12px;
+        }
+
+        .index-stat .label {
+            opacity: 0.75;
+        }
+
+        .index-stat .value {
+            font-weight: 800;
+        }
+
+        .index-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .index-tag {
+            font-size: 11px;
+            padding: 4px 7px;
+            border-radius: 999px;
+            border: 1px solid rgba(142, 68, 173, 0.35);
+            background: rgba(142, 68, 173, 0.14);
+            opacity: 0.95;
+        }
     </style>
 </head>
 
@@ -496,6 +786,9 @@
 
     <div id="gameWrapper">
         <canvas id="gameCanvas"></canvas>
+        <div id="runtimeError"
+            style="position:fixed;left:10px;top:10px;max-width:60vw;z-index:9999;background:rgba(0,0,0,0.85);color:#ff6b6b;padding:10px 12px;border:1px solid rgba(255,107,107,0.6);border-radius:10px;font-family:monospace;font-size:12px;display:none;white-space:pre-wrap;">
+        </div>
 
         <div id="gameUI">
             <div class="bar-container">
@@ -515,10 +808,12 @@
             <div id="normalControls" style="color: #3498db; font-weight: bold; font-size: 16px; margin-top: 5px;">Build:
                 <span id="buildName">Wall</span> (F)</div>
             <div id="tdControls" class="td-controls">
-                F: Wall | G: Spike | C: Laser<br>V: Rocket | B: Heal
+                F: Wall | G: Spike | C: Laser<br>V: Rocket | B: All-Seeing
             </div>
         </div>
         <div id="scoreCounter">0</div>
+        <div id="killsCounter">Kills: 0</div>
+        <div id="timeCounter">Time: 0:00</div>
         <div id="achievementToast" class="achievement-toast"></div>
         <div id="noScoreMsg" class="build-notify">Need More Score!</div>
         <button id="tdStartBtn" class="menu-btn" onclick="startTDWaves()">START WAVES</button>
@@ -527,20 +822,41 @@
             <h1>Ninja's Nightmare</h1>
             <div class="credits">Made by McGee Zhang</div>
             <button class="menu-btn" onclick="goToLoadout()">PLAY</button>
-            <button class="menu-btn menu-btn-small" onclick="toggleScreen('enemyIndexScreen', true)">ENEMY
-                INDEX</button>
+            <button class="menu-btn menu-btn-small" onclick="toggleScreen('enemyIndexScreen', true)">INDEX</button>
             <button class="menu-btn menu-btn-small" onclick="toggleScreen('settingsMenu', true)">SETTINGS</button>
+            <button class="menu-btn menu-btn-small"
+                onclick="toggleScreen('upgradesScreen', true); renderUpgrades();">UPGRADES</button>
             <button class="menu-btn menu-btn-small"
                 onclick="toggleScreen('achievementsScreen', true); renderAchievements();">ACHIEVEMENTS</button>
             <div class="copyright">© 2025 McGee Zhang Games. All Rights Reserved.</div>
 
         </div>
 
-        <div id="enemyIndexScreen" class="overlay-screen">
-            <button class="menu-btn back-nav" onclick="toggleScreen('enemyIndexScreen', false)">← BACK</button>
-            <h2 style="font-size: 34px; color: #fff; margin-bottom: 20px;">ENEMY INDEX</h2>
-            <div class="index-grid" id="enemyIndexGrid"></div>
 
+        <div id="upgradesScreen" class="overlay-screen"
+            style="display: none; background: rgba(5,5,5,0.95); z-index: 30; padding: 40px; align-items: flex-start; overflow-y: auto;">
+            <button class="menu-btn back-nav" onclick="toggleScreen('upgradesScreen', false)">← BACK</button>
+            <h1 style="margin-top: 60px;">UPGRADES</h1>
+            <div style="color:#aaa; margin-top:10px; font-size:14px; max-width:900px; line-height:1.4;">
+                Achievements give <b style="color:#2ecc71;">+1% Max HP</b> each (free). You can also buy permanent
+                upgrades with gold (prices scale).
+            </div>
+            <div id="upgradesList" style="width:100%; max-width: 900px; margin-top: 20px;"></div>
+        </div>
+
+        <div id="enemyIndexScreen" class="overlay-screen">
+            <button class="back-nav" onclick="toggleScreen('enemyIndexScreen', false)">← BACK</button>
+            <h2 class="index-title">INDEX</h2>
+            <div class="index-tabs">
+                <button class="tab-btn active" onclick="setIndexTab('enemies')">ENEMIES</button>
+                <button class="tab-btn" onclick="setIndexTab('weapons')">WEAPONS</button>
+                <button class="tab-btn" onclick="setIndexTab('utilities')">UTILITIES</button>
+                <button class="tab-btn" onclick="setIndexTab('buildings')">BUILDINGS</button>
+                <button class="tab-btn" onclick="setIndexTab('events')">EVENTS</button>
+            </div>
+            <p id="indexSubTitle" style="margin: 10px 0 20px; color: #ccc; max-width: 820px; text-align:center;">Learn
+                the world.</p>
+            <div id="enemyIndexGrid" class="index-grid" style="width: min(900px, 94vw);"></div>
         </div>
 
         <div id="achievementsScreen" class="overlay-screen"
@@ -600,6 +916,10 @@
     <div id="victoryScreen" class="overlay-screen" style="background: rgba(46, 204, 113, 0.95);">
         <h1 style="color: #fff; text-shadow: 0 0 20px #000;">VICTORY!</h1>
         <p style="font-size: 24px; color: #fff; margin-bottom: 5px;" id="vicScore">Score: 0</p>
+        <p style="font-size: 20px; color: #fff; margin-bottom: 6px;" id="vicKills">Kills: 0</p>
+        <p style="font-size: 20px; color: #fff; margin-bottom: 6px;" id="vicTime">Time: 0:00</p>
+        <p style="font-size: 16px; margin: 10px 0 0; color: #ddd;" id="vicExtra">Shots: 0 · Buildings: 0 · Boulders: 0 ·
+            Indirect Kills: 0</p>
         <p style="font-size: 20px; color: #f1c40f; margin-bottom: 10px;" id="vicGold">Gold Earned: 0</p>
         <p style="font-size: 16px; color: #ccc; margin-bottom: 30px;" id="vicTotal">Total Gold: 0</p>
         <p style="font-size: 20px; color: #fff; font-weight:bold;">Endless Mode Unlocked!</p>
@@ -609,19 +929,40 @@
     <div id="gameOverScreen" class="overlay-screen">
         <h1>GAME OVER</h1>
         <p style="font-size: 32px; margin: 10px 0; color: #fff;" id="finalScore">Score: 0</p>
+        <p style="font-size: 20px; margin: 6px 0; color: #fff;" id="finalKills">Kills: 0</p>
+        <p style="font-size: 20px; margin: 6px 0; color: #fff;" id="finalTime">Time: 0:00</p>
+        <p style="font-size: 16px; margin: 10px 0 0; color: #ddd;" id="finalExtra">Shots: 0 · Buildings: 0 · Boulders: 0
+            · Indirect Kills: 0</p>
         <p style="color: #f1c40f; font-size: 24px; margin-bottom: 5px;" id="goldEarned">Gold Earned: 0</p>
         <p style="color: #ccc; font-size: 18px; margin-bottom: 40px;" id="totalGold">Total Gold: 0</p>
         <button class="menu-btn" onclick="goToMainMenu()">MAIN MENU</button>
     </div>
     </div>
 
-    <script>
+    <script>/* =========================
+NINJA'S NIGHTMARE - SEPARATED SECTIONS
+(Same behavior, easier to navigate)
+========================= */
+
+
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
+        function showRuntimeError(err) {
+            const box = document.getElementById('runtimeError');
+            if (!box) return;
+            box.style.display = 'block';
+            box.textContent = String(err && (err.stack || err.message) || err);
+        }
+        window.addEventListener('error', (e) => { showRuntimeError(e.error || e.message); });
+        window.addEventListener('unhandledrejection', (e) => { showRuntimeError(e.reason); });
+
+
+        /* ===== AUDIO ===== */
         // --- AUDIO SYSTEM ---
         const Audio = {
             ctx: null, enabled: false,
+            lastSfx: {},
             init: function () {
                 if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
                 else if (this.ctx.state === 'suspended') this.ctx.resume();
@@ -638,6 +979,10 @@
             playSFX: function (type) {
                 if (!this.ctx) return;
                 const now = this.ctx.currentTime;
+                const last = this.lastSfx[type] || 0;
+                const minGap = (type === 'hit') ? 0.03 : (type === 'shoot' ? 0.03 : 0.10);
+                if (now - last < minGap) return;
+                this.lastSfx[type] = now;
                 const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
                 osc.connect(gain); gain.connect(this.ctx.destination);
 
@@ -662,29 +1007,58 @@
         function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
         window.addEventListener('resize', resizeCanvas); resizeCanvas();
 
+
+        /* ===== SAVE DATA / DBs ===== */
         // --- DATA ---
         const defaultData = {
             gold: 0, hasWon: false,
-            achievements: { firstBlood: false },
+            achievements: {},
+            stats: {},
             unlockedWeapons: ['katana'], unlockedUtilities: ['shuriken'], unlockedBuildings: ['wall'], unlockedSkins: ['white'],
             equippedWeapon: 'katana', equippedUtility: 'shuriken', equippedBuilding: 'wall', equippedSkin: 'white'
         };
         let saveData = JSON.parse(JSON.stringify(defaultData));
         if (localStorage.getItem('ninjaCosmicData')) { try { saveData = { ...saveData, ...JSON.parse(localStorage.getItem('ninjaCosmicData')) }; } catch (e) { } }
+        // Save migration for v10 (All-Seeing is a building; Heal Pad is a utility)
+        (function migrateSaveV10() {
+            saveData.unlockedUtilities = saveData.unlockedUtilities || ['shuriken'];
+            saveData.unlockedBuildings = saveData.unlockedBuildings || ['wall'];
+            saveData.achievements = saveData.achievements || {};
+            saveData.stats = saveData.stats || {};
+
+            // Move turret from utilities -> buildings (only if it was unlocked)
+            if (saveData.unlockedUtilities.includes('turret')) {
+                saveData.unlockedUtilities = saveData.unlockedUtilities.filter(x => x !== 'turret');
+                if (!saveData.unlockedBuildings.includes('turret')) saveData.unlockedBuildings.push('turret');
+            }
+
+            // Move healpad from buildings -> utilities (only if it was unlocked)
+            if (saveData.unlockedBuildings.includes('healpad')) {
+                saveData.unlockedBuildings = saveData.unlockedBuildings.filter(x => x !== 'healpad');
+                if (!saveData.unlockedUtilities.includes('healpad')) saveData.unlockedUtilities.push('healpad');
+            }
+
+            // Fix equipped items
+            if (saveData.equippedUtility === 'turret') saveData.equippedUtility = 'shuriken';
+            if (saveData.equippedBuilding === 'healpad') saveData.equippedBuilding = 'wall';
+
+            saveData.unlockedUtilities = Array.from(new Set(saveData.unlockedUtilities));
+            saveData.unlockedBuildings = Array.from(new Set(saveData.unlockedBuildings));
+        })();
 
         // --- CHEAT ---
         let cheatGod = false;
         function enterCheatCode() {
             const code = prompt("Enter Cheat Code:");
-            if (code === "TheNigerianNightmare") { cheatGod = true; saveData.gold = 9999999; saveGame(); updateShopUI(); alert("CHEAT: God Mode + Rich"); }
-            else if (code === "TheNigerianPrince") { saveData.gold = 9999999; saveGame(); updateShopUI(); alert("CHEAT: Infinite Gold"); }
+            if (code === "TheNigerianNightmare") { unlockAchievement('forbiddenWords'); cheatGod = true; saveData.gold = 9999999; saveGame(); updateShopUI(); alert("CHEAT: God Mode + Rich"); }
+            else if (code === "TheNigerianPrince") { unlockAchievement('forbiddenWords'); saveData.gold = 9999999; saveGame(); updateShopUI(); alert("CHEAT: Infinite Gold"); }
             else alert("Invalid Code");
         }
         function wipeData() {
             if (confirm("Wipe all data?")) {
                 localStorage.removeItem('ninjaCosmicData');
                 saveData = JSON.parse(JSON.stringify(defaultData));
-                cheatGod = false; saveGame(); updateShopUI(); alert("Data Wiped.");
+                cheatGod = false; saveGame(); updateShopUI(); unlockAchievement('cleanSlate'); alert("Data Wiped.");
             }
         }
 
@@ -699,16 +1073,16 @@
         const utilitiesDB = {
             shuriken: { name: 'Shuriken', cost: 0, desc: 'Throw 1 projectile.' },
             landmine: { name: 'Landmine', cost: 500, desc: 'Place trap.' },
-            pill: { name: 'Heal Pill', cost: 500, desc: '0.5s Use. Heal 15HP.' },
-            grenade: { name: 'Grenade', cost: 500, desc: 'Explodes after 2s.' },
-            turret: { name: 'All-Seeing', cost: 1000, desc: 'Range: 1000px. 0.2s Fire.' }
+            pill: { name: 'Speed Pill', cost: 500, desc: 'Use. 2x Speed for 6s.' },
+            grenade: { name: 'Grenade', cost: 500, desc: 'Explodes after 1s.' },
+            healpad: { name: 'Heal Pad', cost: 1000, desc: 'Place a heal pad for 10s.' }
         };
         const buildingsDB = {
             wall: { name: 'Wall', cost: 10, desc: '10 Score. Block.' },
             spikes: { name: 'Spikes', cost: 50, desc: '50 Score. Hurt.' },
             laser: { name: 'Laser Turret', cost: 1000, desc: '1000 Score. 0.1s Beam.' },
             rocket: { name: 'Rocket Pad', cost: 2000, desc: '2000 Score. 3 Rockets/1s.' },
-            healpad: { name: 'Heal Pad', cost: 1000, desc: '1000 Score. Heal.' }
+            turret: { name: 'All-Seeing Turret', cost: 1000, desc: '1000 Score. Range: 1000px. 0.2s Fire.' }
         };
         const skinsDB = {
             white: { name: 'White', cost: 0, color: '#fff' },
@@ -722,6 +1096,269 @@
             rainbow: { name: 'Rainbow', cost: 5000, color: 'rainbow' }
         };
 
+        // --- ENEMY STATS (single source of truth) ---
+        const enemyStatsDB = {
+            0: { name: 'Goblin', color: '#e74c3c', radius: 18, speed: 2.0, maxHp: 1, score: 10 },
+            1: { name: 'Shield Goblin', color: '#c0392b', radius: 18, speed: 1.8, maxHp: 1, score: 25, hasShield: true, shieldHp: 5 },
+            2: { name: 'Dasher', color: '#f39c12', radius: 18, speed: 1.6, maxHp: 1, score: 25, dashSpeed: 12, dashDuration: 15, dashCooldown: 180 },
+            3: { name: 'Shooter', color: '#9b59b6', radius: 18, speed: 1.2, maxHp: 1, score: 10, actionTimer: 180 },
+            4: { name: 'Summoner', color: '#27ae60', radius: 22, speed: 0.8, maxHp: 3, score: 50, actionTimer: 240 },
+            5: { name: 'Giant', color: '#000', radius: 60, speed: 0.5, maxHp: 50, score: 250, actionTimer: 180, minRadius: 30 },
+            6: { name: 'King', color: '#f1c40f', radius: 80, speed: 0.9, maxHp: 150, score: 1000, actionTimer: 300, minRadius: 40 },
+            7: { name: 'Flyer', color: '#00ffff', radius: 12, speed: 2.5, maxHp: 1, score: 10 },
+            8: { name: 'Airstrike', color: 'cyan', radius: 15, speed: 8.0, maxHp: 10, score: 75 },
+            9: { name: 'Goblin Queen', color: '#2ecc71', radius: 100, speed: 0.0, maxHp: 500, score: 5000, actionTimer: 120, minRadius: 40, maxRadius: 100 }
+        };
+
+        // --- ACHIEVEMENTS ---
+
+        // --- SAVE SANITY (prevents broken loadouts from older versions) ---
+        function sanitizeLoadout() {
+            if (!saveData || typeof saveData !== 'object') saveData = JSON.parse(JSON.stringify(defaultData));
+
+            const ensureArr = (key, fallback) => {
+                if (!Array.isArray(saveData[key])) saveData[key] = fallback.slice();
+            };
+
+            ensureArr('unlockedWeapons', ['katana']);
+            ensureArr('unlockedUtilities', ['shuriken']);
+            ensureArr('unlockedBuildings', ['wall']);
+            ensureArr('unlockedSkins', ['white']);
+
+            if (!weaponsDB[saveData.equippedWeapon]) saveData.equippedWeapon = 'katana';
+            if (!utilitiesDB[saveData.equippedUtility]) saveData.equippedUtility = 'shuriken';
+            if (!buildingsDB[saveData.equippedBuilding]) saveData.equippedBuilding = 'wall';
+            if (!skinsDB[saveData.equippedSkin]) saveData.equippedSkin = 'white';
+
+            if (!saveData.unlockedWeapons.includes(saveData.equippedWeapon)) saveData.unlockedWeapons.push(saveData.equippedWeapon);
+            if (!saveData.unlockedUtilities.includes(saveData.equippedUtility)) saveData.unlockedUtilities.push(saveData.equippedUtility);
+            if (!saveData.unlockedBuildings.includes(saveData.equippedBuilding)) saveData.unlockedBuildings.push(saveData.equippedBuilding);
+            if (!saveData.unlockedSkins.includes(saveData.equippedSkin)) saveData.unlockedSkins.push(saveData.equippedSkin);
+
+            saveGame();
+        }
+        sanitizeLoadout();
+
+        const achievementsDB = [
+            { id: 'firstBlood', name: 'First Blood', desc: 'Kill your first enemy.', type: 'bool' },
+            { id: 'goblinCleanup', name: 'Goblin Cleanup', desc: 'Kill 50 enemies.', type: 'count', stat: 'totalKills', goal: 50 },
+            { id: 'exterminationProtocol', name: 'Extermination Protocol', desc: 'Kill 250 enemies.', type: 'count', stat: 'totalKills', goal: 250 },
+            { id: 'cosmicSlayer', name: 'Cosmic Slayer', desc: 'Kill 1,000 enemies.', type: 'count', stat: 'totalKills', goal: 1000 },
+
+            { id: 'bladeDancer', name: 'Blade Dancer', desc: 'Kill 250 enemies using melee weapons only.', type: 'count', stat: 'meleeKills', goal: 250 },
+            { id: 'sharpShooter', name: 'Sharp Shooter', desc: 'Kill 250 enemies using ranged weapons.', type: 'count', stat: 'rangedKills', goal: 250 },
+
+            { id: 'piercingPrecision', name: 'Piercing Precision', desc: 'Kill 3 enemies with a single sniper shot.', type: 'bool' },
+            { id: 'sprayAndPray', name: 'Spray and Pray', desc: 'Kill 3 enemies with one Shuriken Gun burst.', type: 'bool' },
+
+            { id: 'firstConstruction', name: 'First Construction', desc: 'Place your first building.', type: 'bool' },
+            { id: 'laserEngineer', name: 'Laser Engineer', desc: 'Kill 100 enemies using a Laser Turret.', type: 'count', stat: 'laserKills', goal: 100 },
+            { id: 'rocketScience', name: 'Rocket Science', desc: 'Kill 500 enemies with Rocket Pads.', type: 'count', stat: 'rocketKills', goal: 500 },
+            { id: 'medicStation', name: 'Medic Station', desc: 'Heal yourself using a Heal Pad.', type: 'bool' },
+
+            { id: 'stillAlive', name: 'Still Alive', desc: 'Survive for 5 minutes.', type: 'bool' },
+            { id: 'untouchable', name: 'Untouchable', desc: 'Go 1 minute without taking damage.', type: 'bool' },
+            { id: 'closeCall', name: 'Close Call', desc: 'Survive while at 1 HP.', type: 'bool' },
+
+            { id: 'bigGameHunter', name: 'Big Game Hunter', desc: 'Kill a Giant.', type: 'bool' },
+            { id: 'royalExecution', name: 'Royal Execution', desc: 'Kill a King.', type: 'bool' },
+            { id: 'queensFall', name: 'Queen’s Fall', desc: 'Defeat the Goblin Queen.', type: 'bool' },
+
+            { id: 'nightmareConquered', name: 'Nightmare Conquered', desc: 'Beat Campaign Mode.', type: 'bool' },
+            { id: 'endlessWarrior', name: 'Endless Warrior', desc: 'Reach 25,000 score in Endless.', type: 'bool' },
+            { id: 'endlessLegend', name: 'Endless Legend', desc: 'Reach 100,000 score in Endless.', type: 'bool' },
+
+            { id: 'forbiddenWords', name: 'The Forbidden Words', desc: 'Enter a valid cheat code.', type: 'bool' },
+            { id: 'cleanSlate', name: 'Clean Slate', desc: 'Wipe all saved data.', type: 'bool' },
+            { id: 'overkill', name: 'Overkill', desc: 'Kill 5 enemies with a single grenade.', type: 'bool' },
+            { id: 'tooSoon', name: 'Too Soon', desc: 'Die within 10 seconds of starting a run.', type: 'bool' },
+            { id: 'statueMode', name: 'Statue Mode', desc: 'Do absolutely nothing for 30 seconds.', type: 'bool' },
+            { id: 'livingOnEdge', name: 'Living on the Edge', desc: 'Reach 5,000 score without using a single medkit.', type: 'bool' },
+            { id: 'surviveMeteor', name: 'Storm Survivor', desc: 'Survive a Meteor Shower.', type: 'bool' },
+            { id: 'surviveHealing', name: 'Rain Survivor', desc: 'Survive a Healing Rain.', type: 'bool' },
+            { id: 'surviveGlitched', name: 'Firewall Endured', desc: 'Survive the Glitched Event.', type: 'bool' },
+        ];
+
+        function ensureSaveDataShape() {
+            if (!saveData.achievements || typeof saveData.achievements !== 'object') saveData.achievements = {
+                actOfGod: { name: 'Act of God', desc: 'Kill an enemy with indirect damage (e.g., meteor).', hidden: false },
+            };
+            for (const a of achievementsDB) {
+                if (typeof saveData.achievements[a.id] !== 'boolean') saveData.achievements[a.id] = false;
+            }
+            if (!saveData.stats || typeof saveData.stats !== 'object') {
+                saveData.stats = {
+                    totalKills: 0,
+                    meleeKills: 0,
+                    rangedKills: 0,
+                    laserKills: 0,
+                    rocketKills: 0,
+                    buildingsPlaced: 0,
+                    healPadUsed: false,
+                    endlessBestScore: 0
+                };
+            }
+
+            if (!saveData.upgrades || typeof saveData.upgrades !== 'object') {
+                saveData.upgrades = { hp: 0, dash: 0, ammo: 0, building: 0 };
+            } else {
+                if (typeof saveData.upgrades.hp !== 'number') saveData.upgrades.hp = 0;
+                if (typeof saveData.upgrades.dash !== 'number') saveData.upgrades.dash = 0;
+                if (typeof saveData.upgrades.ammo !== 'number') saveData.upgrades.ammo = 0;
+                if (typeof saveData.upgrades.building !== 'number') saveData.upgrades.building = 0;
+            }
+
+            saveGame();
+        }
+
+        function unlockAchievement(id) {
+            ensureSaveDataShape();
+            if (!saveData.achievements[id]) {
+                saveData.achievements[id] = true;
+                saveGame();
+                const a = achievementsDB.find(x => x.id === id);
+                showAchievementToast(a ? a.name : id);
+            }
+        }
+
+        function incStat(stat, amount = 1) {
+            ensureSaveDataShape();
+            if (typeof saveData.stats[stat] !== 'number') saveData.stats[stat] = 0;
+            saveData.stats[stat] += amount;
+            // Auto-unlock count achievements
+            for (const a of achievementsDB) {
+                if (a.type === 'count' && a.stat === stat && saveData.stats[stat] >= a.goal) unlockAchievement(a.id);
+            }
+            saveGame();
+        }
+
+
+
+        // --- PERMANENT UPGRADES ---
+        const upgradeDefs = {
+            hp: { name: 'Base Max HP', step: 0.05, max: 1.00, baseCost: 75, growth: 1.12, desc: 'Buy +5% Max HP per level (up to +100%).' },
+            dash: { name: 'Dash Recharge', step: 0.05, max: 1.00, baseCost: 75, growth: 1.12, desc: 'Buy +5% dash recharge per level (up to +100%).' },
+            building: { name: 'Building HP', step: 0.05, max: 1.00, baseCost: 75, growth: 1.12, desc: 'Buy +5% building HP per level (up to +100%).' },
+            ammo: { name: 'Starting Ammo', step: 1, max: Infinity, baseCost: 90, growth: 1.15, desc: 'Buy +1 starting ammo per level (no max). Price scales.' },
+        };
+
+        function countUnlockedAchievements() {
+            ensureSaveDataShape();
+            let c = 0;
+            for (const a of achievementsDB) if (saveData.achievements[a.id]) c++;
+            return c;
+        }
+
+        function getAchievementHpBonus() {
+            // +1% HP per completed achievement
+            return countUnlockedAchievements() * 0.01;
+        }
+
+        function getUpgradeBonus(key) {
+            ensureSaveDataShape();
+            const lvl = saveData.upgrades[key] || 0;
+            const def = upgradeDefs[key];
+            if (key === 'ammo') return lvl * def.step; // +ammo
+            const raw = lvl * def.step;
+            return Math.min(raw, def.max);
+        }
+
+        function getUpgradeCost(key) {
+            ensureSaveDataShape();
+            const lvl = saveData.upgrades[key] || 0;
+            const def = upgradeDefs[key];
+            // Exponential scaling; always at least 1
+            return Math.max(1, Math.floor(def.baseCost * Math.pow(def.growth, lvl)));
+        }
+
+        function canBuyUpgrade(key) {
+            ensureSaveDataShape();
+            const def = upgradeDefs[key];
+            const lvl = saveData.upgrades[key] || 0;
+            if (key !== 'ammo') {
+                const bonus = lvl * def.step;
+                if (bonus >= def.max) return false;
+            }
+            return saveData.gold >= getUpgradeCost(key);
+        }
+
+        function buyUpgrade(key) {
+            ensureSaveDataShape();
+            const cost = getUpgradeCost(key);
+            if (!canBuyUpgrade(key)) return;
+            saveData.gold -= cost;
+            saveData.upgrades[key] = (saveData.upgrades[key] || 0) + 1;
+            saveGame();
+            updateShopUI();
+            renderUpgrades();
+            Audio.playClick();
+        }
+
+        function renderUpgrades() {
+            ensureSaveDataShape();
+            const el = document.getElementById('upgradesList');
+            if (!el) return;
+
+            const achCount = countUnlockedAchievements();
+            const achHp = Math.round(getAchievementHpBonus() * 100);
+
+            const hpBonus = Math.round(getUpgradeBonus('hp') * 100);
+            const dashBonus = Math.round(getUpgradeBonus('dash') * 100);
+            const bldBonus = Math.round(getUpgradeBonus('building') * 100);
+            const ammoBonus = getUpgradeBonus('ammo');
+
+            const mkCard = (key, valueText, extraText) => {
+                const def = upgradeDefs[key];
+                const lvl = saveData.upgrades[key] || 0;
+                const cost = getUpgradeCost(key);
+                const capped = (key !== 'ammo') && (lvl * def.step >= def.max);
+                const afford = saveData.gold >= cost;
+                const disabled = capped || !afford;
+                const btnText = capped ? "MAXED" : `BUY (${cost}G)`;
+                return `
+                <div class="upgrade-card">
+                    <div class="upgrade-name">${def.name}</div>
+                    <div class="upgrade-desc">${def.desc}</div>
+                    <div class="upgrade-row">
+                        <div class="upgrade-pill ${capped ? 'good' : ''}">Level: ${lvl} • ${valueText}${extraText ? ` • ${extraText}` : ''}</div>
+                        <button class="upgrade-buy" ${disabled ? 'disabled' : ''} onclick="buyUpgrade('${key}')">${btnText}</button>
+                    </div>
+                </div>
+            `;
+            };
+
+            el.innerHTML = `
+            <div class="upgrade-card">
+                <div class="upgrade-name">Achievement Bonus</div>
+                <div class="upgrade-desc">Completed achievements: <b style="color:#fff;">${achCount}</b> → <b style="color:#2ecc71;">+${achHp}% Max HP</b></div>
+            </div>
+            ${mkCard('hp', `+${hpBonus}%`, `Total HP bonus: +${achHp + hpBonus}%`)}
+            ${mkCard('dash', `+${dashBonus}%`, `Cooldown reduced by ${(dashBonus)}%`)}
+            ${mkCard('building', `+${bldBonus}%`, `Buildings tougher`)}
+            ${mkCard('ammo', `+${ammoBonus}`, `Starting ammo +${ammoBonus}`)}
+        `;
+        }
+
+        function applyUpgradesToPlayer(p) {
+            const hpMult = 1 + getAchievementHpBonus() + getUpgradeBonus('hp');
+            p.maxHp = Math.floor(p.maxHp * hpMult);
+            p.hp = p.maxHp;
+
+            // Dash recharge: reduce cooldown. +100% means cooldown /2.
+            const dashBoost = getUpgradeBonus('dash'); // 0..1
+            p.dashCooldown = Math.max(30, Math.floor(p.dashCooldown / (1 + dashBoost)));
+
+            // Starting ammo: additive
+            p.ammo = p.ammo + getUpgradeBonus('ammo');
+
+            return p;
+        }
+
+        function getBuildingHpMult() {
+            return 1 + getUpgradeBonus('building');
+        }
+
+        /* ===== MENUS / SHOP ===== */
         // --- MENU SYSTEM ---
         let gameState = 'MENU';
         let backgroundSceneTimer = 0, currentBgScene = 0;
@@ -735,51 +1372,219 @@
             const el = document.getElementById(id);
             if (!el) return;
             el.style.display = show ? 'flex' : 'none';
-            if (id === 'enemyIndexScreen' && show) renderEnemyIndex();
+            if (id === 'enemyIndexScreen' && show) renderIndex();
+            if (id === 'upgradesScreen' && show) renderUpgrades();
             Audio.init();
         }
 
 
-        function renderEnemyIndex() {
+
+        let currentIndexTab = 'enemies';
+
+        function setIndexTab(tab) {
+            currentIndexTab = tab;
+            // set button styles
+            const btns = document.querySelectorAll('#enemyIndexScreen .tab-btn');
+            btns.forEach(b => {
+                const t = b.innerText.toLowerCase();
+                const key = t.includes('enemy') ? 'enemies' : t.includes('weapon') ? 'weapons' : t.includes('util') ? 'utilities' : t.includes('building') ? 'buildings' : 'events';
+                b.classList.toggle('active', key === tab);
+            });
+            renderIndex();
+        }
+
+        const indexDescriptions = {
+            enemies: {
+                0: "Basic goblin. Gets faster with score. Dies to most hits.",
+                1: "Tankier goblin. Soaks damage and crowds you.",
+                2: "Dasher. Very low HP but bursts toward you.",
+                3: "Shooter. Low HP. Keeps distance and fires.",
+                4: "Summoner. Spawns minions. If it lives too long, the screen fills.",
+                5: "Giant. Big body, shrinks as health drops. Slow but terrifying.",
+                6: "King. Huge bruiser with a massive health pool. Shrinks as it weakens.",
+                7: "Healer. Supports nearby goblins (weak alone).",
+                8: "Airstrike marker. Not a real enemy—telegraphs incoming damage.",
+                9: "Goblin Queen. Boss. Summons barracks and drops hex meteors."
+            },
+            weapons: {
+                katana: "Fast melee. Great for clearing crowds. Your safest default.",
+                shuriken: "Burst ranged weapon. Lots of projectiles—watch performance.",
+                sniper: "Single heavy shot. Great for picking dangerous targets.",
+                grenade: "Throw to爆. Good for 'Overkill' achievement."
+            },
+            utilities: {
+                healpad: "Utility: Place a heal field for 10 seconds. Stand in it to heal.",
+                medkit: "Instant heal. Useful when you get clipped by meteors.",
+                pill: "Speed Pill: 0.2s eat, then 2x speed with afterimages."
+            },
+            buildings: {
+                wall: "Cheap block. Helps funnel enemies and protect objectives.",
+                spikes: "Passive damage when enemies touch it.",
+                laser: "Laser Turret: zaps the closest enemy with a beam.",
+                rocket: "Rocket Pad: detects enemies and launches homing rockets.",
+                turret: "All-Seeing Turret: long range, steady fire (building now).",
+                barracks: "Enemy structure: spawns goblins (cannot spawn giants)."
+            },
+            events: {
+                meteor: "Meteor Shower: red warning → shadow → WHITE FLASH → impact. Leaves a boulder you can break.",
+                healing: "Healing Rain: visible green drops. Heal by standing near the glow.",
+                glitched: "GLITCHED: ultra-rare (1/1000). Screen looks hacked for 30s."
+            }
+        };
+
+
+        // Back-compat: older code/buttons may call this name
+        function renderEnemyIndex() { renderIndex(); }
+
+        function renderIndex() {
             const grid = document.getElementById('enemyIndexGrid');
+            const sub = document.getElementById('indexSubTitle');
             if (!grid) return;
+            grid.innerHTML = "";
+            if (sub) {
+                const map = { enemies: 'Enemies', weapons: 'Weapons', utilities: 'Utilities', buildings: 'Buildings', events: 'Events' };
+                sub.innerText = (map[currentIndexTab] || 'Index') + " — stats + notes";
+            }
 
-            const enemyInfo = [
-                { type: 0, name: 'Goblin', color: '#e74c3c', desc: 'Basic melee attacker.' },
-                { type: 1, name: 'Shield Goblin', color: '#c0392b', desc: 'Has a shield that must be broken first.' },
-                { type: 2, name: 'Dasher', color: '#f39c12', desc: 'Bursts forward with invincibility during dash.' },
-                { type: 3, name: 'Shooter', color: '#9b59b6', desc: 'Keeps distance and fires bursts.' },
-                { type: 4, name: 'Summoner', color: '#27ae60', desc: 'Summons extra goblins over time.' },
-                { type: 5, name: 'Giant', color: '#000', desc: 'Slow but tanky.' },
-                { type: 6, name: 'King', color: '#f1c40f', desc: 'Boss-tier enemy with high HP.' },
-                { type: 7, name: 'Flyer', color: '#00ffff', desc: 'Air unit. Melee cannot hit it.' },
-                { type: 8, name: 'Airstrike', color: 'cyan', desc: 'Flies across the map in waves.' },
-                { type: 9, name: 'Goblin Queen', color: '#2ecc71', desc: 'Final boss. Summons reinforcements and shoots.' },
-            ];
-
-            grid.innerHTML = '';
-            for (const info of enemyInfo) {
-                const e = new Enemy(0, 0, info.type); // temp to read stats
-                const hp = e.maxHp || e.hp || 1;
-                const spd = (e.speed ?? 0).toFixed(2);
-                const rad = (e.radius ?? 0);
-
+            const addCard = (title, subtitle, desc, statsArr, swatchHtml = "", tagsArr = []) => {
                 const card = document.createElement('div');
                 card.className = 'index-card';
+
+                const statsHtml = Array.isArray(statsArr) ? (
+                    `<div class="index-statgrid">` + statsArr.map(s => `
+                    <div class="index-stat">
+                        <span class="label">${s.label}</span>
+                        <span class="value">${s.value}</span>
+                    </div>
+                `).join('') + `</div>`
+                ) : (statsArr || "");
+
+                const tagsHtml = (Array.isArray(tagsArr) && tagsArr.length) ? (
+                    `<div class="index-tags">` + tagsArr.map(t => `<span class="index-tag">${t}</span>`).join('') + `</div>`
+                ) : "";
+
                 card.innerHTML = `
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-                    <div style="width:18px; height:18px; border-radius:50%; background:${info.color}; border:1px solid #555;"></div>
-                    <div style="font-weight:bold; color:#fff; font-size:18px;">${info.name}</div>
+                <div class="index-header">
+                    <div>
+                        <div class="index-name">${title}</div>
+                        <div class="index-sub">${subtitle || ""}</div>
+                    </div>
+                    ${swatchHtml}
                 </div>
-                <div style="color:#aaa; font-size:12px; margin-bottom:10px;">${info.desc}</div>
-                <div style="color:#ddd; font-size:12px; line-height:1.4;">
-                    <div><b>HP:</b> ${hp}</div>
-                    <div><b>Speed:</b> ${spd}</div>
-                    <div><b>Size:</b> ${rad}px</div>
-                </div>
+                <div class="index-desc">${desc || ""}</div>
+                ${statsHtml}
+                ${tagsHtml}
             `;
                 grid.appendChild(card);
+            };
+
+            if (currentIndexTab === 'enemies') {
+                Object.keys(enemyStatsDB).forEach(k => {
+                    const id = Number(k);
+                    const st = enemyStatsDB[id];
+                    const hp = (st.maxHp ?? st.hp ?? 1);
+                    const speed = (st.speed ?? 0).toFixed(2);
+                    const dmg = (st.damage ?? 0);
+                    const rad = (st.radius ?? st.baseRadius ?? 18);
+                    const name = st.name || ('Enemy ' + id);
+                    const desc = indexDescriptions.enemies[id] || "A hostile unit.";
+                    const subtitle = `Type ${id}`;
+                    const stats = `HP: ${hp} · Damage: ${dmg} · Speed: ${speed} · Radius: ${rad}`;
+                    addCard(name, subtitle, desc, stats, `<span class="index-swatch" style="background:${st.color || '#777'};"></span>`);
+                });
+            } else if (currentIndexTab === 'weapons') {
+                Object.keys(weaponsDB).forEach(key => {
+                    const w = weaponsDB[key];
+                    const name = w.name || key;
+                    const desc = indexDescriptions.weapons[key] || w.desc || "";
+                    const cdSec = (w.cd ?? 0) / 60;
+                    const isMelee = (key !== 'shooter' && key !== 'sniper');
+                    const subtitle = isMelee ? "Melee Weapon" : (key === 'sniper' ? "Ranged Weapon — Sniper" : "Ranged Weapon — Burst");
+                    const statsArr = [
+                        { label: 'Cost', value: w.cost ?? 0 },
+                        { label: 'Cooldown', value: cdSec.toFixed(2) + "s" },
+                    ];
+                    if (isMelee) {
+                        statsArr.push({ label: 'Range', value: w.range ?? 0 });
+                        statsArr.push({ label: 'Arc', value: w.width ?? 1 });
+                    } else {
+                        statsArr.push({ label: 'Projectile', value: key === 'sniper' ? "Piercing shot" : "3-shot burst" });
+                        statsArr.push({ label: 'Notes', value: key === 'sniper' ? "Great vs threats" : "Crowd clear" });
+                    }
+                    const tags = [];
+                    if (key === 'sniper') tags.push('Pierce');
+                    if (key === 'shooter') tags.push('Burst');
+                    if (key === 'katana') tags.push('Starter');
+                    addCard(name, subtitle, desc, statsArr, `<span class="index-swatch" style="background:#8e44ad;"></span>`, tags);
+                });
+            } else if (currentIndexTab === 'utilities') {
+                Object.keys(utilitiesDB).forEach(key => {
+                    const u = utilitiesDB[key];
+                    const name = u.name || key;
+                    const desc = indexDescriptions.utilities[key] || u.desc || "";
+                    const subtitle = "Utility";
+                    const statsArr = [
+                        { label: 'Cost', value: u.cost ?? 0 },
+                        { label: 'Ammo Use', value: 1 },
+                    ];
+                    const tags = [];
+                    if (key === 'pill') tags.push('Speed');
+                    if (key === 'healpad') tags.push('Healing');
+                    if (key === 'grenade') tags.push('AOE');
+                    if (key === 'landmine') tags.push('Trap');
+                    if (key === 'shuriken') tags.push('Ranged');
+                    addCard(name, subtitle, desc, statsArr, `<span class="index-swatch" style="background:#2ecc71;"></span>`, tags);
+                });
+            } else if (currentIndexTab === 'buildings') {
+                const baseHp = { wall: 200, spikes: 100, laser: 500, rocket: 1000, turret: 500, barracks: 100 };
+                Object.keys(buildingsDB).forEach(key => {
+                    const b = buildingsDB[key];
+                    const name = b.name || key;
+                    const desc = indexDescriptions.buildings[key] || b.desc || "";
+                    const subtitle = "Building";
+                    const statsArr = [
+                        { label: 'Cost', value: b.cost ?? 0 },
+                        { label: 'Base HP', value: baseHp[key] ?? 100 },
+                    ];
+                    if (key === 'laser') statsArr.push({ label: 'Fire', value: 'Beam (0.1s)' });
+                    if (key === 'rocket') statsArr.push({ label: 'Fire', value: '3 rockets / burst' });
+                    if (key === 'turret') statsArr.push({ label: 'Fire', value: 'Auto aim' });
+                    const tags = [];
+                    if (key === 'wall') tags.push('Block');
+                    if (key === 'spikes') tags.push('Passive');
+                    if (key === 'laser') tags.push('Defense');
+                    if (key === 'rocket') tags.push('Homing');
+                    if (key === 'turret') tags.push('Long Range');
+                    addCard(name, subtitle, desc, statsArr, `<span class="index-swatch" style="background:#f1c40f;"></span>`, tags);
+                });
+
+                addCard("Enemy Barracks", "Enemy Structure", indexDescriptions.buildings.barracks || "Spawns goblins.",
+                    [
+                        { label: 'Base HP', value: 100 },
+                        { label: 'Spawn', value: '3 mobs / 2s' },
+                        { label: 'Cannot spawn', value: 'Giant, King' },
+                        { label: 'Threat', value: 'High' }
+                    ],
+                    `<span class="index-swatch" style="background:#c0392b;"></span>`,
+                    ['Spawner', 'Objective']
+                );
+            } else if (currentIndexTab === 'events') {
+                const events = [
+                    { key: 'meteor', name: 'Meteor Shower', chance: 'Common', duration: '30s', notes: 'Damages player, enemies, buildings. Leaves breakable boulders.', tags: ['Boulders', 'Flash'] },
+                    { key: 'healing', name: 'Healing Rain', chance: 'Common', duration: '30s', notes: 'Stronger healing + visible drops.', tags: ['Healing'] },
+                    { key: 'glitched', name: 'GLITCHED', chance: '1/1000', duration: '30s', notes: 'Screen hacked overlay. Rare flex survival.', tags: ['Rare', 'Visual'] }
+                ];
+                events.forEach(ev => {
+                    const desc = indexDescriptions.events[ev.key] || ev.notes;
+                    addCard(ev.name, "World Event", desc, [
+                        { label: 'Chance', value: ev.chance },
+                        { label: 'Duration', value: ev.duration },
+                        { label: 'Type', value: 'Map event' },
+                        { label: 'Tip', value: ev.key === 'meteor' ? 'Break boulders for space' : (ev.key === 'healing' ? 'Stand in the glow' : 'Keep calm') }
+                    ], `<span class="index-swatch" style="background:${ev.key === 'meteor' ? '#ffffff' : (ev.key === 'healing' ? '#2ecc71' : '#9b59b6')};"></span>`, ev.tags);
+                });
             }
+
         }
 
         function goToLoadout() {
@@ -866,43 +1671,459 @@
         }
 
         function renderAchievements() {
+            ensureSaveDataShape();
             const list = document.getElementById('achievementsList');
             if (!list) return;
-            const unlocked = saveData.achievements?.firstBlood;
-            list.innerHTML = `
-            <div style="background:#222; border:1px solid #444; border-radius:10px; padding:16px; margin-bottom:12px; width:100%;">
+
+            list.innerHTML = '';
+            for (const a of achievementsDB) {
+                const unlocked = !!saveData.achievements[a.id];
+                let progressText = unlocked ? 'UNLOCKED' : 'LOCKED';
+
+                if (a.type === 'count') {
+                    const cur = saveData.stats[a.stat] ?? 0;
+                    progressText = unlocked ? `UNLOCKED (${a.goal}/${a.goal})` : `${Math.min(cur, a.goal)}/${a.goal}`;
+                }
+
+                const card = document.createElement('div');
+                card.style.background = '#222';
+                card.style.border = '1px solid #444';
+                card.style.borderRadius = '10px';
+                card.style.padding = '16px';
+                card.style.marginBottom = '12px';
+                card.style.width = '100%';
+                card.style.opacity = unlocked ? '1' : '0.6';
+                card.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
                     <div>
-                        <div style="font-size:22px; font-weight:900; color:#fff;">First Blood</div>
-                        <div style="color:#aaa; margin-top:4px;">Kill your first enemy.</div>
+                        <div style="font-size:22px; font-weight:900; color:#fff;">${a.name}</div>
+                        <div style="color:#aaa; font-size:13px; line-height:1.3; margin-top:4px;">${a.desc}</div>
                     </div>
-                    <div style="font-weight:900; padding:8px 12px; border-radius:999px; border:2px solid ${unlocked ? '#2ecc71' : '#777'}; color:${unlocked ? '#2ecc71' : '#777'};">
-                        ${unlocked ? 'UNLOCKED' : 'LOCKED'}
-                    </div>
+                    <div style="font-weight:bold; color:${unlocked ? '#2ecc71' : '#e74c3c'}; white-space:nowrap;">${progressText}</div>
                 </div>
-            </div>
-        `;
+            `;
+                list.appendChild(card);
+            }
         }
 
 
+
+
+        /* ===== GAME STATE ===== */
         // --- GAME VARIABLES ---
         let score = 0, frames = 0, mouseX = 0, mouseY = 0, isMouseDown = false;
+
+        // Real-time delta (ms) for frame-rate independent timers
+        let frameDtMs = 16.6667;
+
+        // Run-specific trackers (reset each run)
+        let runTimeMs = 0;
+        let runKills = 0;
+        let runDamageDealt = 0;
+        let runDamageTaken = 0;
+        let runShotsFired = 0;
+        let runBuildingsPlaced = 0;
+        let runBouldersBroken = 0;
+        let runIndirectKills = 0;
+
+        let idleMs = 0;
+        let runMedkitsUsed = 0;
+        let grenadeIdCounter = 1;
+        let grenadeKillTally = {};
         const keys = { w: false, a: false, s: false, d: false };
 
         let player = {};
-        let enemies = [], projectiles = [], slashes = [], particles = [], items = [], landmines = [], turrets = [], buildings = [], visuals = [], barracks = [], explosions = [], grenades = [];
+        let enemies = [], projectiles = [], slashes = [], particles = [], items = [], landmines = [], buildings = [], visuals = [], barracks = [], explosions = [], grenades = [], healPads = [], afterimages = [], boulders = [];
         let spawnedFlags = {};
         let goblinQueenActive = false, goblinQueenDefeated = false;
 
         // TD Mode specific
         let tdActive = false;
         let tdWaveStarted = false;
+        // --- JUICE + MAP EVENTS ---
+        let screenShake = 0;
+        let hitStopFrames = 0;
+        let whiteFlash = 0;
+        let damageTexts = [];
 
+        // Hard caps to prevent lag spikes
+        const MAX_PROJECTILES = 600;
+        const MAX_PARTICLES = 1200;
+        const MAX_DAMAGE_TEXTS = 120;
+        const MAX_SLASHES = 12;
+
+        function addShake(amount = 6) { screenShake = Math.max(screenShake, amount); }
+        function addHitStop(fr = 2) { hitStopFrames = Math.max(hitStopFrames, fr); }
+        function addFlash(fr = 6) { whiteFlash = Math.max(whiteFlash, fr); }
+
+        function addDamageText(x, y, text, color = '#fff') {
+            damageTexts.push({ x, y, text, color, life: 45, vy: -0.6 });
+        }
+
+        // Events
+        let eventTimer = 3600;
+        let healingRainTimer = 0;
+        let glitchTimer = 0;
+        let currentEvent = null;
+        let _lastEndedEvent = null;
+
+        // Time scaling (based on real frame time). 1.0 ~= 60fps.
+        let dtScale = 1;
+
+        // Event pacing helpers
+        let _eventWasActive = false;
+        let _healingSpawnAcc = 0;
+        let healingDots = []; // {x,y,life}
+        let meteors = []; // {x,y,stage,timer,radius}
+
+        // Performance: spatial grid for enemy lookup (reduces projectile collision cost)
+        const ENEMY_CELL_SIZE = 140;
+        let enemyGrid = new Map(); // key -> [enemyObj,...]
+        function rebuildEnemyGrid() {
+            enemyGrid.clear();
+            for (const e of enemies) {
+                // Skip removed / dead placeholders
+                if (!e) continue;
+                const cx = (e.x / ENEMY_CELL_SIZE) | 0;
+                const cy = (e.y / ENEMY_CELL_SIZE) | 0;
+                const key = cx + ',' + cy;
+                let arr = enemyGrid.get(key);
+                if (!arr) { arr = []; enemyGrid.set(key, arr); }
+                arr.push(e);
+            }
+        }
+        function forEachEnemyNear(x, y, fn) {
+            const cx = (x / ENEMY_CELL_SIZE) | 0;
+            const cy = (y / ENEMY_CELL_SIZE) | 0;
+            for (let gx = cx - 1; gx <= cx + 1; gx++) {
+                for (let gy = cy - 1; gy <= cy + 1; gy++) {
+                    const arr = enemyGrid.get(gx + ',' + gy);
+                    if (!arr) continue;
+                    for (let i = 0; i < arr.length; i++) fn(arr[i]);
+                }
+            }
+        }
+        function killEnemyByObj(enemy) {
+            const idx = enemies.indexOf(enemy);
+            if (idx !== -1) killEnemy(enemy, idx);
+        }
+        function startHealingRain(duration = 1800) {
+            healingRainTimer = duration;
+            currentEvent = 'healing';
+            // sprinkle initial dots
+            for (let i = 0; i < 140; i++) {
+                healingDots.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, life: 30 + Math.random() * 60 });
+            }
+        }
+
+        function startGlitchedEvent(duration = 1800) {
+            glitchTimer = duration;
+            currentEvent = 'glitched';
+            // A little burst so it feels like the screen got hacked
+            createParticles(player.x, player.y, '#9b59b6', 25);
+        }
+
+        function spawnMeteor(count = 6) {
+            // Meteor Shower: multiple meteors with staggered warning timers
+            count = Math.max(1, Math.floor(count));
+            for (let i = 0; i < count; i++) {
+                const x = 80 + Math.random() * (canvas.width - 160);
+                const y = 80 + Math.random() * (canvas.height - 160);
+                const t = 45 + i * 10 + Math.floor(Math.random() * 8); // stagger slightly
+                meteors.push({ x, y, stage: 'warn', timer: t, radius: 70, source: 'event', playerOnly: false, shape: 'circle' });
+            }
+        }
+
+
+
+        // Meteor boulders (meteor remains). Obstacles that can be broken by player/enemies.
+        function spawnBoulder(x, y, from = 'event') {
+            const r = 34;
+            const maxHp = 220;
+            boulders.push({ x, y, radius: r, hp: maxHp, maxHp: maxHp, from, crack: 0 });
+            if (boulders.length > 8) boulders.shift();
+        }
+
+        function damageBoulder(b, amount, source = '') {
+            if (!b || b.hp <= 0) return;
+            b.hp -= amount;
+            b.crack = Math.min(1, 1 - (b.hp / b.maxHp));
+            if (b.hp <= 0) {
+                runBouldersBroken++;
+                createParticles(b.x, b.y, '#6b4f2a', 18);
+                createParticles(b.x, b.y, '#3d2a17', 18);
+                addShake(4);
+                Audio.playSFX('explode');
+            }
+        }
+
+        function resolveCircleCollision(ax, ay, ar, bx, by, br) {
+            const dx = ax - bx, dy = ay - by;
+            const dist = Math.hypot(dx, dy) || 0.0001;
+            const overlap = (ar + br) - dist;
+            if (overlap > 0) {
+                const nx = dx / dist, ny = dy / dist;
+                return { overlap, nx, ny };
+            }
+            return null;
+        }
+
+        function updateBoulders() {
+            if (!boulders || boulders.length === 0) return;
+
+            // Remove broken
+            for (let i = boulders.length - 1; i >= 0; i--) {
+                if (boulders[i].hp <= 0) boulders.splice(i, 1);
+            }
+
+            // Player collision (push out)
+            if (player && player.hp > 0) {
+                for (const b of boulders) {
+                    const col = resolveCircleCollision(player.x, player.y, player.radius, b.x, b.y, b.radius);
+                    if (col) {
+                        player.x += col.nx * col.overlap;
+                        player.y += col.ny * col.overlap;
+                    }
+                }
+            }
+
+            // Enemy collision + "natural break"
+            const contactDps = 18; // damage per second from bumping
+            const dmgPerFrame = contactDps * (frameDtMs / 1000);
+
+            for (const e of enemies) {
+                for (const b of boulders) {
+                    const col = resolveCircleCollision(e.x, e.y, e.radius, b.x, b.y, b.radius);
+                    if (col) {
+                        // Push enemy out but it keeps trying to path to player -> will keep bumping and breaking
+                        e.x += col.nx * col.overlap;
+                        e.y += col.ny * col.overlap;
+
+                        // Natural break
+                        damageBoulder(b, dmgPerFrame, 'enemy');
+                    }
+                }
+            }
+        }
+
+        function drawBoulders() {
+            if (!boulders || boulders.length === 0) return;
+            for (const b of boulders) {
+                // Base rock
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#2b1c10';
+                ctx.fill();
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Subtle highlight
+                ctx.beginPath();
+                ctx.arc(b.x - b.radius * 0.25, b.y - b.radius * 0.25, b.radius * 0.55, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(120, 90, 55, 0.18)';
+                ctx.fill();
+
+                // Cracks (based on damage)
+                if (b.crack > 0) {
+                    ctx.strokeStyle = `rgba(0,0,0,${0.2 + b.crack * 0.6})`;
+                    ctx.lineWidth = 2;
+                    for (let i = 0; i < 3; i++) {
+                        const a = (i / 3) * Math.PI * 2 + 0.6;
+                        ctx.beginPath();
+                        ctx.moveTo(b.x, b.y);
+                        ctx.lineTo(b.x + Math.cos(a) * b.radius * (0.6 + 0.3 * Math.random()), b.y + Math.sin(a) * b.radius * (0.6 + 0.3 * Math.random()));
+                        ctx.stroke();
+                    }
+                }
+
+                // HP bar
+                const w = 50, h = 6;
+                ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                ctx.fillRect(b.x - w / 2, b.y - b.radius - 14, w, h);
+                ctx.fillStyle = '#f39c12';
+                ctx.fillRect(b.x - w / 2, b.y - b.radius - 14, w * (b.hp / b.maxHp), h);
+                ctx.strokeStyle = '#000';
+                ctx.strokeRect(b.x - w / 2, b.y - b.radius - 14, w, h);
+            }
+        }
+        // Goblin Queen attack: hexagon meteors (player-only)
+        function spawnQueenHexMeteorBurst(count = 1) {
+            // Queen meteors are meant to be scary but fair:
+            // - only ONE meteor
+            // - green
+            // - no flash
+            // - player-only (cannot damage enemies)
+            count = 1;
+            const ox = (Math.random() * 2 - 1) * 90;
+            const oy = (Math.random() * 2 - 1) * 90;
+            const x = Math.max(70, Math.min(canvas.width - 70, player.x + ox));
+            const y = Math.max(70, Math.min(canvas.height - 70, player.y + oy));
+            const t = 40; // telegraph
+            meteors.push({ x, y, stage: 'warn', timer: t, radius: 55, source: 'queen', playerOnly: true, shape: 'hex', color: '#2ecc71', noFlash: true, damage: 45 });
+        }
+        function updateEvents() {
+            // Event pacing (frame-rate independent using dtScale):
+            // - events do not overlap
+            // - after an event ends, wait a full 60 seconds before starting the next
+
+            const eventActive = (healingRainTimer > 0) || (glitchTimer > 0) || meteors.some(mm => mm.source === 'event');
+
+            // Handle end-of-event: unlock "survive event" achievements
+            if (_eventWasActive && !eventActive) {
+                if (player && player.hp > 0 && currentEvent) {
+                    if (currentEvent === 'meteor') unlockAchievement('surviveMeteor');
+                    if (currentEvent === 'healing') unlockAchievement('surviveHealing');
+                    if (currentEvent === 'glitched') unlockAchievement('surviveGlitched');
+                }
+                _lastEndedEvent = currentEvent;
+                currentEvent = null;
+                eventTimer = 3600; // 60s cooldown after an event ends
+            }
+            _eventWasActive = eventActive;
+
+            // Countdown to next event only when nothing is active
+            if (!eventActive) {
+                eventTimer -= dtScale;
+                if (eventTimer <= 0) {
+                    const r = Math.random();
+                    if (r < 0.001) {
+                        startGlitchedEvent(1800);
+                    } else if (r < 0.56) {
+                        spawnMeteor(8); // more meteors
+                    } else {
+                        startHealingRain(1800);
+                    }
+                    eventTimer = 999999; // keep stopped until event ends
+                }
+            }
+
+            // Glitched event timer
+            if (glitchTimer > 0) glitchTimer -= dtScale;
+
+            // Healing Rain update
+            if (healingRainTimer > 0) {
+                healingRainTimer -= dtScale;
+
+                // Spawn healing dots over time (tuned for dtScale)
+                _healingSpawnAcc += dtScale;
+                while (_healingSpawnAcc >= 1) {
+                    _healingSpawnAcc -= 1;
+                    healingDots.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, life: 140, r: 10 + Math.random() * 10 });
+                }
+
+                // Heal player if standing in rain (gentle heal)
+                if (player && player.hp > 0) {
+                    // Stronger, more visible healing: stand near multiple dots to heal faster.
+                    let inRain = false;
+                    for (const d of healingDots) {
+                        const rr = d.r || 14;
+                        if (Math.hypot(player.x - d.x, player.y - d.y) < rr + 30) { inRain = true; break; }
+                    }
+                    if (inRain) {
+                        // heal ~10 HP per 10 seconds (scales with real time)
+                        player._healAcc = (player._healAcc || 0) + (frameDtMs / 1000) * 1.0;
+                        while (player._healAcc >= 1) {
+                            player._healAcc -= 1;
+                            if (player.hp < player.maxHp) {
+                                player.hp = Math.min(player.maxHp, player.hp + 1);
+                                createParticles(player.x, player.y, '#2ecc71', 2);
+                            }
+                        }
+                    } else {
+                        player._healAcc = 0;
+                    }
+                }
+
+                // fade dots
+                for (let i = healingDots.length - 1; i >= 0; i--) {
+                    healingDots[i].life -= dtScale;
+                    if (healingDots[i].life <= 0) healingDots.splice(i, 1);
+                }
+            }
+
+            // Meteor update + damage
+            const buildingRadius = (b) => {
+                if (b.type === 'wall') return 28;
+                if (b.type === 'spikes') return 20;
+                if (b.type === 'laser') return 30;
+                if (b.type === 'rocket') return 30;
+                if (b.type === 'turret') return 24;
+                return 24;
+            };
+
+            for (let i = meteors.length - 1; i >= 0; i--) {
+                const m = meteors[i];
+                m.timer -= dtScale;
+                if (m.timer <= 0) {
+                    if (m.stage === 'warn') {
+                        m.stage = 'shadow';
+                        m.timer = 20; // quick shadow before impact
+                    } else {
+                        // IMPACT
+                        const dmg = (m.damage != null ? m.damage : 75);
+                        // flash
+                        if (!m.noFlash && m.source === 'event') whiteFlash = 6;
+
+                        // Player
+                        if (player && player.hp > 0) {
+                            if (Math.hypot(player.x - m.x, player.y - m.y) < m.radius + player.radius) {
+                                player.hp -= dmg;
+                                saveData._lastDamageFrame = frames;
+                            }
+                        }
+
+                        // Enemies (event meteors only)
+                        if (!m.playerOnly) {
+                            for (let j = enemies.length - 1; j >= 0; j--) {
+                                const e = enemies[j];
+                                if (Math.hypot(e.x - m.x, e.y - m.y) < m.radius + e.radius) {
+                                    e.lastHitSource = 'meteor';
+                                    e.hp -= dmg;
+                                    if (e.hp <= 0) killEnemy(e, j);
+                                }
+                            }
+
+                            // Buildings take damage too (meteor shower only)
+                            for (let j = buildings.length - 1; j >= 0; j--) {
+                                const b = buildings[j];
+                                const br = buildingRadius(b);
+                                if (Math.hypot(b.x - m.x, b.y - m.y) < m.radius + br) {
+                                    b.hp -= dmg;
+                                    createParticles(b.x, b.y, '#ffffff', 6);
+                                    if (b.hp <= 0) {
+                                        buildings.splice(j, 1);
+                                        createParticles(b.x, b.y, '#aaaaaa', 20);
+                                        Audio.playSFX('explode');
+                                    }
+                                }
+                            }
+                        }
+
+                        // particles/explosion
+                        const impactColor = (m.color || (m.shape === 'hex' ? '#2ecc71' : '#6b4f2a'));
+                        createParticles(m.x, m.y, impactColor, 34);
+                        if (m.source === 'event') createParticles(m.x, m.y, '#3d2a17', 18);
+                        explosions.push({ x: m.x, y: m.y, radius: m.radius, life: 18, color: (m.color || (m.shape === 'hex' ? '#2ecc71' : '#6b4f2a')) });
+
+                        if (m.source === 'event') { spawnBoulder(m.x, m.y, 'event'); }
+
+                        meteors.splice(i, 1);
+                    }
+                }
+            }
+        }
+
+
+
+        /* ===== INPUT ===== */
         // --- INPUT LISTENERS ---
         window.addEventListener('keydown', (e) => {
             if (gameState !== 'GAME') return;
             if (e.key === 'Escape') togglePause();
             if (gameState === 'PAUSE') return;
+
+            idleMs = 0;
 
             const key = e.key.toLowerCase();
             if (key === 'w') keys.w = true;
@@ -916,7 +2137,7 @@
                 if (key === 'g') attemptBuildTD('spikes');
                 if (key === 'c') attemptBuildTD('laser');
                 if (key === 'v') attemptBuildTD('rocket');
-                if (key === 'b') attemptBuildTD('healpad');
+                if (key === 'b') attemptBuildTD('turret');
             } else {
                 // Normal Mode or TD Active
                 if (e.key === ' ') { if (!player.isHealing && !player.isUsingUtil) useUtility(); }
@@ -942,12 +2163,15 @@
         canvas.addEventListener('mousedown', (e) => {
             if (gameState === 'MENU' || gameState === 'LOADOUT') return;
             if (e.button === 0 && gameState === 'GAME') {
+                idleMs = 0;
                 isMouseDown = true;
                 if (!player.isHealing && !player.isUsingUtil) performAttack();
             }
         });
         canvas.addEventListener('mouseup', () => { isMouseDown = false; });
 
+
+        /* ===== PLAYER ACTIONS ===== */
         // --- GAME ACTIONS ---
         function togglePause() {
             if (gameState === 'GAME') { gameState = 'PAUSE'; document.getElementById('pauseMenu').style.display = 'flex'; }
@@ -956,7 +2180,7 @@
 
         function attemptMedkit() {
             if (player.medkits > 0 && player.hp < player.maxHp && !player.isHealing) {
-                player.isHealing = true; player.medkits--; player.healTimer = 300;
+                player.isHealing = true; player.medkits--; player.healTimer = 300; runMedkitsUsed++;
             }
         }
 
@@ -990,6 +2214,7 @@
             // TD Limits
             if (type === 'laser' && buildings.filter(b => b.type === 'laser').length >= 5) return;
             if (type === 'rocket' && buildings.filter(b => b.type === 'rocket').length >= 2) return;
+            if (type === 'turret' && buildings.filter(b => b.type === 'turret').length >= 3) return;
             placeBuilding(type);
         }
 
@@ -998,7 +2223,7 @@
             if (type === 'wall') { hp = 200; maxHp = 200; }
             if (type === 'laser') { hp = 500; maxHp = 500; }
             if (type === 'rocket') { hp = 1000; maxHp = 1000; }
-            if (type === 'healpad') { hp = 500; maxHp = 500; }
+            if (type === 'turret') { hp = 500; maxHp = 500; }
 
             const angle = Math.atan2(mouseY - player.y, mouseX - player.x);
             const dist = 60;
@@ -1007,9 +2232,12 @@
             let color = '#fff';
             if (type === 'spikes') color = '#c0392b';
             if (type === 'wall') color = '#7f8c8d';
-            if (type === 'healpad') color = '#2ecc71';
+            if (type === 'turret') color = '#00ffff';
 
-            buildings.push({ x: spawnX, y: spawnY, type: type, angle: angle, hp: hp, maxHp: maxHp, cooldown: 0, color: color });
+            buildings.push({ x: spawnX, y: spawnY, type: type, angle: angle, hp: hp, maxHp: maxHp, cooldown: 0, color: color, burstRemaining: 0, burstTimer: 0 });
+            runBuildingsPlaced++;
+            incStat('buildingsPlaced', 1);
+            unlockAchievement('firstConstruction');
             createParticles(spawnX, spawnY, '#fff', 10);
         }
 
@@ -1025,6 +2253,13 @@
             Audio.playClick();
         }
 
+        let burstCounter = 0;
+        let sniperShotIdCounter = 0;
+
+
+        // Track special multi-kill achievements (sniper shot / shooter burst)
+        const sniperShotKills = Object.create(null);
+        const shooterBurstKills = Object.create(null);
         function performAttack() {
             if (player.weaponTimer > 0) return;
             const wStats = weaponsDB[saveData.equippedWeapon];
@@ -1032,13 +2267,17 @@
             const angle = Math.atan2(mouseY - player.y, mouseX - player.x);
 
             if (saveData.equippedWeapon === 'shooter') {
+                const currentBurstId = (++burstCounter);
                 for (let i = -1; i <= 1; i++) {
                     let spread = angle + (i * 0.15);
-                    projectiles.push({ x: player.x, y: player.y, dx: Math.cos(spread) * 12, dy: Math.sin(spread) * 12, radius: 3, rotation: 0, isEnemy: false, color: '#00ffcc' });
+                    runShotsFired++;
+                    projectiles.push({ x: player.x, y: player.y, dx: Math.cos(spread) * 12, dy: Math.sin(spread) * 12, radius: 3, rotation: 0, isEnemy: false, color: '#00ffcc', source: 'shooter', burstId: currentBurstId });
                 }
                 Audio.playSFX('shoot');
             } else if (saveData.equippedWeapon === 'sniper') {
-                projectiles.push({ x: player.x, y: player.y, dx: Math.cos(angle) * 20, dy: Math.sin(angle) * 20, radius: 5, rotation: 0, isEnemy: false, color: '#ff00ff', isSniper: true, hitList: [] });
+                const sid = ++sniperShotIdCounter;
+                runShotsFired++;
+                projectiles.push({ x: player.x, y: player.y, dx: Math.cos(angle) * 22, dy: Math.sin(angle) * 22, radius: 5, rotation: angle, color: '#ff00ff', isSniper: true, hitSet: new Set(), shotId: sid, life: 240 });
                 Audio.playSFX('shoot');
             } else {
                 slashes.push({ x: player.x, y: player.y, angle: angle, life: 8, radius: wStats.range, width: wStats.width, type: saveData.equippedWeapon, hit: [] });
@@ -1053,6 +2292,7 @@
             if (type === 'shuriken') {
                 player.ammo--;
                 const angle = Math.atan2(mouseY - player.y, mouseX - player.x);
+                runShotsFired++;
                 projectiles.push({ x: player.x, y: player.y, dx: Math.cos(angle) * 10, dy: Math.sin(angle) * 10, radius: 4, rotation: 0, isEnemy: false });
                 Audio.playSFX('shoot');
             } else if (type === 'landmine') {
@@ -1060,16 +2300,27 @@
                 landmines.push({ x: player.x, y: player.y, radius: 10 });
             } else if (type === 'grenade') {
                 player.ammo--;
-                grenades.push({ x: player.x, y: player.y, timer: 60 }); // 1s
+                grenades.push({ x: player.x, y: player.y, timer: 60, id: grenadeIdCounter++ }); // 1s
             } else if (type === 'pill') {
-                if (player.hp < player.maxHp) { player.ammo--; player.isUsingUtil = true; player.utilTimer = 30; }
-            } else if (type === 'turret') {
+                // Speed Pill: 0.2s eat time -> then 2x movement speed for 6 seconds + heavy afterimages + juice
+                if (player.isUsingUtil) return;
                 player.ammo--;
-                if (turrets.length >= 3) turrets.shift();
-                turrets.push({ x: player.x, y: player.y, cooldown: 0, range: 1000 });
+                player.isUsingUtil = true;
+                player.utilType = 'pill';
+                player.utilTimer = 12; // 0.2s @60fps-ish (visual bar uses /30, that's fine)
+                Audio.playSFX('heal');
+            } else if (type === 'healpad') {
+                // Utility Heal Pad: lasts 10 seconds at placement spot
+                player.ammo--;
+                if (healPads.length >= 3) healPads.shift();
+                healPads.push({ x: player.x, y: player.y, radius: 40, life: 600 }); // 10s @60fps, decremented by dtScale
+                createParticles(player.x, player.y, '#2ecc71', 8);
+                Audio.playSFX('heal');
             }
         }
 
+
+        /* ===== ENEMIES / BARRACKS ===== */
         // --- ENEMY LOGIC ---
         class Enemy {
             constructor(x = null, y = null, forcedType = null) {
@@ -1104,16 +2355,45 @@
 
             setType(type) {
                 this.type = type;
-                if (type === 0) { this.color = '#e74c3c'; this.speed = 2; }
-                else if (type === 1) { this.color = '#c0392b'; this.speed = 1.8; this.hasShield = true; this.shieldHp = 5; } // NERFED
-                else if (type === 2) { this.color = '#f39c12'; this.speed = 2.5; this.dashCooldown = 180; this.actionTimer = Math.random() * 100; }
-                else if (type === 3) { this.color = '#9b59b6'; this.speed = 1.2; this.actionTimer = 180; }
-                else if (type === 4) { this.color = '#27ae60'; this.radius = 20; this.speed = 0.8; this.hp = 3; this.maxHp = 3; this.actionTimer = 240; }
-                else if (type === 5) { this.color = '#000'; this.radius = 60; this.speed = 0.5; this.hp = 50; this.maxHp = 50; this.actionTimer = 180; }
-                else if (type === 6) { this.color = '#f1c40f'; this.radius = 80; this.speed = 0; this.hp = 150; this.maxHp = 150; this.actionTimer = 300; }
-                else if (type === 7) { this.color = '#00ffff'; this.radius = 12; this.speed = 2.5; }
-                else if (type === 8) { this.color = 'cyan'; this.radius = 15; this.speed = 8; this.hp = 10; this.maxHp = 10; }
-                else if (type === 9) { this.color = '#2ecc71'; this.radius = 100; this.speed = 0; this.hp = 500; this.maxHp = 500; this.actionTimer = 120; this.summonStage = 0; }
+                // Reset per-type flags
+                this.hasShield = false;
+                this.invincible = false;
+                this.dashCooldown = 0;
+                this.dashDuration = 0;
+                this.dashSpeed = 0;
+                this.actionTimer = 0;
+                this.summonStage = 0;
+
+                const base = enemyStatsDB[type] || enemyStatsDB[0];
+                this.color = base.color;
+                this.baseRadius = base.radius;
+                this.radius = base.radius;
+                this.speed = base.speed;
+                this.maxHp = base.maxHp;
+                this.hp = base.maxHp;
+
+                if (base.hasShield) {
+                    this.hasShield = true;
+                    this.shieldHp = base.shieldHp ?? 5;
+                }
+                if (type === 8) {
+                    // Airstrike: flies straight across the map
+                    this.vx = (Math.random() < 0.5 ? -1 : 1) * base.speed;
+                    this.vy = 0;
+                }
+                if (type === 9) {
+                    this.actionTimer = base.actionTimer ?? 120;
+                    this.summonStage = 0;
+                }
+                if (type === 2) {
+                    this.dashSpeed = base.dashSpeed ?? 12;
+                    this.dashDuration = base.dashDuration ?? 15;
+                    this.dashCooldown = base.dashCooldown ?? 180;
+                    this.actionTimer = Math.random() * 100;
+                }
+                if (type === 3 || type === 4 || type === 5 || type === 6) {
+                    this.actionTimer = base.actionTimer ?? this.actionTimer;
+                }
             }
 
             update() {
@@ -1122,18 +2402,20 @@
 
 
                 // Giant/King shrink with health
-                if (this.type === 5) { this.radius = 30 + 30 * (this.hp / this.maxHp); } // 60 -> 30
-                if (this.type === 6) { this.radius = 40 + 40 * (this.hp / this.maxHp); } // 80 -> 40
-
-                // Keep big enemies consistent size (no health-based shrinking)
-                if (this.type === 5) this.radius = 60; // Giant
-                if (this.type === 6) this.radius = 80; // King
-
-
+                if (this.type === 5 || this.type === 6) {
+                    const maxR = this.baseRadius ?? this.radius;
+                    const minR = enemyStatsDB[this.type]?.minRadius ?? Math.floor(maxR * 0.5);
+                    const t = Math.max(0, Math.min(1, this.hp / Math.max(1, this.maxHp)));
+                    this.radius = minR + (maxR - minR) * t;
+                }
+                // NOTE: Giant/King size is handled by health-based shrink above.
                 if (this.type === 8) { this.x += this.vx; this.y += this.vy; return; }
 
                 if (this.type === 9) {
-                    this.radius = 40 + (60 * (this.hp / this.maxHp));
+                    const qMax = enemyStatsDB[9]?.maxRadius ?? 100;
+                    const qMin = enemyStatsDB[9]?.minRadius ?? 40;
+                    const qt = Math.max(0, Math.min(1, this.hp / Math.max(1, this.maxHp)));
+                    this.radius = qMin + (qMax - qMin) * qt;
                     if (this.summonStage === 0) {
                         for (let i = 0; i < 5; i++) {
                             let ang = (i / 5) * Math.PI * 2;
@@ -1155,7 +2437,7 @@
                     this.actionTimer--;
                     let rate = 60 * (this.hp / this.maxHp); if (rate < 20) rate = 20;
                     if (this.actionTimer <= 0) {
-                        projectiles.push({ x: this.x, y: this.y, dx: Math.cos(angle) * 6, dy: Math.sin(angle) * 6, radius: 20, isEnemy: true, color: '#0f0', isQueenShot: true });
+                        spawnQueenHexMeteorBurst(1);
                         this.actionTimer = rate;
                     }
                     return;
@@ -1237,7 +2519,11 @@
             update() {
                 this.timer--;
                 if (this.timer <= 0) {
-                    for (let i = 0; i < 3; i++) enemies.push(new Enemy(this.x + (Math.random() * 40 - 20), this.y + (Math.random() * 40 - 20)));
+                    const pool = [0, 1, 2, 3, 4, 7, 8]; // NO Giant (5), NO King (6), NO Queen (9)
+                    for (let i = 0; i < 3; i++) {
+                        const t = pool[Math.floor(Math.random() * pool.length)];
+                        enemies.push(new Enemy(this.x + (Math.random() * 40 - 20), this.y + (Math.random() * 40 - 20), t));
+                    }
                     createParticles(this.x, this.y, '#444', 5); this.timer = 120;
                 }
             }
@@ -1249,15 +2535,38 @@
             }
         }
 
+
+        /* ===== MAIN LOOP ===== */
         // --- GAME LOOP ---
         function update() {
             if (gameState === 'MENU') {
                 backgroundSceneTimer++;
                 if (backgroundSceneTimer > 180) { currentBgScene = (currentBgScene + 1) % bgScenes.length; backgroundSceneTimer = 0; }
+
                 return;
             }
 
             if (gameState !== 'GAME') return;
+            // Run timers (frame-rate independent)
+            runTimeMs += frameDtMs;
+
+            // Statue Mode: no input for 30 seconds
+            const anyMoveKey = keys.w || keys.a || keys.s || keys.d;
+            if (anyMoveKey || isMouseDown) {
+                idleMs = 0;
+            } else {
+                idleMs += frameDtMs;
+                if (idleMs >= 30000) {
+                    unlockAchievement('statueMode');
+                    idleMs = 0;
+                }
+            }
+
+            // Living on the Edge: reach 5,000 score without a medkit
+            if (score >= 5000 && runMedkitsUsed === 0) {
+                unlockAchievement('livingOnEdge');
+            }
+
 
             // Victory Check (Only Campaign)
             if (selectedMode === 'campaign' && goblinQueenDefeated && enemies.length === 0 && barracks.length === 0) {
@@ -1265,6 +2574,8 @@
             }
 
             if (isMouseDown && !player.isHealing && !player.isUsingUtil) performAttack();
+
+            updateEvents();
 
             // Player Stats
             if (player.isHealing) {
@@ -1276,6 +2587,12 @@
             }
             if (player.weaponTimer > 0) player.weaponTimer--;
             if (player.dashTimer > 0) player.dashTimer--;
+            if ((player.speedBoostTimer || 0) > 0) player.speedBoostTimer--;
+
+            // Survival / no-damage achievements
+            if (frames >= 60 * 60 * 5) unlockAchievement('stillAlive');
+            if (frames - (saveData._lastDamageFrame || 0) >= 60 * 60) unlockAchievement('untouchable');
+            if (player.hp <= 1) unlockAchievement('closeCall');
 
             // Player Move
             if (player.isDashing) {
@@ -1285,12 +2602,39 @@
                 let dx = 0, dy = 0;
                 if (keys.w) dy -= 1; if (keys.s) dy += 1; if (keys.a) dx -= 1; if (keys.d) dx += 1;
                 if (dx || dy) {
-                    const len = Math.sqrt(dx * dx + dy * dy); dx = (dx / len) * player.speed; dy = (dy / len) * player.speed;
+                    const len = Math.sqrt(dx * dx + dy * dy);
+                    let spd = player.speed;
+                    if ((player.speedBoostTimer || 0) > 0) spd *= 2;
+                    dx = (dx / len) * spd; dy = (dy / len) * spd;
                 }
                 player.x += dx; player.y += dy;
+                if ((player.speedBoostTimer || 0) > 0 && (dx || dy)) {
+                    afterimages.push({ x: player.x, y: player.y, life: 26 });
+                    if (afterimages.length > 120) afterimages.shift();
+                }
             }
             player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
             player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+
+            // Speed afterimages fade
+            for (let i = afterimages.length - 1; i >= 0; i--) {
+                afterimages[i].life--;
+                if (afterimages[i].life <= 0) afterimages.splice(i, 1);
+            }
+
+            // Utility Heal Pads
+            for (let i = healPads.length - 1; i >= 0; i--) {
+                const h = healPads[i];
+                h.life--;
+                if (h.life <= 0) { healPads.splice(i, 1); continue; }
+                if (Math.hypot(player.x - h.x, player.y - h.y) < h.radius) {
+                    if (player.hp < player.maxHp) {
+                        player.hp = Math.min(player.maxHp, player.hp + 0.35);
+                        if (!saveData.stats.healPadUsed) { saveData.stats.healPadUsed = true; unlockAchievement('medicStation'); }
+                        if (frames % 6 === 0) createParticles(player.x, player.y, '#2ecc71', 1);
+                    }
+                }
+            }
 
             // Barracks
             for (let i = barracks.length - 1; i >= 0; i--) {
@@ -1304,7 +2648,10 @@
 
                 if (b.type === 'healpad') {
                     if (Math.hypot(player.x - b.x, player.y - b.y) < 30) {
-                        if (player.hp < player.maxHp) { player.hp += 0.5; if (frames % 10 === 0) createParticles(player.x, player.y, '#2ecc71', 1); }
+                        if (player.hp < player.maxHp) {
+                            player.hp += 0.5;
+                            if (!saveData.stats.healPadUsed) { saveData.stats.healPadUsed = true; unlockAchievement('medicStation'); saveGame(); } if (frames % 10 === 0) createParticles(player.x, player.y, '#2ecc71', 1);
+                        }
                     }
                 } else if (b.type === 'laser') {
                     if (b.cooldown > 0) b.cooldown--;
@@ -1323,11 +2670,26 @@
                                     let d2 = Math.atan2(e.y - b.y, e.x - b.x);
                                     if (Math.abs(d1 - d2) < 0.1) { // roughly same direction
                                         if (e.hasShield) { e.shieldHp -= 1; if (e.shieldHp <= 0) e.hasShield = false; }
-                                        else { e.hp -= 1; if (e.hp <= 0) e.pendingDeath = true; }
+                                        else { e.hp -= 1; e.lastHitSource = 'laserTurret'; if (e.hp <= 0) e.pendingDeath = true; }
                                     }
                                 }
                             });
                             b.cooldown = 6; // 0.1s
+                        }
+                    }
+                } else if (b.type === 'turret') {
+                    if (b.cooldown > 0) b.cooldown--;
+                    else {
+                        let closest = null, minDist = 1000;
+                        for (const e of enemies) {
+                            const d = Math.hypot(e.x - b.x, e.y - b.y);
+                            if (d < minDist) { minDist = d; closest = e; }
+                        }
+                        if (closest) {
+                            const angle = Math.atan2(closest.y - b.y, closest.x - b.x);
+                            projectiles.push({ x: b.x, y: b.y, dx: Math.cos(angle) * 15, dy: Math.sin(angle) * 15, radius: 4, isEnemy: false, color: '#00ffff', source: 'allSeeing' });
+                            b.cooldown = 12; // 0.2s
+                            Audio.playSFX('shoot');
                         }
                     }
                 } else if (b.type === 'rocket') {
@@ -1346,38 +2708,65 @@
                 if (b.hp <= 0) { createParticles(b.x, b.y, '#7f8c8d', 10); buildings.splice(i, 1); Audio.playSFX('explode'); }
             }
 
-            // Turrets
-            turrets.forEach(t => {
-                if (t.cooldown > 0) t.cooldown--;
-                else {
-                    let closest = null, minDist = 1000;
-                    enemies.forEach(e => { let d = Math.hypot(e.x - t.x, e.y - t.y); if (d < minDist) { minDist = d; closest = e; } });
-                    if (closest) {
-                        const angle = Math.atan2(closest.y - t.y, closest.x - t.x);
-                        projectiles.push({ x: t.x, y: t.y, dx: Math.cos(angle) * 15, dy: Math.sin(angle) * 15, radius: 4, isEnemy: false, color: '#00ffff' });
-                        t.cooldown = 12; Audio.playSFX('shoot');
-                    }
-                }
-            });
-
             // Grenades
             for (let i = grenades.length - 1; i >= 0; i--) {
                 grenades[i].timer--;
                 if (grenades[i].timer <= 0) {
-                    explosions.push({ x: grenades[i].x, y: grenades[i].y, radius: 1, maxRadius: 100, life: 30 });
-                    enemies.forEach(e => {
-                        if (Math.hypot(grenades[i].x - e.x, grenades[i].y - e.y) < 100) {
-                            if (e.hasShield) { e.shieldHp = 0; e.hasShield = false; } else e.hp -= 200;
+                    const gx = grenades[i].x, gy = grenades[i].y;
+                    const gid = grenades[i].id;
+                    explosions.push({ x: gx, y: gy, radius: 1, maxRadius: 100, life: 30 });
+                    for (const e of enemies) {
+                        if (Math.hypot(gx - e.x, gy - e.y) < 100 + e.radius) {
+                            e.lastHitSource = 'grenade';
+                            e.lastGrenadeId = gid;
+                            if (e.hasShield) {
+                                e.shieldHp = 0;
+                                e.hasShield = false;
+                            } else {
+                                e.hp -= 25;
+                                if (e.hp <= 0) e.pendingDeath = true;
+                            }
                         }
-                    });
+                    }
                     Audio.playSFX('explode');
                     grenades.splice(i, 1);
                 }
             }
 
+            // Meteor boulders (obstacles)
+            updateBoulders();
+
+            rebuildEnemyGrid();
+
             // Projectiles
+            if (projectiles.length > MAX_PROJECTILES) projectiles.splice(0, projectiles.length - MAX_PROJECTILES);
+            if (particles.length > MAX_PARTICLES) particles.splice(0, particles.length - MAX_PARTICLES);
+            if (damageTexts.length > MAX_DAMAGE_TEXTS) damageTexts.splice(0, damageTexts.length - MAX_DAMAGE_TEXTS);
+
             for (let i = projectiles.length - 1; i >= 0; i--) {
                 let p = projectiles[i];
+                // Boulder collision (meteor remains)
+                if (boulders && boulders.length) {
+                    for (let bi = 0; bi < boulders.length; bi++) {
+                        const b = boulders[bi];
+                        const pr0 = (p.radius || (p.isRocket ? 10 : 5));
+                        if (Math.hypot(p.x - b.x, p.y - b.y) < b.radius + pr0) {
+                            // Damage amount depends on projectile
+                            const pd = (p.damage != null ? p.damage : (p.isRocket ? 50 : (p.isEnemy ? 8 : 12)));
+                            damageBoulder(b, pd, 'projectile');
+                            // Rockets explode on boulders too
+                            if (p.isRocket) {
+                                explosions.push({ x: p.x, y: p.y, radius: 1, maxRadius: 70, life: 20 });
+                                addShake(6);
+                            }
+                            projectiles.splice(i, 1);
+                            p = null;
+                            break;
+                        }
+                    }
+                    if (!p) continue;
+                }
+
 
                 if (p.isRocket && p.target && enemies.includes(p.target)) {
                     let angle = Math.atan2(p.target.y - p.y, p.target.x - p.x);
@@ -1396,7 +2785,7 @@
                             if (!cheatGod) {
                                 let dmg = 10;
                                 if (p.isQueenShot) dmg = player.maxHp / 2;
-                                player.hp -= dmg; if (player.hp <= 0) endGame();
+                                player.hp -= dmg; saveData._lastDamageFrame = frames; if (player.hp <= 0) endGame();
                             }
                         }
                         hit = true; Audio.playSFX('hit');
@@ -1416,20 +2805,24 @@
                         explosions.push({ x: p.x, y: p.y, radius: 1, maxRadius: 60, life: 20 });
                         enemies.forEach(e => {
                             if (Math.hypot(p.x - e.x, p.y - e.y) < 60) {
-                                if (e.hasShield) { e.shieldHp -= 10; if (e.shieldHp <= 0) e.hasShield = false; } else { e.hp -= 50; }
+                                if (e.hasShield) { e.shieldHp -= 10; if (e.shieldHp <= 0) e.hasShield = false; } else { e.hp -= 50; e.lastHitSource = (p.source === 'rocketPad' ? 'rocketPad' : 'rocketPad'); }
                             }
                         });
                         projectiles.splice(i, 1); Audio.playSFX('explode');
                     }
                 } else if (p.isSniper) {
-                    // Pierce Logic (10 dmg total: one-shots shielded (5 shield + 1 hp))
+                    // Pierce Logic: heavy hit, limited hits per enemy
                     const dmg = 10;
-                    enemies.forEach(e => {
-                        if (Math.hypot(p.x - e.x, p.y - e.y) < e.radius + p.radius && !p.hitList.includes(e)) {
+                    const pr = (p.radius || 5);
+                    forEachEnemyNear(p.x, p.y, (e) => {
+                        if (!e) return;
+                        const dx = p.x - e.x, dy = p.y - e.y;
+                        const rr = e.radius + pr;
+                        if ((dx * dx + dy * dy) < (rr * rr) && !p.hitSet.has(e)) {
                             if (e.hasShield) {
                                 e.shieldHp -= dmg;
                                 if (e.shieldHp <= 0) {
-                                    const overflow = -e.shieldHp; // remaining damage after breaking shield
+                                    const overflow = -e.shieldHp;
                                     e.hasShield = false;
                                     e.shieldHp = 0;
                                     if (overflow > 0) e.hp -= overflow;
@@ -1437,8 +2830,67 @@
                             } else {
                                 e.hp -= dmg;
                             }
-                            p.hitList.push(e);
+
+                            // Tag for achievements + kill attribution
+                            e.lastHitSource = 'ranged';
+                            e._sniperTag = p;
+                            e._sniperLastShotId = p.shotId;
+                            p.hitSet.add(e);
                             createParticles(e.x, e.y, e.color, 3);
+
+                            if (e.hp <= 0 && !e.hasShield) {
+                                e._killedBySniperShotId = p.shotId;
+                                e.pendingDeath = true;
+                                killEnemyByObj(e);
+                            }
+                        }
+                    });
+
+                    // lifetime cap to avoid lingering sniper bullets
+                    if (p.life !== undefined) {
+                        p.life--;
+                        if (p.life <= 0) { projectiles.splice(i, 1); continue; }
+                    }
+                }
+
+                else {
+                    // Regular player projectile (e.g., shuriken gun bullets): collide vs nearby enemies using grid.
+                    let removed = false;
+                    const pr = (p.radius || 5);
+                    forEachEnemyNear(p.x, p.y, (enemy) => {
+                        if (removed || !enemy) return;
+                        // Ignore special non-collidable types
+                        if (enemy.type === 8) return; // airstrike marker handled elsewhere
+                        const dx = p.x - enemy.x, dy = p.y - enemy.y;
+                        const rr = (enemy.radius + pr);
+                        if ((dx * dx + dy * dy) < (rr * rr)) {
+                            if (enemy.invincible) {
+                                createParticles(p.x, p.y, '#fff', 2);
+                            } else if (enemy.hasShield) {
+                                createParticles(p.x, p.y, '#3498db', 3);
+                                enemy.shieldHp -= 1;
+                                if (enemy.shieldHp <= 0) enemy.hasShield = false;
+                            } else {
+                                enemy.hp -= 1;
+                                enemy.lastHitSource = (p.source === 'shooter' ? 'shooter' : 'ranged');
+                                createParticles(enemy.x, enemy.y, enemy.color, 3);
+                            }
+                            // track special burst kills (shuriken gun)
+                            if (p.source === 'shooter' && p.burstId) {
+                                // increment on kill below
+                            }
+                            // remove projectile on hit
+                            removed = true;
+                            projectiles.splice(i, 1);
+                            Audio.playSFX('hit');
+
+                            if (enemy.hp <= 0 && !enemy.hasShield) {
+                                // Shooter burst achievement tracking (3 kills in one burst)
+                                if (p.source === 'shooter' && p.burstId) {
+                                    enemy._killedByShooterBurstId = p.burstId;
+                                }
+                                killEnemyByObj(enemy);
+                            }
                         }
                     });
                 }
@@ -1449,10 +2901,31 @@
                 if (ex.life <= 0) explosions.splice(i, 1);
             }
 
-            slashes.forEach((s, i) => { s.life--; s.x = player.x; s.y = player.y; if (s.life <= 0) slashes.splice(i, 1); });
+            for (let si = slashes.length - 1; si >= 0; si--) {
+                const s = slashes[si];
+                s.life--; s.x = player.x; s.y = player.y;
+                if (s.life <= 0) slashes.splice(si, 1);
+            }
+            if (slashes.length > MAX_SLASHES) slashes.splice(0, slashes.length - MAX_SLASHES);
 
             // --- SPAWNER ---
             frames++;
+
+            // Time-based achievements
+            if (frames >= 60 * 60 * 5) unlockAchievement('stillAlive'); // 5 minutes @ 60fps
+            if (frames - (saveData._lastDamageFrame || 0) >= 60 * 60) unlockAchievement('untouchable'); // 1 minute no damage
+            if (player.hp === 1) unlockAchievement('closeCall');
+
+            // Endless score achievements
+            if (selectedMode === 'endless') {
+                if (score >= 25000) unlockAchievement('endlessWarrior');
+                if (score >= 100000) unlockAchievement('endlessLegend');
+                if (score > (saveData.stats.endlessBestScore || 0)) {
+                    saveData.stats.endlessBestScore = score;
+                    saveGame();
+                }
+            }
+
             if (frames % 60 === 0 && (tdActive ? tdWaveStarted : true)) {
                 // Spawn Rate
                 if (!goblinQueenActive || selectedMode === 'endless') {
@@ -1526,7 +2999,7 @@
                     if (enemy.x < -100 || enemy.x > canvas.width + 100 || enemy.y < -100 || enemy.y > canvas.height + 100) { enemies.splice(i, 1); continue; }
                 }
 
-                if (enemy.pendingDeath || (enemy.hp <= 0 && !enemy.hasShield)) { killEnemy(enemy, i); continue; }
+                if (enemy.pendingDeath || (enemy.hp <= 0 && !enemy.hasShield)) { if (!enemy.lastHitSource) enemy.lastHitSource = 'unknown'; killEnemy(enemy, i); continue; }
 
                 enemy.update();
 
@@ -1564,27 +3037,12 @@
                         }
                     } else {
                         if (!cheatGod) {
-                            player.hp -= 1; enemy.x += (enemy.x - player.x) * 0.1; enemy.y += (enemy.y - player.y) * 0.1;
+                            player.hp -= 1; saveData._lastDamageFrame = frames; enemy.x += (enemy.x - player.x) * 0.1; enemy.y += (enemy.y - player.y) * 0.1;
                             if (player.hp <= 0) endGame();
                         }
                     }
                 }
-
-                for (let j = projectiles.length - 1; j >= 0; j--) {
-                    let p = projectiles[j];
-                    if (p.isEnemy || p.isRocket || p.isSniper) continue;
-                    if (Math.hypot(p.x - enemy.x, p.y - enemy.y) < enemy.radius + p.radius) {
-                        if (enemy.invincible) { createParticles(p.x, p.y, '#fff', 2); projectiles.splice(j, 1); }
-                        else if (enemy.hasShield) {
-                            createParticles(p.x, p.y, '#3498db', 3); projectiles.splice(j, 1);
-                            enemy.shieldHp--; if (enemy.shieldHp <= 0) enemy.hasShield = false;
-                        }
-                        else {
-                            enemy.hp--; projectiles.splice(j, 1); createParticles(enemy.x, enemy.y, enemy.color, 3);
-                        }
-                        if (enemy.hp <= 0 && !enemy.hasShield) { killEnemy(enemy, i); Audio.playSFX('hit'); break; }
-                    }
-                }
+                // Player projectile collisions handled in the projectile loop (performance).
                 if (enemies[i] === undefined) continue;
 
                 if (enemy.type !== 7 && enemy.type !== 8) {
@@ -1598,7 +3056,7 @@
                             if (!s.hit.includes(enemy)) {
                                 if (enemy.invincible) { createParticles(enemy.x, enemy.y, '#fff', 5); return; }
                                 s.hit.push(enemy);
-                                if (enemy.hasShield) { enemy.shieldHp -= 5; if (enemy.shieldHp <= 0) enemy.hasShield = false; } else enemy.hp -= 5;
+                                if (enemy.hasShield) { enemy.shieldHp -= 5; if (enemy.shieldHp <= 0) enemy.hasShield = false; } else { enemy.hp -= 5; enemy.lastHitSource = 'melee'; }
                                 createParticles(enemy.x, enemy.y, enemy.color, 5); Audio.playSFX('hit');
                                 if (enemy.hp <= 0 && !enemy.hasShield) killEnemy(enemy, i);
                             }
@@ -1636,39 +3094,127 @@
 
             for (let i = particles.length - 1; i >= 0; i--) { let p = particles[i]; p.x += p.vx; p.y += p.vy; p.life--; if (p.life <= 0) particles.splice(i, 1); }
             for (let i = visuals.length - 1; i >= 0; i--) { visuals[i].life--; if (visuals[i].life <= 0) visuals.splice(i, 1); }
+            // Endless score achievements
+            if (selectedMode === 'endless') {
+                if (score > (saveData.stats.endlessBestScore || 0)) { saveData.stats.endlessBestScore = score; saveGame(); }
+                if (score >= 25000) unlockAchievement('endlessWarrior');
+                if (score >= 100000) unlockAchievement('endlessLegend');
+            }
+
+            // Glitched overlay (very rare event)
+            if (glitchTimer > 0) {
+                ctx.save();
+                const t = Math.max(0, Math.min(1, glitchTimer / 1800));
+                const w = canvas.width * 0.55;
+                ctx.globalAlpha = 0.35 + 0.25 * t;
+
+                // Blocky artifacts
+                for (let i = 0; i < 35; i++) {
+                    const x = Math.random() * w;
+                    const y = Math.random() * canvas.height;
+                    const ww = 40 + Math.random() * 180;
+                    const hh = 8 + Math.random() * 40;
+                    ctx.fillStyle = Math.random() < 0.5 ? 'rgba(155, 89, 182, 0.65)' : 'rgba(0, 255, 255, 0.55)';
+                    ctx.fillRect(x, y, ww, hh);
+                }
+
+                // Scanlines
+                ctx.globalAlpha = 0.18;
+                ctx.fillStyle = 'rgba(255,255,255,0.25)';
+                for (let y = 0; y < canvas.height; y += 6) {
+                    ctx.fillRect(0, y, w, 1);
+                }
+
+                ctx.restore();
+            }
+
+            // Damage texts update
+            for (let i = damageTexts.length - 1; i >= 0; i--) {
+                const t = damageTexts[i];
+                t.y += t.vy;
+                t.life--;
+                if (t.life <= 0) damageTexts.splice(i, 1);
+            }
 
             updateUI();
         }
 
         function killEnemy(enemy, index) {
+            // Loot
             let rand = Math.random();
             if (rand < 0.025) items.push({ x: enemy.x, y: enemy.y, type: 'medkit' });
             else if (rand < 0.4) items.push({ x: enemy.x, y: enemy.y, type: 'ammo' });
 
-            if (enemy.type === 9) { goblinQueenActive = false; goblinQueenDefeated = true; }
-
-            enemies.splice(index, 1);
-            let s = 10;
-            if (enemy.type === 1 || enemy.type === 2) s = 25;
-            if (enemy.type === 4 || enemy.type === 7) s = 50;
-            if (enemy.type === 5) s = 250;
-            if (enemy.type === 6) s = 1000;
-            if (enemy.type === 8) s = 75;
-            if (enemy.type === 9) s = 5000;
+            // Score
+            const s = enemyStatsDB[enemy.type]?.score ?? 10;
             score += s;
 
-            // Achievement: First Blood
-            if (!saveData.achievements) saveData.achievements = { firstBlood: false };
-            if (!saveData.achievements.firstBlood) {
-                saveData.achievements.firstBlood = true;
-                saveGame();
-                showAchievementToast('First Blood');
+            // Boss flags
+            if (enemy.type === 9) { goblinQueenActive = false; goblinQueenDefeated = true; unlockAchievement('queensFall'); }
+
+            // Kill stats & achievements (based on lastHitSource)
+            unlockAchievement('firstBlood');
+
+            if (enemy.lastHitSource === 'melee') incStat('meleeKills', 1);
+            if (enemy.lastHitSource === 'ranged' || enemy.lastHitSource === 'shooter') incStat('rangedKills', 1);
+            if (enemy.lastHitSource === 'laserTurret') incStat('laserKills', 1);
+            if (enemy.lastHitSource === 'rocketPad') incStat('rocketKills', 1);
+
+            incStat('totalKills', 1);
+
+            runKills++;
+            if (enemy.lastHitSource === 'meteor') {
+                runIndirectKills++;
+                unlockAchievement('actOfGod');
             }
+
+            // Grenade Overkill: 5 kills from one grenade explosion
+            if (enemy.lastHitSource === 'grenade' && enemy.lastGrenadeId != null) {
+                const gid = enemy.lastGrenadeId;
+                grenadeKillTally[gid] = (grenadeKillTally[gid] || 0) + 1;
+                if (grenadeKillTally[gid] >= 5) {
+                    unlockAchievement('overkill');
+                    delete grenadeKillTally[gid];
+                }
+            }
+
+
+            if (enemy.type === 5) unlockAchievement('bigGameHunter');
+            if (enemy.type === 6) unlockAchievement('royalExecution');
+
+
+            // Juice
+            createParticles(enemy.x, enemy.y, enemy.color || '#fff', 10);
+            addShake(enemy.type === 6 || enemy.type === 9 ? 12 : (enemy.type === 5 ? 10 : 6));
+            if (enemy.type === 5 || enemy.type === 6 || enemy.type === 9) {
+                addHitStop(enemy.type === 6 || enemy.type === 9 ? 3 : 2);
+            }
+
+            // Special achievement checks (sniper / shooter burst)
+            if (enemy._killedBySniperShotId != null) {
+                const sid = enemy._killedBySniperShotId;
+                sniperShotKills[sid] = (sniperShotKills[sid] || 0) + 1;
+                if (sniperShotKills[sid] >= 3) {
+                    unlockAchievement('piercingPrecision');
+                    delete sniperShotKills[sid];
+                }
+            }
+            if (enemy._killedByShooterBurstId != null) {
+                const bid = enemy._killedByShooterBurstId;
+                shooterBurstKills[bid] = (shooterBurstKills[bid] || 0) + 1;
+                if (shooterBurstKills[bid] >= 3) {
+                    unlockAchievement('sprayAndPray');
+                    delete shooterBurstKills[bid];
+                }
+            }
+            enemies.splice(index, 1);
         }
 
         function victory() {
             gameState = 'VICTORY';
             saveData.hasWon = true;
+            if (selectedMode === 'campaign') unlockAchievement('nightmareConquered');
+
             const divisor = selectedMode === 'endless' ? 10 : 5;
             const goldEarned = Math.floor(score / divisor);
             saveData.gold += goldEarned;
@@ -1676,6 +3222,10 @@
 
             document.getElementById('victoryScreen').style.display = 'flex';
             document.getElementById('vicScore').innerText = 'Score: ' + score;
+            document.getElementById('vicKills').innerText = 'Kills: ' + runKills;
+            { const tsec = Math.floor(runTimeMs / 1000); const mm = Math.floor(tsec / 60); const ss = String(tsec % 60).padStart(2, '0'); document.getElementById('vicTime').innerText = 'Time: ' + mm + ':' + ss; }
+            document.getElementById('vicExtra').innerText = 'Shots: ' + runShotsFired + ' · Buildings: ' + runBuildingsPlaced + ' · Boulders: ' + runBouldersBroken + ' · Indirect Kills: ' + runIndirectKills;
+
             document.getElementById('vicGold').innerText = 'Gold Earned: ' + goldEarned;
             document.getElementById('vicTotal').innerText = 'Total Gold: ' + saveData.gold;
             document.getElementById('gameUI').style.display = 'none';
@@ -1701,10 +3251,33 @@
             document.getElementById('medkitCounter').innerText = "Medkits: " + player.medkits;
             document.getElementById('scoreCounter').innerText = score;
             document.getElementById('buildName').innerText = buildingsDB[saveData.equippedBuilding].name;
+
+            // Run stats HUD
+            const kc = document.getElementById('killsCounter');
+            const tc = document.getElementById('timeCounter');
+            if (kc && tc) {
+                const tsec = Math.floor(runTimeMs / 1000);
+                const mm = Math.floor(tsec / 60);
+                const ss = String(tsec % 60).padStart(2, '0');
+                kc.innerText = 'Kills: ' + runKills;
+                tc.innerText = 'Time: ' + mm + ':' + ss;
+                const show = (gameState === 'GAME');
+                kc.style.display = show ? 'block' : 'none';
+                tc.style.display = show ? 'block' : 'none';
+            }
         }
 
         function draw() {
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            let sx = 0, sy = 0;
+            if (screenShake > 0.1) {
+                sx = (Math.random() * 2 - 1) * screenShake;
+                sy = (Math.random() * 2 - 1) * screenShake;
+                screenShake *= 0.88;
+            } else { screenShake = 0; }
+            ctx.translate(sx, sy);
 
             // -- DRAW BACKGROUND SCENE IF IN MENU --
             if (gameState === 'MENU') {
@@ -1720,10 +3293,33 @@
                     ctx.fillStyle = b.c || '#fff'; ctx.fillRect(b.x - 15, b.y - 15, 30, 30);
                     if (b.type === 'wall') { ctx.fillStyle = '#7f8c8d'; ctx.fillRect(b.x - 40, b.y - 10, 80, 20); }
                 });
+                ctx.restore();
                 return;
             }
 
             // -- GAME DRAW --
+
+            // Utility Heal Pads
+            healPads.forEach(h => {
+                const t = Math.max(0, Math.min(1, h.life / 600));
+                ctx.beginPath(); ctx.arc(h.x, h.y, h.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(46, 204, 113, ${0.12 + 0.12 * (1 - t)})`;
+                ctx.fill();
+                ctx.strokeStyle = `rgba(46, 204, 113, ${0.25})`;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+
+            // Speed Pill afterimages
+            if (afterimages.length) {
+                afterimages.forEach(a => {
+                    const alpha = Math.max(0, Math.min(1, a.life / 18));
+                    ctx.beginPath(); ctx.arc(a.x, a.y, player.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 255, 255, ${0.10 * alpha})`;
+                    ctx.fill();
+                });
+            }
+
             ctx.save(); ctx.translate(player.x, player.y);
 
             // Cosmetics
@@ -1766,6 +3362,10 @@
                 } else if (b.type === 'laser') {
                     ctx.fillRect(-25, -25, 50, 50); ctx.strokeStyle = '#0ff'; ctx.lineWidth = 2; ctx.strokeRect(-25, -25, 50, 50);
                     ctx.fillStyle = '#0ff'; ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill();
+                } else if (b.type === 'turret') {
+                    ctx.fillRect(-18, -18, 36, 36); ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 2; ctx.strokeRect(-18, -18, 36, 36);
+                    ctx.fillStyle = '#00ffff'; ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI * 2); ctx.fill();
                 } else if (b.type === 'rocket') {
                     ctx.fillRect(-30, -30, 60, 60); ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 2; ctx.strokeRect(-30, -30, 60, 60);
                     ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI * 2); ctx.fill();
@@ -1779,10 +3379,7 @@
                 ctx.restore();
             });
 
-            turrets.forEach(t => {
-                ctx.beginPath(); ctx.rect(t.x - 8, t.y - 8, 16, 16); ctx.fillStyle = '#444'; ctx.fill(); ctx.strokeStyle = '#00ffff'; ctx.stroke();
-                ctx.beginPath(); ctx.rect(t.x - 3, t.y - 12, 6, 10); ctx.fillStyle = '#00ffff'; ctx.fill();
-            });
+            drawBoulders();
 
             enemies.forEach(e => e.draw());
 
@@ -1829,6 +3426,73 @@
             });
 
             particles.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); });
+
+            // Map Events visuals
+            // Healing rain dots
+            healingDots.forEach(d => {
+                const a = Math.max(0, Math.min(1, d.life / 160));
+                const r = d.r || 14;
+                // Glow
+                ctx.beginPath();
+                ctx.arc(d.x, d.y, r * 1.4, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(46, 204, 113, ${0.10 * a})`;
+                ctx.fill();
+                // Core
+                ctx.beginPath();
+                ctx.arc(d.x, d.y, r * 0.55, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(46, 204, 113, ${0.45 * a})`;
+                ctx.fill();
+            });
+
+            // Meteor telegraphs
+            function _drawPoly(x, y, r, sides, rot = 0) {
+                ctx.beginPath();
+                for (let i = 0; i < sides; i++) {
+                    const a = rot + i * (Math.PI * 2 / sides);
+                    const px = x + Math.cos(a) * r;
+                    const py = y + Math.sin(a) * r;
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+            }
+
+            meteors.forEach(m => {
+                const isHex = m.shape === 'hex';
+                const isQueen = m.source === 'queen';
+                if (m.stage === 'warn') {
+                    if (isHex) _drawPoly(m.x, m.y, m.radius, 6, Math.PI / 6);
+                    else { ctx.beginPath(); ctx.arc(m.x, m.y, m.radius, 0, Math.PI * 2); }
+
+                    ctx.fillStyle = isQueen ? 'rgba(155, 89, 182, 0.22)' : 'rgba(231, 76, 60, 0.22)';
+                    ctx.fill();
+                    ctx.strokeStyle = isQueen ? 'rgba(155, 89, 182, 0.65)' : 'rgba(231, 76, 60, 0.6)';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                } else if (m.stage === 'shadow') {
+                    if (isHex) _drawPoly(m.x, m.y, m.radius, 6, Math.PI / 6);
+                    else { ctx.beginPath(); ctx.arc(m.x, m.y, m.radius, 0, Math.PI * 2); }
+                    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+                    ctx.fill();
+                }
+            });
+
+            // Damage texts
+            damageTexts.forEach(t => {
+                ctx.font = '16px Arial';
+                ctx.fillStyle = t.color;
+                ctx.globalAlpha = Math.max(0, t.life / 45);
+                ctx.fillText(t.text, t.x, t.y);
+                ctx.globalAlpha = 1;
+            });
+            // Flash
+            if (whiteFlash > 0) {
+                whiteFlash--;
+                ctx.fillStyle = `rgba(255,255,255,${whiteFlash / 6})`;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            ctx.restore();
         }
 
         function startGame() {
@@ -1853,11 +3517,21 @@
                 x: canvas.width / 2, y: canvas.height / 2, radius: 15, color: '#fff', speed: 4,
                 maxHp: 100, hp: 100, ammo: 10, medkits: 1, dashCooldown: 180, dashTimer: 0,
                 isDashing: false, dashDuration: 10, isHealing: false, healTimer: 0,
-                isUsingUtil: false, utilTimer: 0, weaponTimer: 0
+                isUsingUtil: false, utilTimer: 0, weaponTimer: 0, speedBoostTimer: 0
             };
+            applyUpgradesToPlayer(player);
 
-            enemies = []; projectiles = []; slashes = []; particles = []; items = []; landmines = []; turrets = []; buildings = []; visuals = []; barracks = []; explosions = []; grenades = [];
+            enemies = []; projectiles = []; slashes = []; particles = []; items = []; landmines = []; buildings = []; visuals = []; barracks = []; explosions = []; grenades = [];
+            healPads = []; afterimages = [], boulders = [];
             score = 0; frames = 0; gameState = 'GAME';
+            runTimeMs = 0;
+            idleMs = 0;
+            runMedkitsUsed = 0;
+            grenadeKillTally = {};
+            grenadeIdCounter = 1;
+            // Map Events
+            eventTimer = 3600; healingRainTimer = 0; glitchTimer = 0; currentEvent = null; _lastEndedEvent = null; healingDots = []; meteors = []; boulders = [];
+            saveData._lastDamageFrame = 0;
             spawnedFlags = { giant1k: false, king2k: false, king5k: false, king10k: false, king20k: false, queen: false };
             goblinQueenActive = false; goblinQueenDefeated = false;
 
@@ -1867,6 +3541,7 @@
 
         function endGame() {
             gameState = 'GAMEOVER';
+            if (runTimeMs < 10000) unlockAchievement('tooSoon');
             const divisor = selectedMode === 'endless' ? 10 : 5;
             const goldEarned = Math.floor(score / divisor);
             saveData.gold += goldEarned;
@@ -1874,6 +3549,10 @@
             document.getElementById('gameOverScreen').style.display = 'flex';
             document.getElementById('pauseMenu').style.display = 'none';
             document.getElementById('finalScore').innerText = 'Score: ' + score;
+            document.getElementById('finalKills').innerText = 'Kills: ' + runKills;
+            { const tsec = Math.floor(runTimeMs / 1000); const mm = Math.floor(tsec / 60); const ss = String(tsec % 60).padStart(2, '0'); document.getElementById('finalTime').innerText = 'Time: ' + mm + ':' + ss; }
+            document.getElementById('finalExtra').innerText = 'Shots: ' + runShotsFired + ' · Buildings: ' + runBuildingsPlaced + ' · Boulders: ' + runBouldersBroken + ' · Indirect Kills: ' + runIndirectKills;
+
             document.getElementById('goldEarned').innerText = 'Gold Earned: ' + goldEarned;
             document.getElementById('totalGold').innerText = 'Total Gold: ' + saveData.gold;
             document.getElementById('gameUI').style.display = 'none';
@@ -1887,8 +3566,24 @@
         }
 
         updateShopUI();
-        function loop() { update(); draw(); requestAnimationFrame(loop); }
-        loop();
+        let _lastRAF = performance.now();
+        function loop(now) {
+            // dtScale is used for event timing/FX pacing so it stays consistent on high-refresh monitors.
+            const dt = (now - _lastRAF) || 16.6667;
+            _lastRAF = now;
+            dtScale = Math.min(3, Math.max(0.25, dt / 16.6667));
+
+            frameDtMs = dt;
+
+            try {
+                update();
+                draw();
+            } catch (e) {
+                showRuntimeError(e);
+            }
+            requestAnimationFrame(loop);
+        }
+        requestAnimationFrame(loop);
     </script>
 </body>
 
