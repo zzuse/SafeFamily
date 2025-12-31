@@ -348,6 +348,7 @@ function setupTaskFeedbackModal() {
 }
 
 setupTaskFeedbackModal();
+setupAdminStatusDropdowns();
 updateSlotProgress();
 setInterval(updateSlotProgress, 60000);
 
@@ -356,6 +357,60 @@ function getSlotDurationMinutes(timeSlot) {
     const endTime = parseSlotEndTime(timeSlot);
     if (!startTime || !endTime) return null;
     return Math.round((endTime - startTime) / 60000);
+}
+
+function updateRowStatusFromDropdown(todoId, status) {
+    const row = document.querySelector(`.todo-row[data-todo-id="${todoId}"]`);
+    if (!row) return;
+    row.dataset.status = status;
+    const taskInput = row.querySelector(`input[name="task_${todoId}"]`);
+    const checkbox = row.querySelector(".complete-checkbox");
+    if (checkbox) {
+        checkbox.checked = true;
+        checkbox.disabled = true;
+    }
+    if (taskInput) {
+        taskInput.classList.add("done");
+    }
+    const statusEl = row.querySelector(".task-status");
+    if (statusEl) {
+        statusEl.dataset.status = status;
+        statusEl.textContent = normalizeStatusLabel(status);
+    }
+}
+
+function setupAdminStatusDropdowns() {
+    const selects = document.querySelectorAll(".admin-status-select");
+    if (!selects.length) return;
+
+    selects.forEach(select => {
+        select.addEventListener("change", () => {
+            const todoId = select.dataset.todoId;
+            const status = select.value;
+            if (!todoId) return;
+            if (!status) return;
+            fetch("/todo/mark_status", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    id: todoId,
+                    status,
+                })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        updateRowStatusFromDropdown(todoId, status);
+                    } else {
+                        alert("Status update failed.");
+                    }
+                })
+                .catch(err => {
+                    console.error("Status update error:", err);
+                    alert("Error updating status.");
+                });
+        });
+    });
 }
 
 function setupSplitSlotButtons() {

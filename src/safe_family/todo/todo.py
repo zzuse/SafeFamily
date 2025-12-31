@@ -149,6 +149,7 @@ def todo_page():
 
     now = datetime.now(local_tz).time()
     show_disable_button = today_tasks != [] and time(16, 0) <= now <= time(18, 0)
+    show_task_feedback = not (role == "admin" and selected_user != username)
 
     return render_template(
         "todo/todo.html",
@@ -163,6 +164,7 @@ def todo_page():
         today_tasks=today_tasks,
         show_disable_button=show_disable_button,
         selected_user_row_id=selected_user_id,
+        show_task_feedback=show_task_feedback,
     )
 
 
@@ -370,6 +372,7 @@ def split_slot():
 def mark_todo_status():
     """Store completion status feedback for a to-do item."""
     try:
+        user = get_current_username()
         data = request.get_json()
         todo_id = data.get("id")
         status = (data.get("status") or "").strip().lower()
@@ -389,7 +392,8 @@ def mark_todo_status():
             return jsonify({"success": False, "error": "not found"}), 404
 
         existing_status, time_slot, task_owner, task_name = row
-        if existing_status:
+        is_admin = user is not None and user.role == "admin"
+        if existing_status and not is_admin:
             conn.close()
             return jsonify({"success": False, "error": "status locked"}), 400
 
@@ -407,7 +411,7 @@ def mark_todo_status():
             second=0,
             microsecond=0,
         )
-        if now < end_dt:
+        if now < end_dt and not is_admin:
             conn.close()
             return jsonify({"success": False, "error": "too early"}), 400
 
@@ -423,7 +427,7 @@ def mark_todo_status():
                     "time_slot": time_slot,
                     "task": task_name,
                     "completion_status": status,
-                }
+                },
             ],
         )
         conn.close()

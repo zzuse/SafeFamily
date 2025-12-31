@@ -9,16 +9,16 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from src.safe_family.auto_git.auto_git import rule_auto_commit
 from src.safe_family.core.auth import admin_required
 from src.safe_family.core.extensions import get_db_connection, local_tz
+from src.safe_family.notifications.notifier import send_hammerspoon_alert
 from src.safe_family.urls.analyzer import (
     get_time_range,
     log_analysis,
 )
-from src.safe_family.notifications.notifier import send_hammerspoon_alert
 from src.safe_family.urls.blocker import (
     rule_allow_traffic_all,
+    rule_disable_ai,
     rule_disable_all,
     rule_enable_ai,
-    rule_disable_ai,
     rule_enable_all_except_ai,
     rule_stop_traffic_all,
 )
@@ -130,7 +130,7 @@ def notify_overdue_task_feedback():
     """Send a desktop alert when task feedback is overdue."""
     global _NOTIFIED_DATE
     today = datetime.now(local_tz).date().isoformat()
-    if _NOTIFIED_DATE != today:
+    if today != _NOTIFIED_DATE:
         _NOTIFIED_DATE = today
         _NOTIFIED_TASK_IDS.clear()
 

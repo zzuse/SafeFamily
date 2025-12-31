@@ -53,9 +53,26 @@
                     <td>
                         <input type="checkbox" class="complete-checkbox" name="completed_{{ todo_id }}"
                             data-task-id="{{ todo_id }}" {% if completed %}checked{% endif %} />
+                        {% if role == 'admin' and selected_user != user_name %}
+                        <select class="admin-status-select" data-todo-id="{{ todo_id }}">
+                            <option value="" {% if completion_status == '' %}selected{% endif %}></option>
+                            <option value="skipped" {% if completion_status == 'skipped' %}selected{% endif %}>Skipped</option>
+                            <option value="partially done" {% if completion_status == 'partially done' %}selected{% endif %}>
+                                Partially Done
+                            </option>
+                            <option value="half done" {% if completion_status == 'half done' %}selected{% endif %}>
+                                Half Done
+                            </option>
+                            <option value="mostly done" {% if completion_status == 'mostly done' %}selected{% endif %}>
+                                Mostly Done
+                            </option>
+                            <option value="done" {% if completion_status == 'done' %}selected{% endif %}>Done</option>
+                        </select>
+                        {% else %}
                         <div class="task-status" data-status="{{ completion_status }}">
                             {{ completion_status }}
                         </div>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
@@ -189,6 +206,7 @@
         </div>
     </div>
 
+    {% if show_task_feedback %}
     <div id="task-feedback-modal" class="task-feedback-modal" aria-hidden="true">
         <div class="task-feedback-panel">
             <div class="task-feedback-title">How did this task go?</div>
@@ -206,6 +224,7 @@
             <button type="button" class="feedback-later" data-action="later">➡️Plan Something Else, Check Later</button>
         </div>
     </div>
+    {% endif %}
 
     <div id="bridge-element" data-value="{{ selected_user_row_id }}" data-user="{{ selected_user }}"></div>
     <script src="{{ url_for('static', filename='js/todo.js') }}"></script>
