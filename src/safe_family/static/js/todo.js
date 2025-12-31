@@ -349,6 +349,8 @@ function setupTaskFeedbackModal() {
 
 setupTaskFeedbackModal();
 setupAdminStatusDropdowns();
+setupScheduleConfig();
+setupTimeOptions();
 updateSlotProgress();
 setInterval(updateSlotProgress, 60000);
 
@@ -410,6 +412,49 @@ function setupAdminStatusDropdowns() {
                     alert("Error updating status.");
                 });
         });
+    });
+}
+
+function setupScheduleConfig() {
+    const form = document.getElementById("schedule-config");
+    if (!form) return;
+    const modeSelect = form.querySelector("#schedule_mode");
+    const customRow = form.querySelector(".config-custom-row");
+    if (!modeSelect || !customRow) return;
+
+    const toggleCustomRow = () => {
+        const isCustom = modeSelect.value === "custom";
+        customRow.classList.toggle("config-hidden", !isCustom);
+    };
+
+    toggleCustomRow();
+    modeSelect.addEventListener("change", toggleCustomRow);
+}
+
+function setupTimeOptions() {
+    const selects = document.querySelectorAll(".config-time-select");
+    if (!selects.length) return;
+    const options = [];
+    for (let hour = 0; hour < 24; hour += 1) {
+        for (let minute = 0; minute < 60; minute += 30) {
+            options.push(`${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`);
+        }
+    }
+
+    selects.forEach(select => {
+        if (select.dataset.ready === "true") return;
+        select.innerHTML = "";
+        options.forEach(value => {
+            const option = document.createElement("option");
+            option.value = value;
+            option.textContent = value;
+            select.appendChild(option);
+        });
+        const current = select.dataset.current;
+        if (current) {
+            select.value = current;
+        }
+        select.dataset.ready = "true";
     });
 }
 

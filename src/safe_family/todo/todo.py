@@ -22,20 +22,42 @@ todo_bp = Blueprint("todo", __name__)
 
 def generate_time_slots(
     slot_type: str,
-    holiday: str,
+    schedule_mode: str,
+    custom_start: str,
+    custom_end: str,
     today: datetime | None = None,
 ) -> list[str]:
     """Return list of time slots based on weekday/weekend and duration."""
     today = today or datetime.now(local_tz)
-    is_holiday = holiday == "on"
     is_weekend = today.weekday() >= Saturday
 
-    if is_weekend or is_holiday:
-        start_hour, start_minute = 9, 0
-        end_hour, end_minute = 16, 0
-    else:
-        start_hour, start_minute = 18, 30
-        end_hour, end_minute = 21, 00
+    if schedule_mode == "custom":
+        try:
+            start_parts = [int(p) for p in custom_start.split(":")]
+            end_parts = [int(p) for p in custom_end.split(":")]
+            if len(start_parts) != 2 or len(end_parts) != 2:
+                raise ValueError("invalid time format")
+            start_hour, start_minute = start_parts
+            end_hour, end_minute = end_parts
+            start_time = time(start_hour, start_minute)
+            end_time = time(end_hour, end_minute)
+            if end_time <= start_time:
+                raise ValueError("invalid time range")
+        except (TypeError, ValueError):
+            logger.warning(
+                "Invalid custom time range: %s - %s; falling back to weekday hours",
+                custom_start,
+                custom_end,
+            )
+            schedule_mode = "weekday"
+
+    if schedule_mode != "custom":
+        if schedule_mode == "holiday" or is_weekend:
+            start_hour, start_minute = 9, 0
+            end_hour, end_minute = 16, 0
+        else:
+            start_hour, start_minute = 18, 30
+            end_hour, end_minute = 21, 00
 
     step = 30 if slot_type == "30" else 60
     slots = []
@@ -76,13 +98,24 @@ def todo_page():
     if role == "admin" and request.args.get("view_user"):
         selected_user = request.args.get("view_user")
 
-    is_holiday = request.form.get("is_holiday", "off")
-    logger.info("is holiday: %s", is_holiday)
+    schedule_mode = request.form.get("schedule_mode", "weekday")
+    logger.info("schedule mode: %s", schedule_mode)
 
     slot_type = request.form.get("slot_type", "60")
     logger.info("slots type: %s", slot_type)
 
-    slots = generate_time_slots(slot_type, is_holiday)
+    custom_start = request.form.get("custom_start", "")
+    custom_end = request.form.get("custom_end", "")
+    if schedule_mode == "custom" and (not custom_start or not custom_end):
+        custom_start = custom_start or "18:30"
+        custom_end = custom_end or "21:00"
+
+    slots = generate_time_slots(
+        slot_type,
+        schedule_mode,
+        custom_start,
+        custom_end,
+    )
     logger.info("slots size: %d", slots.__len__())
 
     message = ""
@@ -159,7 +192,9 @@ def todo_page():
         users_list=users_list,
         slots=slots,
         slot_type=slot_type,
-        is_holiday=is_holiday,
+        schedule_mode=schedule_mode,
+        custom_start=custom_start,
+        custom_end=custom_end,
         message=message,
         today_tasks=today_tasks,
         show_disable_button=show_disable_button,

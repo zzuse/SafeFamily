@@ -189,6 +189,7 @@ section {
 }
 
 .footer {
+    margin-top: 20px;
     padding-top: 20px;
     padding-bottom: 20px;
     border-top: 1px solid;
@@ -477,6 +478,7 @@ td form button {
     0% {
         background-position: -100% 0;
     }
+
     100% {
         background-position: 100% 0;
     }
@@ -707,4 +709,49 @@ td form button {
     justify-content: center;
     align-items: center;
     z-index: 2000;
+}
+
+.config-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.config-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: flex-end;
+}
+
+.config-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 180px;
+}
+
+.config-field select {
+    min-width: 180px;
+}
+
+.config-hidden {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .config-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .config-field {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .config-field select {
+        width: 100%;
+        min-width: 0;
+    }
 }
