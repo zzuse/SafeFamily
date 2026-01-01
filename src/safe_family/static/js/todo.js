@@ -450,6 +450,12 @@ function setupTimeOptions() {
             option.textContent = value;
             select.appendChild(option);
         });
+        if (select.id === "custom_end") {
+            const option = document.createElement("option");
+            option.value = "23:59";
+            option.textContent = "23:59";
+            select.appendChild(option);
+        }
         const current = select.dataset.current;
         if (current) {
             select.value = current;
@@ -463,9 +469,9 @@ function setupSplitSlotButtons() {
         const row = btn.closest(".todo-row");
         const timeSlot = row ? row.dataset.timeSlot : "";
         const duration = getSlotDurationMinutes(timeSlot);
-        if (duration !== 60) {
+        if (duration !== 60 && duration !== 59) {
             btn.disabled = true;
-            btn.title = "Only 60-minute slots can be split.";
+            btn.title = "Only 59-60-minute slots can be split.";
         }
 
         btn.addEventListener("click", () => {

@@ -76,7 +76,10 @@ def generate_time_slots(
     )
     while current < end:
         next_slot = current + timedelta(minutes=step)
-        slots.append(f"{current.strftime('%H:%M')} - {next_slot.strftime('%H:%M')}")
+        if next_slot < end:
+            slots.append(f"{current.strftime('%H:%M')} - {next_slot.strftime('%H:%M')}")
+        else:
+            slots.append(f"{current.strftime('%H:%M')} - {end.strftime('%H:%M')}")
         current = next_slot
     return slots
 
@@ -362,7 +365,7 @@ def split_slot():
             return jsonify({"success": False, "error": "invalid time slot"}), 400
 
         duration = end_dt - start_dt
-        if duration != timedelta(minutes=60):
+        if duration != timedelta(minutes=60) and duration != timedelta(minutes=59):
             conn.close()
             return jsonify({"success": False, "error": "slot not 60 minutes"}), 400
 
