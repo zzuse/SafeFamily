@@ -1261,6 +1261,35 @@ td form button {
     min-width: 0;
   }
 }
+.oauth-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.oauth-github {
+  background-color: #0d1117;
+  color: #f0f6fc;
+  border: 1px solid #30363d;
+}
+.oauth-google {
+  background-color: #ffffff;
+  color: #3c4043;
+  border: 1px solid #dadce0;
+}
+.oauth-google:hover, .oauth-github:hover {
+  opacity: 0.95;
+}
+.oauth-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+}
+.oauth-icon svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
 @property --tw-rotate-x {
   syntax: "*";
   inherits: false;
