@@ -47,5 +47,14 @@ class Settings:
         "http://localhost:9181/alert",
     )
 
+    # OAuth settings
+    GITHUB_CLIENT_ID = os.environ.get("GITHUB_CLIENT_ID")
+    GITHUB_CLIENT_SECRET = os.environ.get("GITHUB_CLIENT_SECRET")
+    GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
+    GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
+    GOOGLE_CLIENT_PROJECT_ID = os.environ.get("GOOGLE_CLIENT_PROJECT_ID")
+    GOOGLE_CALLBACK_ROUTE = os.environ.get("GOOGLE_CALLBACK_ROUTE")
+    OAUTHLIB_INSECURE_TRANSPORT = os.environ.get("OAUTHLIB_INSECURE_TRANSPORT")
+
 
 settings = Settings()

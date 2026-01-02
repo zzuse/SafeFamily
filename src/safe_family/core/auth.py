@@ -1,5 +1,6 @@
 """Authentication routes and session management for Safe Family application."""
 
+import logging
 from functools import wraps
 
 import jwt as jwt_inner
@@ -12,6 +13,7 @@ from flask import (
     render_template,
     request,
     session,
+    url_for,
 )
 from flask_jwt_extended import (
     create_access_token,
@@ -22,10 +24,15 @@ from flask_jwt_extended import (
     get_jwt_identity,
     jwt_required,
 )
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token
+from google_auth_oauthlib.flow import Flow
 
+from config.settings import settings
 from src.safe_family.core.models import TokenBlocklist, User
-from src.safe_family.utils.constants import HTTP_CREATED, HTTP_OK
+from src.safe_family.utils.constants import HTTP_CREATED, HTTP_OK, SCOPES
 
+logger = logging.getLogger(__name__)
 auth_bp = Blueprint("auth", __name__)
 
 
@@ -211,6 +218,7 @@ def session_logout():
     """Logout user and clear session."""
     session.pop("access_token", None)
     session.pop("refresh_token", None)
+    session.pop("state", None)
     flash("Logged out successfully", "info")
     return redirect("/auth/login-ui")
 
@@ -270,3 +278,124 @@ def admin_required(view_func):
         return view_func(*args, **kwargs)
 
     return wrapped
+
+
+client_secrets = {
+    "web": {
+        "client_id": settings.GOOGLE_CLIENT_ID,
+        "project_id": settings.GOOGLE_CLIENT_PROJECT_ID,
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "client_secret": settings.GOOGLE_CLIENT_SECRET,
+        "redirect_uris": [
+            f"https://zzuse.duckdns.org/{settings.GOOGLE_CALLBACK_ROUTE}",
+            f"http://127.0.0.1:5000/{settings.GOOGLE_CALLBACK_ROUTE}",
+        ],
+        "javascript_origins": ["https://zzuse.duckdns.org", "http://127.0.0.1:5000"],
+    },
+}
+
+
+def _oauth_create_client(name: str):
+    if name == "google":
+        return True
+    if name == "github":
+        return True
+    return None
+
+
+def _oauth_provider_available(name: str) -> bool:
+    client = _oauth_create_client(name)
+    return bool(
+        client,
+    )
+
+
+@auth_bp.get("/login/github")
+def login_github():
+    if not _oauth_provider_available("github"):
+        flash("GitHub login is not configured.", "danger")
+        return redirect("/auth/login-ui")
+    redirect_uri = url_for("auth.github_callback", _external=True)
+    return None
+
+
+@auth_bp.get("/login/google")
+def login_google():
+    if not _oauth_provider_available("google"):
+        flash("Google login is not configured.", "danger")
+        return redirect("/auth/login-ui")
+    flow = Flow.from_client_config(
+        client_secrets,
+        scopes=SCOPES,
+        redirect_uri=url_for("auth.google_callback", _external=True),
+    )
+    authorization_url, state = flow.authorization_url(
+        access_type="offline",
+        include_granted_scopes="true",
+    )
+    session["state"] = state
+    return redirect(authorization_url)
+
+
+@auth_bp.get("/github/callback")
+def github_callback():
+    pass
+
+
+@auth_bp.get("/google/callback")
+def google_callback():
+    state = session.get("state")
+    flow = Flow.from_client_config(
+        client_secrets,
+        scopes=SCOPES,
+        state=state,
+        redirect_uri=url_for("auth.google_callback", _external=True),
+    )
+    # Fetch token
+    flow.fetch_token(authorization_response=request.url)
+    # Get credentials and verify
+    credentials = flow.credentials
+    id_info = id_token.verify_oauth2_token(
+        credentials.id_token,
+        google_requests.Request(),
+        client_secrets["web"]["client_id"],
+    )
+    google_id = id_info["sub"]
+    email = id_info["email"]
+    name = id_info.get("name", "")
+    user = User.query.filter_by(id=google_id).first()
+    if not user:
+        new_user = User(
+            id=google_id,
+            username=name,
+            email=email,
+        )
+        new_user.set_password("google_oauth_default_password")
+        new_user.save()
+    else:
+        # Update user info in case it changed
+        user.username = name
+        user.email = email
+        user.save()
+
+    json_data = {"username": name, "password": "google_oauth_default_password"}
+
+    logger.info("Logging in Google user: %s, state: %s", name, state)
+
+    g._json_data = json_data
+    response = login_user()
+    del g._json_data
+
+    data, status_code = response
+    if status_code != HTTP_OK:
+        flash("Invalid username or password", "danger")
+        return redirect("/auth/login-ui")
+
+    tokens = data.get_json().get("tokens", {})
+    session["access_token"] = tokens.get("access_token")
+    session["refresh_token"] = tokens.get("refresh_token")
+
+    flash("Login successful!", "success")
+    return redirect("/")

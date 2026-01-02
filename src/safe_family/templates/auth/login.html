@@ -10,6 +10,10 @@
             <input type="password" id="pwd" name="password" required /><br><br>
             <button class="btn btn-primary max-w-[100px]" type="submit">Login</button>
         </form>
+        <div class="mt-4">
+            <a class="btn btn-secondary" href="{{ url_for('auth.login_github') }}">Login with GitHub</a>
+            <a class="btn btn-secondary" href="{{ url_for('auth.login_google') }}">Login with Google</a>
+        </div>
     </div>
 </div>
 {% endblock %}

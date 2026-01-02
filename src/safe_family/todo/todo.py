@@ -555,7 +555,8 @@ def get_long_term(selected_user_id: str):
         (user_id,),
     )
     rows = cur.fetchall()
-    logger.info("Long-term tasks: %s", rows[0])
+    if rows:
+        logger.info("Long-term tasks: %s", rows[0])
     conn.close()
 
     return jsonify(
