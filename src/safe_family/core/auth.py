@@ -1,6 +1,7 @@
 """Authentication routes and session management for Safe Family application."""
 
 import logging
+import secrets
 from functools import wraps
 
 import jwt as jwt_inner
@@ -372,30 +373,19 @@ def google_callback():
             username=name,
             email=email,
         )
-        new_user.set_password("google_oauth_default_password")
+        new_user.set_password(secrets.token_urlsafe(48))
         new_user.save()
+        user = new_user
     else:
         # Update user info in case it changed
         user.username = name
         user.email = email
         user.save()
 
-    json_data = {"username": name, "password": "google_oauth_default_password"}
-
     logger.info("Logging in Google user: %s, state: %s", name, state)
 
-    g._json_data = json_data
-    response = login_user()
-    del g._json_data
-
-    data, status_code = response
-    if status_code != HTTP_OK:
-        flash("Invalid username or password", "danger")
-        return redirect("/auth/login-ui")
-
-    tokens = data.get_json().get("tokens", {})
-    session["access_token"] = tokens.get("access_token")
-    session["refresh_token"] = tokens.get("refresh_token")
+    session["access_token"] = create_access_token(identity=user.id)
+    session["refresh_token"] = create_refresh_token(identity=user.id)
 
     flash("Login successful!", "success")
     return redirect("/")
