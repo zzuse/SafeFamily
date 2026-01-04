@@ -3,8 +3,10 @@
 import logging
 import secrets
 from functools import wraps
+from urllib.parse import urlencode
 
 import jwt as jwt_inner
+import requests
 from flask import (
     Blueprint,
     flash,
@@ -110,7 +112,7 @@ def whoami():
             "user": current_user.username,
             "email": current_user.email,
         },
-    ), 200
+    ), HTTP_OK
 
 
 @auth_bp.get("/refresh")
@@ -281,7 +283,7 @@ def admin_required(view_func):
     return wrapped
 
 
-client_secrets = {
+google_client_secrets = {
     "web": {
         "client_id": settings.GOOGLE_CLIENT_ID,
         "project_id": settings.GOOGLE_CLIENT_PROJECT_ID,
@@ -300,9 +302,23 @@ client_secrets = {
 
 def _oauth_create_client(name: str):
     if name == "google":
-        return True
+        if not (
+            settings.GOOGLE_CLIENT_ID
+            and settings.GOOGLE_CLIENT_SECRET
+            and settings.GOOGLE_CLIENT_PROJECT_ID
+        ):
+            return None
+        return {
+            "client_id": settings.GOOGLE_CLIENT_ID,
+            "client_secret": settings.GOOGLE_CLIENT_SECRET,
+        }
     if name == "github":
-        return True
+        if not (settings.GITHUB_CLIENT_ID and settings.GITHUB_CLIENT_SECRET):
+            return None
+        return {
+            "client_id": settings.GITHUB_CLIENT_ID,
+            "client_secret": settings.GITHUB_CLIENT_SECRET,
+        }
     return None
 
 
@@ -319,7 +335,16 @@ def login_github():
         flash("GitHub login is not configured.", "danger")
         return redirect("/auth/login-ui")
     redirect_uri = url_for("auth.github_callback", _external=True)
-    return None
+    state = secrets.token_urlsafe(24)
+    session["github_oauth_state"] = state
+    params = {
+        "client_id": settings.GITHUB_CLIENT_ID,
+        "redirect_uri": redirect_uri,
+        "scope": "read:user user:email",
+        "state": state,
+    }
+    authorization_url = "https://github.com/login/oauth/authorize?" + urlencode(params)
+    return redirect(authorization_url)
 
 
 @auth_bp.get("/login/google")
@@ -328,7 +353,7 @@ def login_google():
         flash("Google login is not configured.", "danger")
         return redirect("/auth/login-ui")
     flow = Flow.from_client_config(
-        client_secrets,
+        google_client_secrets,
         scopes=SCOPES,
         redirect_uri=url_for("auth.google_callback", _external=True),
     )
@@ -342,14 +367,113 @@ def login_google():
 
 @auth_bp.get("/github/callback")
 def github_callback():
-    pass
+    if not _oauth_provider_available("github"):
+        flash("GitHub login is not configured.", "danger")
+        return redirect("/auth/login-ui")
+    error = request.args.get("error")
+    if error:
+        flash("GitHub login failed.", "danger")
+        return redirect("/auth/login-ui")
+    state = request.args.get("state")
+    expected_state = session.pop("github_oauth_state", None)
+    if not state or state != expected_state:
+        flash("GitHub login state mismatch.", "danger")
+        return redirect("/auth/login-ui")
+    code = request.args.get("code")
+    if not code:
+        flash("GitHub login missing code.", "danger")
+        return redirect("/auth/login-ui")
+
+    token_response = requests.post(
+        "https://github.com/login/oauth/access_token",
+        headers={"Accept": "application/json"},
+        data={
+            "client_id": settings.GITHUB_CLIENT_ID,
+            "client_secret": settings.GITHUB_CLIENT_SECRET,
+            "code": code,
+            "redirect_uri": url_for("auth.github_callback", _external=True),
+            "state": state,
+        },
+        timeout=10,
+    )
+    if token_response.status_code != HTTP_OK:
+        flash("GitHub token exchange failed.", "danger")
+        return redirect("/auth/login-ui")
+    token_data = token_response.json()
+    access_token = token_data.get("access_token")
+    if not access_token:
+        flash("GitHub token exchange failed.", "danger")
+        return redirect("/auth/login-ui")
+
+    api_headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Accept": "application/vnd.github+json",
+    }
+    user_response = requests.get(
+        "https://api.github.com/user",
+        headers=api_headers,
+        timeout=10,
+    )
+    if user_response.status_code != HTTP_OK:
+        flash("GitHub user lookup failed.", "danger")
+        return redirect("/auth/login-ui")
+    user_info = user_response.json()
+    emails_response = requests.get(
+        "https://api.github.com/user/emails",
+        headers=api_headers,
+        timeout=10,
+    )
+    emails = []
+    if emails_response.status_code == HTTP_OK:
+        emails = emails_response.json()
+
+    email = user_info.get("email")
+    if not email and emails:
+        primary_verified = [
+            entry for entry in emails if entry.get("primary") and entry.get("verified")
+        ]
+        verified = [entry for entry in emails if entry.get("verified")]
+        selection = (
+            primary_verified[0]
+            if primary_verified
+            else verified[0]
+            if verified
+            else emails[0]
+        )
+        email = selection.get("email")
+    if not email:
+        login_name = user_info.get("login", "github_user")
+        email = f"{login_name}@users.noreply.github.com"
+
+    github_id = str(user_info.get("id"))
+    name = user_info.get("name") or user_info.get("login") or email.split("@")[0]
+    user = User.query.filter_by(id=github_id).first()
+    if not user:
+        user = User.query.filter_by(email=email).first()
+
+    if not user:
+        new_user = User(
+            id=github_id,
+            username=name,
+            email=email,
+        )
+        new_user.set_password(secrets.token_urlsafe(48))
+        new_user.save()
+        user = new_user
+
+    logger.info("Logging in GitHub user: %s", name)
+    session["access_token"] = create_access_token(identity=user.id)
+    session["refresh_token"] = create_refresh_token(identity=user.id)
+
+    flash("Login successful!", "success")
+    return redirect("/")
 
 
 @auth_bp.get("/google/callback")
 def google_callback():
     state = session.get("state")
     flow = Flow.from_client_config(
-        client_secrets,
+        google_client_secrets,
         scopes=SCOPES,
         state=state,
         redirect_uri=url_for("auth.google_callback", _external=True),
@@ -361,12 +485,15 @@ def google_callback():
     id_info = id_token.verify_oauth2_token(
         credentials.id_token,
         google_requests.Request(),
-        client_secrets["web"]["client_id"],
+        google_client_secrets["web"]["client_id"],
     )
     google_id = id_info["sub"]
     email = id_info["email"]
     name = id_info.get("name", "")
     user = User.query.filter_by(id=google_id).first()
+    if not user:
+        user = User.query.filter_by(email=email).first()
+
     if not user:
         new_user = User(
             id=google_id,
@@ -376,11 +503,6 @@ def google_callback():
         new_user.set_password(secrets.token_urlsafe(48))
         new_user.save()
         user = new_user
-    else:
-        # Update user info in case it changed
-        user.username = name
-        user.email = email
-        user.save()
 
     logger.info("Logging in Google user: %s, state: %s", name, state)
 
