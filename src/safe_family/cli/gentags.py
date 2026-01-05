@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 KEYWORDS = {
     "math": ["math", "algebra", "calculus", "tutor"],
     "science": ["science", "biology", "chemistry", "physics", "lab"],
-    "english": [
+    "language": [
         "english",
         "essay",
         "read",
@@ -22,18 +22,46 @@ KEYWORDS = {
         "geography",
         "economics",
         "writing",
+        "french",
+        "francais",
+        "langue",
+        "spanish",
+        "espanol",
+        "khan",
     ],
-    "coding": ["unity", "python", "c++", "js", "twinery"],
-    "life": ["sleep", "clean", "eat", "exercise", "meditate", "rest", "snow"],
-    "language": ["french", "francais", "langue", "spanish", "espanol"],
+    "coding": [
+        "unity",
+        "python",
+        "c++",
+        "js",
+        "twinery",
+        "roblox",
+        "dev",
+        "gemini",
+        "game",
+    ],
+    "leasure": [
+        "sleep",
+        "clean",
+        "eat",
+        "exercise",
+        "meditate",
+        "rest",
+        "snow",
+        "tok",
+        "sledding",
+        "phone",
+    ],
     "piano": ["piano", "flute", "violin"],
 }
 
 
 def infer_tag(task_name: str) -> str:
     """Task name to tag inference."""
+    task_lower = task_name.lower()
     for tag, words in KEYWORDS.items():
-        if any(w in task_name.lower() for w in words):
+        if any(w.lower() in task_lower for w in words):
+            logger.debug("Inferred tag '%s' for task '%s'", tag, task_name)
             return tag
     return "unknown"
 
@@ -59,7 +87,7 @@ def main(args: list[str] = None) -> int:
     cur = conn.cursor()
 
     cur.execute(
-        "SELECT task, id from todo_list WHERE tags IS NULL OR tags = ''",
+        "SELECT task, id from todo_list WHERE tags IS NULL OR tags = '' OR tags = 'unknown'",
     )
     for task_name, task_id in cur.fetchall():
         inferred_tag = infer_tag(task_name)
