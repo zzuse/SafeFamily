@@ -43,6 +43,8 @@ def rule_enable_all_except_ai():
         "whitelist": False,
     }
     response = json_post(json_data)
+    logger.info("Game Response status: %d", response.status_code)
+    logger.info("Game Response status: %s", response.text)
     json_data = {
         "url": "https://raw.githubusercontent.com/zzuse/adguard_home_rule/refs/heads/main/block_music.txt",
         "data": {
@@ -53,6 +55,8 @@ def rule_enable_all_except_ai():
         "whitelist": False,
     }
     response = json_post(json_data)
+    logger.info("Music Response status: %d", response.status_code)
+    logger.info("Music Response status: %s", response.text)
     json_data = {
         "url": "https://raw.githubusercontent.com/zzuse/adguard_home_rule/refs/heads/main/block_news.txt",
         "data": {
@@ -63,16 +67,8 @@ def rule_enable_all_except_ai():
         "whitelist": False,
     }
     response = json_post(json_data)
-    json_data = {
-        "url": "https://raw.githubusercontent.com/zzuse/adguard_home_rule/refs/heads/main/block_clicker.txt",
-        "data": {
-            "name": "Clicker",
-            "url": "https://raw.githubusercontent.com/zzuse/adguard_home_rule/refs/heads/main/block_clicker.txt",
-            "enabled": True,
-        },
-        "whitelist": False,
-    }
-    response = json_post(json_data)
+    logger.info("News Response status: %d", response.status_code)
+    logger.info("News Response status: %s", response.text)
     json_data = {
         "url": "https://raw.githubusercontent.com/zzuse/adguard_home_rule/refs/heads/main/block_video.txt",
         "data": {
@@ -83,6 +79,8 @@ def rule_enable_all_except_ai():
         "whitelist": False,
     }
     response = json_post(json_data)
+    logger.info("Video Response status: %d", response.status_code)
+    logger.info("Video Response status: %s", response.text)
     json_data = {
         "url": "https://raw.githubusercontent.com/zzuse/adguard_home_rule/refs/heads/main/block_a03s.txt",
         "data": {
@@ -93,6 +91,8 @@ def rule_enable_all_except_ai():
         "whitelist": False,
     }
     response = json_post(json_data)
+    logger.info("A03S Response status: %d", response.status_code)
+    logger.info("A03S Response status: %s", response.text)
     json_data = {
         "url": "https://raw.githubusercontent.com/zzuse/adguard_home_rule/refs/heads/main/allow_educational.txt",
         "data": {
@@ -103,6 +103,8 @@ def rule_enable_all_except_ai():
         "whitelist": True,
     }
     response = json_post(json_data)
+    logger.info("scratch Response status: %d", response.status_code)
+    logger.info("scratch Response status: %s", response.text)
 
     json_data = {
         "ids": [
@@ -222,19 +224,22 @@ def rule_enable_all_except_ai():
             "snapchat",
             "discord",
             "youtube",
-            # "roblox",
+            "roblox",
         ],
         "schedule": {
             "time_zone": "UTC",
         },
     }
-    return requests.put(
+    response = requests.put(
         "http://" + f"{settings.ADGUARD_HOSTPORT}/control/blocked_services/update",
         headers=headers,
         json=json_data,
         auth=(f"{settings.ADGUARD_USERNAME}", f"{settings.ADGUARD_PASSWORD}"),
-        timeout=5.0,
+        timeout=10.0,
     )
+    logger.info("Service Response status: %d", response.status_code)
+    logger.info("Service Response status: %s", response.text)
+    return response
 
 
 def rule_enable_ai():
@@ -518,6 +523,7 @@ def rules_toggle_enable():
         "rules enabled all.",
         (response.status_code == HTTP_OK and "success") or "danger",
     )
+    logger.info("Enable Response status: %d", response.status_code)
     return redirect("/")
 
 
@@ -530,6 +536,7 @@ def rules_toggle_disable():
         "rules disabled all.",
         (response.status_code == HTTP_OK and "success") or "danger",
     )
+    logger.info("Disable Response status: %d", response.status_code)
     return redirect("/")
 
 

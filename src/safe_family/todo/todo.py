@@ -57,7 +57,7 @@ def generate_time_slots(
             end_hour, end_minute = 16, 0
         else:
             start_hour, start_minute = 18, 30
-            end_hour, end_minute = 21, 00
+            end_hour, end_minute = 21, 30
 
     step = 30 if slot_type == "30" else 60
     slots = []
