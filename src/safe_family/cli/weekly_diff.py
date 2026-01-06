@@ -72,6 +72,7 @@ def _fmt_num(value: float | None, digits: int = 2) -> str:
 
 
 def _format_output(current: WeekMetrics, previous: WeekMetrics) -> str:
+    study_tags = {"coding", "language", "math", "piano", "science"}
     lines: list[str] = []
     lines.append(f"WEEK: {current.week}")
     lines.append("")
@@ -114,6 +115,19 @@ def _format_output(current: WeekMetrics, previous: WeekMetrics) -> str:
         planned_value = f"{current.avg_planned_minutes:.0f} min"
     lines.append(
         f"- Avg planned task length: {planned_value} ({planned_arrow}) {planned_delta}",
+    )
+
+    total_study_minutes = 0.0
+    total_study_effective_minutes = 0.0
+    for tag in study_tags:
+        minutes = current.by_category_minutes.get(tag, {})
+        total_study_minutes += minutes.get("planned_minutes", 0.0)
+        total_study_effective_minutes += minutes.get("effective_minutes", 0.0)
+    total_study_hours = total_study_minutes / 60.0
+    total_study_effective_hours = total_study_effective_minutes / 60.0
+    lines.append(f"- Total study hours (planned): {total_study_hours:.2f}h")
+    lines.append(
+        f"- Total study hours (effective): {total_study_effective_hours:.2f}h"
     )
 
     lines.append("")
