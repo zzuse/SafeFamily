@@ -27,7 +27,7 @@ def json_post(json_data: dict) -> requests.Response:
         headers=headers,
         json=json_data,
         auth=(f"{settings.ADGUARD_USERNAME}", f"{settings.ADGUARD_PASSWORD}"),
-        timeout=5.0,
+        timeout=10.0,
     )
 
 
@@ -460,7 +460,6 @@ def rule_disable_all():
             "weibo",
             "whatsapp",
             "wizz",
-            "xboxlive",
             "xiaohongshu",
             "yy",
             "reddit",
@@ -468,7 +467,6 @@ def rule_disable_all():
             "valorant",
             "amazon_streaming",
             "zhihu",
-            "minecraft",
             "twitch",
         ],
         "schedule": {
@@ -480,7 +478,7 @@ def rule_disable_all():
         headers=headers,
         json=json_data,
         auth=(f"{settings.ADGUARD_USERNAME}", f"{settings.ADGUARD_PASSWORD}"),
-        timeout=5.0,
+        timeout=10.0,
     )
 
 
@@ -488,7 +486,7 @@ def rule_stop_traffic_all():
     """Stop all traffic by disabling the gateway on the router."""
     response = requests.get(
         f"http://{settings.ROUTER_IP}/cgi-bin/disablegateway.sh",
-        timeout=10,
+        timeout=10.0,
     )
     logger.info("Response status: %d", response.status_code)
     return response
@@ -498,7 +496,7 @@ def rule_allow_traffic_all():
     """Allow all traffic by enabling the gateway on the router."""
     response = requests.get(
         f"http://{settings.ROUTER_IP}/cgi-bin/enablegateway.sh",
-        timeout=10,
+        timeout=10.0,
     )  # GET request, same as curl without -X
     logger.info("Response status: %d", response.status_code)
     return response
@@ -508,7 +506,7 @@ def rule_status_gateway():
     """Check the status of the gateway on the router."""
     response = requests.get(
         f"http://{settings.ROUTER_IP}/cgi-bin/gateway.sh",
-        timeout=10,
+        timeout=10.0,
     )
     logger.info("Response status: %d", response.status_code)
     return response
