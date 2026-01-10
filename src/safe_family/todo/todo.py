@@ -1,6 +1,8 @@
 """To-Do list management routes and logic."""
 
 import logging
+import threading
+import time as time_module
 from datetime import UTC, datetime, time, timedelta
 
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
@@ -18,6 +20,9 @@ from src.safe_family.utils.constants import Saturday
 
 logger = logging.getLogger(__name__)
 todo_bp = Blueprint("todo", __name__)
+RULE_EXEC_LOCK = threading.Lock()
+RULE_EXEC_COOLDOWN_SECONDS = 30.0
+RULE_EXEC_STATE = {"last_run": 0.0}
 
 
 def generate_time_slots(
@@ -499,38 +504,51 @@ def notify_feedback():
 @login_required
 def exec_rules(selected_user_id: str):
     """Execute assigned rules for the selected user."""
+    if not RULE_EXEC_LOCK.acquire(blocking=False):
+        flash("Rules update already in progress.", "warning")
+        return redirect(url_for("todo.todo_page"))
+    now = time_module.monotonic()
+    remaining = RULE_EXEC_COOLDOWN_SECONDS - (now - RULE_EXEC_STATE["last_run"])
+    if remaining > 0:
+        RULE_EXEC_LOCK.release()
+        flash(f"Please wait {remaining:.0f}s before trying again.", "warning")
+        return redirect(url_for("todo.todo_page"))
+    RULE_EXEC_STATE["last_run"] = now
     user_id = selected_user_id
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute(
-        "SELECT assigned_rule FROM user_rule_assignment WHERE user_id = %s",
-        (user_id,),
-    )
-    row = cur.fetchone()
-    rule_name = row[0] if row else None
-
-    if not rule_name:
-        flash("No rule assigned to the user.", "warning")
-        return redirect(url_for("todo.todo_page"))
-
-    func = RULE_FUNCTIONS.get(rule_name)
-    if func:
-        flash(f"Executing rule: {rule_name}", "info")
-        try:
-            func()
-        except Exception as e:
-            flash(f"Error executing {rule_name}: {e}", "danger")
-    else:
-        flash(f"Rule {rule_name} not found in RULE_FUNCTIONS.", "danger")
-
-    # For pre-configured rule only, I want to make the network rule back in one hour later
-    if rule_name == "Rule disable all":
+    try:
         cur.execute(
-            "UPDATE schedule_rules SET start_time = NOW() + INTERVAL '1 hour' WHERE id = 15",
+            "SELECT assigned_rule FROM user_rule_assignment WHERE user_id = %s",
+            (user_id,),
         )
-        conn.commit()
-        load_schedules()
-    conn.close()
+        row = cur.fetchone()
+        rule_name = row[0] if row else None
+
+        if not rule_name:
+            flash("No rule assigned to the user.", "warning")
+            return redirect(url_for("todo.todo_page"))
+
+        func = RULE_FUNCTIONS.get(rule_name)
+        if func:
+            flash(f"Executing rule: {rule_name}", "info")
+            try:
+                func()
+            except Exception as e:
+                flash(f"Error executing {rule_name}: {e}", "danger")
+        else:
+            flash(f"Rule {rule_name} not found in RULE_FUNCTIONS.", "danger")
+
+        # For pre-configured rule only, I want to make the network rule back in one hour later
+        if rule_name == "Rule disable all":
+            cur.execute(
+                "UPDATE schedule_rules SET start_time = NOW() + INTERVAL '1 hour' WHERE id = 15",
+            )
+            conn.commit()
+            load_schedules()
+    finally:
+        conn.close()
+        RULE_EXEC_LOCK.release()
     return redirect(url_for("todo.todo_page"))
 
 
