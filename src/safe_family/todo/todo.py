@@ -7,11 +7,13 @@ from datetime import UTC, datetime, time, timedelta
 
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 
+from src.safe_family.cli import gentags, weekly_diff, weekly_metrics
 from src.safe_family.core.auth import get_current_username, login_required
 from src.safe_family.core.extensions import get_db_connection, local_tz
 from src.safe_family.core.models import LongTermGoal
 from src.safe_family.notifications.notifier import (
     send_discord_notification,
+    send_discord_summary,
     send_email_notification,
     send_hammerspoon_alert,
 )
@@ -488,15 +490,198 @@ def notify_feedback():
     task = (data.get("task") or "").strip()
 
     if time_slot and task:
-        message = f"Task feedback needed: {time_slot} - {task}"
-    elif time_slot:
-        message = f"Task feedback needed: {time_slot}"
-    elif task:
-        message = f"Task feedback needed: {task}"
+        message = f"{time_slot} - {task}"
     else:
-        message = "Task feedback needed"
+        message = time_slot or task or "Task feedback needed"
 
     send_hammerspoon_alert(message)
+    return jsonify({"success": True})
+
+
+@todo_bp.get("/todo/weekly_summary")
+@login_required
+def weekly_summary():
+    """Return a weekly summary for the current or selected user."""
+    user = get_current_username()
+    if user is None:
+        return jsonify({"success": False, "error": "not logged in"}), 401
+
+    requested_user = (request.args.get("user") or "").strip()
+    username = user.username
+    if user.role == "admin" and requested_user:
+        username = requested_user
+
+    gentags.main([])
+
+    today = datetime.now(local_tz).date()
+    current_iso = today.isocalendar()
+    current_week = f"{current_iso.year}-W{current_iso.week:02d}"
+    previous_date = today - timedelta(days=7)
+    previous_iso = previous_date.isocalendar()
+    previous_week = f"{previous_iso.year}-W{previous_iso.week:02d}"
+
+    current_start, current_end = weekly_metrics._parse_iso_week(current_week)
+    previous_start, previous_end = weekly_metrics._parse_iso_week(previous_week)
+
+    current_df = weekly_metrics._fetch_week_df(current_start, current_end, username)
+    previous_df = weekly_metrics._fetch_week_df(previous_start, previous_end, username)
+    current_metrics = weekly_metrics._compute_metrics(
+        current_df,
+        current_start,
+        current_end,
+    )
+    previous_metrics = weekly_metrics._compute_metrics(
+        previous_df,
+        previous_start,
+        previous_end,
+    )
+
+    current_payload = weekly_diff.WeekMetrics(
+        week=current_week,
+        completion_rate=current_metrics.completion_rate,
+        avg_tasks_per_day=current_metrics.avg_tasks_per_day,
+        avg_planned_minutes=current_metrics.avg_planned_minutes,
+        by_category=current_metrics.by_category,
+        by_category_minutes=current_metrics.by_category_minutes,
+    )
+    previous_payload = weekly_diff.WeekMetrics(
+        week=previous_week,
+        completion_rate=previous_metrics.completion_rate,
+        avg_tasks_per_day=previous_metrics.avg_tasks_per_day,
+        avg_planned_minutes=previous_metrics.avg_planned_minutes,
+        by_category=previous_metrics.by_category,
+        by_category_minutes=previous_metrics.by_category_minutes,
+    )
+
+    summary = weekly_diff._format_output(current_payload, previous_payload)
+    send_discord_summary(username, summary, current_week, previous_week)
+    return jsonify(
+        {
+            "success": True,
+            "summary": summary,
+            "week": current_week,
+            "previous_week": previous_week,
+        },
+    )
+
+
+@todo_bp.get("/todo/unknown_metadata")
+@login_required
+def unknown_metadata():
+    """Return tasks with unknown tags or missing completion status."""
+    user = get_current_username()
+    if user is None:
+        return jsonify({"success": False, "error": "not logged in"}), 401
+
+    requested_user = (request.args.get("user") or "").strip()
+    username = user.username
+    if user.role == "admin" and requested_user:
+        username = requested_user
+
+    gentags.main([])
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT id, time_slot, task, tags, date, completion_status
+        FROM todo_list
+        WHERE username = %s
+          AND date <= CURRENT_DATE
+          AND (tags IS NULL OR tags = '' OR tags = 'unknown' OR completion_status IS NULL OR completion_status = '')
+        ORDER BY date DESC, time_slot
+        """,
+        (username,),
+    )
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    today = datetime.now(local_tz).date()
+    now = datetime.now(local_tz)
+    unknown_tags = []
+    unknown_status = []
+    for todo_id, time_slot, task, tags, task_date, completion_status in rows:
+        tag_missing = (
+            tags is None or not str(tags).strip() or str(tags).strip() == "unknown"
+        )
+        status_missing = completion_status is None or not str(completion_status).strip()
+        if tag_missing and task_date < today:
+            unknown_tags.append(
+                {
+                    "id": todo_id,
+                    "time_slot": time_slot,
+                    "task": task,
+                    "tags": tags or "unknown",
+                },
+            )
+
+        if status_missing:
+            include_status = task_date < today
+            if task_date == today and time_slot:
+                try:
+                    _, end_str = [t.strip() for t in time_slot.split("-")]
+                    end_time = datetime.strptime(end_str, "%H:%M").time()
+                    end_dt = now.replace(
+                        hour=end_time.hour,
+                        minute=end_time.minute,
+                        second=0,
+                        microsecond=0,
+                    )
+                    include_status = now >= end_dt
+                except (ValueError, AttributeError):
+                    include_status = False
+            if include_status:
+                unknown_status.append(
+                    {
+                        "id": todo_id,
+                        "time_slot": time_slot,
+                        "task": task,
+                    },
+                )
+
+    return jsonify(
+        {
+            "success": True,
+            "unknown_tags": unknown_tags,
+            "unknown_status": unknown_status,
+        },
+    )
+
+
+@todo_bp.post("/todo/update_tag")
+@login_required
+def update_tag():
+    """Update task tags for a specific todo item."""
+    user = get_current_username()
+    if user is None:
+        return jsonify({"success": False, "error": "not logged in"}), 401
+
+    data = request.get_json() or {}
+    todo_id = data.get("id")
+    tag = (data.get("tag") or "").strip().lower()
+    if not todo_id or not tag:
+        return jsonify({"success": False, "error": "missing data"}), 400
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT username FROM todo_list WHERE id = %s", (todo_id,))
+    row = cur.fetchone()
+    if not row:
+        cur.close()
+        conn.close()
+        return jsonify({"success": False, "error": "not found"}), 404
+
+    task_owner = row[0]
+    if user.role != "admin" and task_owner != user.username:
+        cur.close()
+        conn.close()
+        return jsonify({"success": False, "error": "forbidden"}), 403
+
+    cur.execute("UPDATE todo_list SET tags = %s WHERE id = %s", (tag, todo_id))
+    conn.commit()
+    cur.close()
+    conn.close()
     return jsonify({"success": True})
 
 

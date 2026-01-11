@@ -230,6 +230,48 @@
     </div>
     {% endif %}
 
+    <div id="weekly-summary-modal" class="weekly-summary-modal" aria-hidden="true">
+        <div class="weekly-summary-panel">
+            <div class="weekly-summary-header">
+                <div class="weekly-summary-title">Weekly Summary</div>
+                <button type="button" class="weekly-summary-close" aria-label="Close weekly summary">✕</button>
+            </div>
+            <div class="weekly-summary-subtitle">Loading summary...</div>
+            <pre class="weekly-summary-content"></pre>
+            <button type="button" class="weekly-summary-close-btn">Close</button>
+        </div>
+    </div>
+
+    <div id="unknown-tags-modal" class="unknown-tags-modal" aria-hidden="true">
+        <div class="unknown-tags-panel">
+            <div class="unknown-tags-header">
+                <div class="unknown-tags-title">Update Unknown Tags</div>
+                <button type="button" class="unknown-tags-close" aria-label="Close tag update">✕</button>
+            </div>
+            <div class="unknown-tags-subtitle">Fill in tags before planning today.</div>
+            <div class="unknown-tags-list"></div>
+            <div class="unknown-tags-actions">
+                <button type="button" class="unknown-tags-skip">Skip</button>
+                <button type="button" class="unknown-tags-save">Save & Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="unknown-status-modal" class="unknown-status-modal" aria-hidden="true">
+        <div class="unknown-status-panel">
+            <div class="unknown-status-header">
+                <div class="unknown-status-title">Update Completion Status</div>
+                <button type="button" class="unknown-status-close" aria-label="Close status update">✕</button>
+            </div>
+            <div class="unknown-status-subtitle">Update unfinished status entries.</div>
+            <div class="unknown-status-list"></div>
+            <div class="unknown-status-actions">
+                <button type="button" class="unknown-status-skip">Skip</button>
+                <button type="button" class="unknown-status-save">Save</button>
+            </div>
+        </div>
+    </div>
+
     <div id="bridge-element" data-value="{{ selected_user_row_id }}" data-user="{{ selected_user }}"></div>
 
     <div class="card-header">Configuration</div>

@@ -168,13 +168,9 @@ def notify_overdue_task_feedback():
             continue
 
         if time_slot and task:
-            message = f"Task feedback needed: {username} {time_slot} - {task}"
-        elif time_slot:
-            message = f"Task feedback needed: {username} {time_slot}"
-        elif task:
-            message = f"Task feedback needed: {username} - {task}"
+            message = f"{time_slot} - {task}"
         else:
-            message = f"Task feedback needed: {username}"
+            message = time_slot or task or username
 
         send_hammerspoon_alert(message)
         _NOTIFIED_TASK_IDS.add(todo_id)

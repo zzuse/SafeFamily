@@ -51,6 +51,7 @@ KEYWORDS = {
         "tok",
         "sledding",
         "phone",
+        "haircut",
     ],
     "piano": ["piano", "flute", "violin"],
 }

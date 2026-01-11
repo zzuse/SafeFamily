@@ -162,38 +162,8 @@ function setupTaskFeedbackModal() {
     const laterButton = modal.querySelector(".feedback-later");
     const queue = [];
     const queuedIds = new Set();
-    const notifiedIds = new Set();
     const serverNotifiedIds = new Set();
     let activeItem = null;
-
-    function maybeRequestNotificationPermission() {
-        if (!("Notification" in window)) return;
-        if (Notification.permission !== "default") return;
-        Notification.requestPermission().catch(err => {
-            console.warn("Notification permission request failed:", err);
-        });
-    }
-
-    function sendTaskFeedbackNotification(item) {
-        if (!("Notification" in window)) return;
-        if (Notification.permission !== "granted") return;
-        if (notifiedIds.has(item.id)) return;
-
-        const body = item.task ? `${item.timeSlot} - ${item.task}` : item.timeSlot;
-        const notification = new Notification("Task feedback needed", {
-            body,
-            icon: "/static/icons/task-feedback-notification.svg",
-            tag: `task-feedback-${item.id}`,
-            renotify: true,
-            requireInteraction: true,
-        });
-
-        notification.onclick = () => {
-            window.focus();
-        };
-
-        notifiedIds.add(item.id);
-    }
 
     function sendTaskFeedbackServerAlert(item) {
         if (serverNotifiedIds.has(item.id)) return;
@@ -235,7 +205,6 @@ function setupTaskFeedbackModal() {
         titleName.textContent = item.task ? `- ${item.task}` : "";
         modal.classList.add("active");
         modal.setAttribute("aria-hidden", "false");
-        sendTaskFeedbackNotification(item);
         sendTaskFeedbackServerAlert(item);
     }
 
@@ -339,7 +308,6 @@ function setupTaskFeedbackModal() {
 
     collectOverdueTasks();
     showNext();
-    document.addEventListener("click", maybeRequestNotificationPermission, { once: true });
     setInterval(() => {
         if (activeItem) return;
         collectOverdueTasks();
@@ -347,7 +315,302 @@ function setupTaskFeedbackModal() {
     }, 60000);
 }
 
+function setupWeeklySummaryPopup() {
+    const modal = document.getElementById("weekly-summary-modal");
+    if (!modal) return;
+
+    const contentEl = modal.querySelector(".weekly-summary-content");
+    const subtitleEl = modal.querySelector(".weekly-summary-subtitle");
+    const closeButtons = modal.querySelectorAll(".weekly-summary-close, .weekly-summary-close-btn");
+    const bridge = document.getElementById("bridge-element");
+    const selectedUser = bridge ? bridge.dataset.user : "";
+
+    function pad2(value) {
+        return String(value).padStart(2, "0");
+    }
+
+    function localDateKey(date) {
+        return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+    }
+
+
+    function closeModal() {
+        modal.classList.remove("active");
+        modal.setAttribute("aria-hidden", "true");
+    }
+
+    function openModal() {
+        modal.classList.add("active");
+        modal.setAttribute("aria-hidden", "false");
+    }
+
+    closeButtons.forEach(button => {
+        button.addEventListener("click", closeModal);
+    });
+
+    modal.addEventListener("click", event => {
+        if (event.target === modal) {
+            closeModal();
+        }
+    });
+
+    function fetchSummary() {
+        const params = new URLSearchParams();
+        if (selectedUser) {
+            params.set("user", selectedUser);
+        }
+        const url = params.toString()
+            ? `/todo/weekly_summary?${params.toString()}`
+            : "/todo/weekly_summary";
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    throw new Error(data.error || "Summary unavailable");
+                }
+                subtitleEl.textContent = data.week ? `Week ${data.week}` : "Weekly summary";
+                contentEl.textContent = data.summary || "No summary data available.";
+                openModal();
+                localStorage.setItem("weeklySummaryShown", localDateKey(new Date()));
+            })
+            .catch(err => {
+                console.warn("Weekly summary failed:", err);
+                subtitleEl.textContent = "Weekly summary";
+                contentEl.textContent = "Summary unavailable right now.";
+                openModal();
+                localStorage.setItem("weeklySummaryShown", localDateKey(new Date()));
+            })
+            .finally(() => {
+                scheduleNext();
+            });
+    }
+
+    function scheduleNext() {
+        const now = new Date();
+        const target = new Date(now);
+        target.setHours(15, 30, 0, 0);
+        if (now >= target) {
+            target.setDate(target.getDate() + 1);
+        }
+        const delay = Math.max(target - now, 0);
+        window.setTimeout(fetchSummary, delay);
+    }
+
+    const now = new Date();
+    const todayKey = localDateKey(now);
+    const target = new Date(now);
+    target.setHours(15, 30, 0, 0);
+    if (now >= target && localStorage.getItem("weeklySummaryShown") !== todayKey) {
+        fetchSummary();
+        return;
+    }
+    scheduleNext();
+}
+
+function setupUnknownMetadataFlow() {
+    const tagsModal = document.getElementById("unknown-tags-modal");
+    const statusModal = document.getElementById("unknown-status-modal");
+    if (!tagsModal || !statusModal) return;
+
+    const tagsList = tagsModal.querySelector(".unknown-tags-list");
+    const statusList = statusModal.querySelector(".unknown-status-list");
+    const tagsSave = tagsModal.querySelector(".unknown-tags-save");
+    const tagsSkip = tagsModal.querySelector(".unknown-tags-skip");
+    const tagsClose = tagsModal.querySelector(".unknown-tags-close");
+    const statusSave = statusModal.querySelector(".unknown-status-save");
+    const statusSkip = statusModal.querySelector(".unknown-status-skip");
+    const statusClose = statusModal.querySelector(".unknown-status-close");
+    const bridge = document.getElementById("bridge-element");
+    const selectedUser = bridge ? bridge.dataset.user : "";
+    let pendingStatusItems = [];
+
+    const tagOptions = ["math", "science", "language", "coding", "leasure", "piano", "unknown"];
+    const statusOptions = ["skipped", "partially done", "half done", "mostly done", "done"];
+
+    function setModalState(modal, isOpen) {
+        if (isOpen) {
+            modal.classList.add("active");
+            modal.setAttribute("aria-hidden", "false");
+        } else {
+            modal.classList.remove("active");
+            modal.setAttribute("aria-hidden", "true");
+        }
+    }
+
+    function renderTags(items) {
+        tagsList.innerHTML = "";
+        items.forEach(item => {
+            const row = document.createElement("div");
+            row.className = "unknown-tags-row";
+            row.dataset.todoId = item.id;
+            const title = document.createElement("div");
+            title.className = "unknown-row-title";
+            title.textContent = item.time_slot
+                ? `${item.time_slot} - ${item.task}`
+                : item.task;
+            const select = document.createElement("select");
+            tagOptions.forEach(option => {
+                const opt = document.createElement("option");
+                opt.value = option;
+                opt.textContent = option;
+                if (option === (item.tags || "unknown")) {
+                    opt.selected = true;
+                }
+                select.appendChild(opt);
+            });
+            row.appendChild(title);
+            row.appendChild(select);
+            tagsList.appendChild(row);
+        });
+    }
+
+    function renderStatus(items) {
+        statusList.innerHTML = "";
+        items.forEach(item => {
+            const row = document.createElement("div");
+            row.className = "unknown-status-row";
+            row.dataset.todoId = item.id;
+            const title = document.createElement("div");
+            title.className = "unknown-row-title";
+            title.textContent = item.time_slot
+                ? `${item.time_slot} - ${item.task}`
+                : item.task;
+            const select = document.createElement("select");
+            const placeholder = document.createElement("option");
+            placeholder.value = "";
+            placeholder.textContent = "Select status";
+            placeholder.selected = true;
+            select.appendChild(placeholder);
+            statusOptions.forEach(option => {
+                const opt = document.createElement("option");
+                opt.value = option;
+                opt.textContent = option;
+                select.appendChild(opt);
+            });
+            row.appendChild(title);
+            row.appendChild(select);
+            statusList.appendChild(row);
+        });
+    }
+
+    function openStatusIfNeeded() {
+        if (!pendingStatusItems.length) return;
+        renderStatus(pendingStatusItems);
+        setModalState(statusModal, true);
+    }
+
+    function closeTagsModal() {
+        setModalState(tagsModal, false);
+    }
+
+    function closeStatusModal() {
+        setModalState(statusModal, false);
+    }
+
+    [tagsClose, tagsSkip].forEach(btn => {
+        if (btn) {
+            btn.addEventListener("click", () => {
+                closeTagsModal();
+                openStatusIfNeeded();
+            });
+        }
+    });
+
+    [statusClose, statusSkip].forEach(btn => {
+        if (btn) {
+            btn.addEventListener("click", closeStatusModal);
+        }
+    });
+
+    if (tagsSave) {
+        tagsSave.addEventListener("click", () => {
+            const updates = [];
+            tagsList.querySelectorAll(".unknown-tags-row").forEach(row => {
+                const todoId = row.dataset.todoId;
+                const select = row.querySelector("select");
+                const tag = select ? select.value : "";
+                if (todoId && tag && tag !== "unknown") {
+                    updates.push(
+                        fetch("/todo/update_tag", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ id: todoId, tag }),
+                        }).catch(err => {
+                            console.warn("Tag update failed:", err);
+                        })
+                    );
+                }
+            });
+            Promise.all(updates).finally(() => {
+                closeTagsModal();
+                openStatusIfNeeded();
+            });
+        });
+    }
+
+    if (statusSave) {
+        statusSave.addEventListener("click", () => {
+            const updates = [];
+            statusList.querySelectorAll(".unknown-status-row").forEach(row => {
+                const todoId = row.dataset.todoId;
+                const select = row.querySelector("select");
+                const status = select ? select.value : "";
+                if (todoId && status) {
+                    updates.push(
+                        fetch("/todo/mark_status", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ id: todoId, status }),
+                        }).catch(err => {
+                            console.warn("Status update failed:", err);
+                        })
+                    );
+                }
+            });
+            Promise.all(updates).finally(() => {
+                closeStatusModal();
+            });
+        });
+    }
+
+    function fetchUnknownMetadata() {
+        const params = new URLSearchParams();
+        if (selectedUser) {
+            params.set("user", selectedUser);
+        }
+        const url = params.toString()
+            ? `/todo/unknown_metadata?${params.toString()}`
+            : "/todo/unknown_metadata";
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    throw new Error(data.error || "Unknown metadata unavailable");
+                }
+                const tags = data.unknown_tags || [];
+                const status = data.unknown_status || [];
+                pendingStatusItems = status;
+                if (tags.length) {
+                    renderTags(tags);
+                    setModalState(tagsModal, true);
+                    return;
+                }
+                if (status.length) {
+                    openStatusIfNeeded();
+                }
+            })
+            .catch(err => {
+                console.warn("Unknown metadata failed:", err);
+            });
+    }
+
+    fetchUnknownMetadata();
+}
+
 setupTaskFeedbackModal();
+setupWeeklySummaryPopup();
+setupUnknownMetadataFlow();
 setupAdminStatusDropdowns();
 setupScheduleConfig();
 setupTimeOptions();
