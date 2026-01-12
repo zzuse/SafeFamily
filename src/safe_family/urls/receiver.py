@@ -65,7 +65,7 @@ def receive_log():
         cur.close()
         conn.close()
         logger.info("Log stored: %s", {qh})
-        return jsonify({"message": "Log received"}), 201
+        return jsonify({"message": "Log received"}), 200
     except DatabaseConnectionError as e:
         logger.exception("Database error")
         return jsonify({"error": str(e)}), 500

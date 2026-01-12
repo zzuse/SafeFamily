@@ -20,6 +20,8 @@
                     {% if session.access_token %}
                     <li><a href="{{ url_for('suspicious.view_suspicious') }}">HOME</a></li>
                     <li><a href="{{ url_for('todo.todo_page') }}">TODO</a></li>
+                    <li><a href="{{ url_for('index.ninja_nightmare') }}">GAME</a></li>
+                    <li><a href="{{ url_for('index.store_sum') }}">SHEET</a></li>
                     <li><a href="{{ url_for('auth.session_logout') }}">Logout</a></li>
                     {% else %}
                     <li><a href="{{ url_for('auth.show_login_form') }}">Login</a></li>

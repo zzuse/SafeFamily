@@ -957,6 +957,8 @@ td form button {
 }
 .one {
   display: box;
+  background: #FFFFFF;
+  color: black;
 }
 .main {
   color: black;
