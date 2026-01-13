@@ -56,6 +56,31 @@ _NOTIFIED_TASK_IDS: set[int] = set()
 _NOTIFIED_DATE: str | None = None
 
 
+def get_scheduled_job_details():
+    """Return a human-friendly view of the current scheduler jobs."""
+    jobs = []
+    for job in scheduler.get_jobs():
+        next_run_time = job.next_run_time
+        if next_run_time:
+            try:
+                next_run_time = next_run_time.astimezone(local_tz)
+            except Exception:
+                logger.exception("  Next Run Time: %s", job["next_run_time"])
+        jobs.append(
+            {
+                "id": job.id,
+                "name": job.name,
+                "trigger": str(job.trigger),
+                "next_run_time": (
+                    next_run_time.strftime("%Y-%m-%d %H:%M:%S %Z")
+                    if next_run_time
+                    else "-"
+                ),
+            },
+        )
+    return jobs
+
+
 def load_schedules():
     """Clear existing jobs and reload from DB."""
     scheduler.remove_all_jobs()
@@ -103,16 +128,16 @@ def load_schedules():
     )
 
     # Get all scheduled jobs
-    jobs = scheduler.get_jobs()
+    jobs = get_scheduled_job_details()
 
-    # Iterate through the jobs and print their details
+    # Iterate through the jobs and log their details
     logger.info("-" * 20)
     logger.info("Scheduled Jobs:")
     for job in jobs:
-        logger.info("  ID:  %s", {job.id})
-        logger.info("  Name: %s", {job.name})
-        logger.info("  Trigger: %s", str(job.trigger))
-        logger.info("  Next Run Time: %s", str(job.next_run_time))
+        logger.info("  ID:  %s", job["id"])
+        logger.info("  Name: %s", job["name"])
+        logger.info("  Trigger: %s", job["trigger"])
+        logger.info("  Next Run Time: %s", job["next_run_time"])
         logger.info("-" * 20)
 
 
@@ -282,11 +307,14 @@ def schedule_rules():
     rules = cur.fetchall()
     cur.close()
 
+    scheduled_jobs = get_scheduled_job_details()
+
     return render_template(
         "rules/schedule_rules.html",
         rules=rules,
         assigned_rules=assigned_rules,
         available_rules=RULE_FUNCTIONS.keys(),
+        scheduled_jobs=scheduled_jobs,
     )
 
 

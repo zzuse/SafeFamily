@@ -245,6 +245,11 @@ section {
     background-color: var(--bg-secondary);
 }
 
+.empty-state {
+    @apply px-4 py-3 text-center text-sm text-slate-200 border border-dashed border-slate-600 rounded-md;
+    background-color: var(--bg-secondary);
+}
+
 .signup-button {
     display: flex;
     justify-content: center;

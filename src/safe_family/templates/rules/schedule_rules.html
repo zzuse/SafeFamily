@@ -2,7 +2,31 @@
 {% block content %}
 
 <div class="card">
-    <div class="card-header">Rule Management</div>
+    <div class="card-header">Scheduled Jobs</div>
+    {% if scheduled_jobs %}
+    <table class="table-modern">
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Trigger</th>
+            <th>Next Run Time</th>
+        </tr>
+        {% for job in scheduled_jobs %}
+        <tr>
+            <td>{{ job.id }}</td>
+            <td>{{ job.name }}</td>
+            <td>{{ job.trigger }}</td>
+            <td>{{ job.next_run_time }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <div class="empty-state">No jobs scheduled.</div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-header">Schedule Management</div>
     <table class="table-modern">
         <tr>
             <th>ID</th>
