@@ -17,7 +17,11 @@ from src.safe_family.notifications.notifier import (
     send_email_notification,
     send_hammerspoon_alert,
 )
-from src.safe_family.rules.scheduler import RULE_FUNCTIONS, load_schedules
+from src.safe_family.rules.scheduler import (
+    RULE_FUNCTIONS,
+    load_schedules,
+    notify_schedule_change,
+)
 from src.safe_family.utils.constants import Saturday
 
 logger = logging.getLogger(__name__)
@@ -731,6 +735,7 @@ def exec_rules(selected_user_id: str):
             )
             conn.commit()
             load_schedules()
+            notify_schedule_change()
     finally:
         conn.close()
         RULE_EXEC_LOCK.release()

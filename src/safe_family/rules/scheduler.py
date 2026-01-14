@@ -1,8 +1,15 @@
 """Scheduler for automated rule execution."""
 
+import atexit
 import logging
+import os
+import select
+import threading
+import uuid
+import zlib
 from datetime import datetime, timedelta
 
+from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
@@ -49,9 +56,226 @@ RULE_FUNCTIONS = {
     "Rule auto commit": rule_auto_commit,
 }
 
+
+SCHEDULE_CHANGE_CHANNEL = "schedule_rules_changed"
+_SCHEDULER_INSTANCE_ID = uuid.uuid4().hex
+_LOAD_SCHEDULES_LOCK = threading.Lock()
+_JOB_LOCKS: dict[str, object] = {}
+_JOB_LOCKS_LOCK = threading.Lock()
+_LISTENER_THREAD: threading.Thread | None = None
+_LISTENER_LOCK = threading.Lock()
+_LISTENER_STOP = threading.Event()
+_SCHEDULER_LEADER_LOCK_KEY = zlib.crc32(b"safe_family_scheduler_leader")
+_SCHEDULER_LEADER_CONN = None
+_SCHEDULER_LEADER_LOCK = threading.Lock()
+_IS_SCHEDULER_LEADER = False
+_JOB_SKIPPED = object()
+
+
+def _job_lock_key(job_id: str) -> int:
+    """Return a stable advisory lock key for a job ID."""
+    return zlib.crc32(job_id.encode("utf-8"))
+
+
+def _ensure_scheduler_leader() -> bool:
+    """Return True if this process is the scheduler leader."""
+    global _IS_SCHEDULER_LEADER, _SCHEDULER_LEADER_CONN
+    with _SCHEDULER_LEADER_LOCK:
+        if _IS_SCHEDULER_LEADER and _SCHEDULER_LEADER_CONN is not None:
+            try:
+                cur = _SCHEDULER_LEADER_CONN.cursor()
+                cur.execute("SELECT 1")
+                cur.close()
+                return True
+            except Exception:
+                logger.warning("Scheduler leader connection lost; re-electing.")
+                try:
+                    _SCHEDULER_LEADER_CONN.close()
+                except Exception:
+                    logger.exception("Failed to close leader connection.")
+                _SCHEDULER_LEADER_CONN = None
+                _IS_SCHEDULER_LEADER = False
+
+        conn = None
+        try:
+            conn = get_db_connection()
+            conn.autocommit = True
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT pg_try_advisory_lock(%s)",
+                (_SCHEDULER_LEADER_LOCK_KEY,),
+            )
+            locked = cur.fetchone()[0]
+            cur.close()
+        except Exception:
+            logger.exception("Failed to acquire scheduler leader lock.")
+            if conn is not None:
+                conn.close()
+            return False
+
+        if not locked:
+            conn.close()
+            return False
+
+        _SCHEDULER_LEADER_CONN = conn
+        _IS_SCHEDULER_LEADER = True
+        return True
+
+
+def _release_scheduler_leader() -> None:
+    """Close the scheduler leader connection."""
+    global _IS_SCHEDULER_LEADER, _SCHEDULER_LEADER_CONN
+    with _SCHEDULER_LEADER_LOCK:
+        if _SCHEDULER_LEADER_CONN is not None:
+            try:
+                _SCHEDULER_LEADER_CONN.close()
+            except Exception:
+                logger.exception("Failed to close scheduler leader connection.")
+        _SCHEDULER_LEADER_CONN = None
+        _IS_SCHEDULER_LEADER = False
+
+
+def _ensure_job_lock(job_id: str) -> bool:
+    """Return True if this process owns the advisory lock for a job."""
+    with _JOB_LOCKS_LOCK:
+        conn = _JOB_LOCKS.get(job_id)
+        if conn is not None and conn.closed == 0:
+            return True
+
+    lock_key = _job_lock_key(job_id)
+    conn = None
+    try:
+        conn = get_db_connection()
+        conn.autocommit = True
+        cur = conn.cursor()
+        cur.execute("SELECT pg_try_advisory_lock(%s)", (lock_key,))
+        locked = cur.fetchone()[0]
+        cur.close()
+    except Exception:
+        logger.exception("Failed to acquire job lock for %s", job_id)
+        if conn is not None:
+            conn.close()
+        return False
+
+    if not locked:
+        conn.close()
+        return False
+
+    with _JOB_LOCKS_LOCK:
+        _JOB_LOCKS[job_id] = conn
+    return True
+
+
+def _wrap_job(job_id: str, func):
+    """Wrap a scheduled function with a per-job advisory lock."""
+    def _wrapped(*args, **kwargs):
+        if not _ensure_scheduler_leader():
+            return _JOB_SKIPPED
+        if not _ensure_job_lock(job_id):
+            logger.debug("Skipping job %s; lock held by another process.", job_id)
+            return _JOB_SKIPPED
+        return func(*args, **kwargs)
+
+    return _wrapped
+
+
+def _release_unused_job_locks(active_job_ids: set[str]) -> None:
+    """Close advisory lock connections for jobs that are no longer scheduled."""
+    with _JOB_LOCKS_LOCK:
+        for job_id in list(_JOB_LOCKS.keys()):
+            if job_id in active_job_ids:
+                continue
+            conn = _JOB_LOCKS.pop(job_id)
+            try:
+                if conn is not None and conn.closed == 0:
+                    conn.close()
+            except Exception:
+                logger.exception("Failed to release job lock for %s", job_id)
+
+
+def _listen_for_schedule_changes() -> None:
+    """Listen for schedule change notifications and reload jobs."""
+    try:
+        conn = get_db_connection()
+        conn.autocommit = True
+        cur = conn.cursor()
+        cur.execute(f"LISTEN {SCHEDULE_CHANGE_CHANNEL}")
+    except Exception:
+        logger.exception("Failed to start schedule change listener.")
+        return
+
+    try:
+        while not _LISTENER_STOP.is_set():
+            if select.select([conn], [], [], 1.0) == ([], [], []):
+                continue
+            conn.poll()
+            while conn.notifies:
+                notify = conn.notifies.pop(0)
+                if notify.payload == _SCHEDULER_INSTANCE_ID:
+                    continue
+                logger.info("Reloading schedules after notification.")
+                load_schedules()
+    finally:
+        cur.close()
+        conn.close()
+
+
+def _start_schedule_listener() -> None:
+    """Start a background listener for schedule change notifications."""
+    if os.environ.get("PYTEST_CURRENT_TEST"):
+        return
+    global _LISTENER_THREAD
+    with _LISTENER_LOCK:
+        if _LISTENER_THREAD is not None:
+            return
+        _LISTENER_THREAD = threading.Thread(
+            target=_listen_for_schedule_changes,
+            name="schedule-change-listener",
+            daemon=True,
+        )
+        _LISTENER_THREAD.start()
+
+
+def _stop_schedule_listener() -> None:
+    """Signal the schedule listener thread to stop."""
+    _LISTENER_STOP.set()
+
+
+atexit.register(_stop_schedule_listener)
+atexit.register(_release_scheduler_leader)
+
+
+def notify_schedule_change() -> None:
+    """Notify other processes to reload schedules."""
+    try:
+        conn = get_db_connection()
+        conn.autocommit = True
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT pg_notify(%s, %s)",
+            (SCHEDULE_CHANGE_CHANNEL, _SCHEDULER_INSTANCE_ID),
+        )
+        cur.close()
+        conn.close()
+    except Exception:
+        logger.exception("Failed to notify schedule change.")
+
+
+def _log_job_event(event) -> None:
+    """Log a single line per job run to avoid APScheduler's duplicate INFO logs."""
+    if event.exception:
+        logger.error("Scheduler job %s failed: %s", event.job_id, event.exception)
+        return
+    if getattr(event, "retval", None) is _JOB_SKIPPED:
+        return
+    logger.info("Scheduler job %s executed", event.job_id)
+
+
 # 0-6 → Sunday to Saturday (APScheduler uses 0=Monday, 6=Sunday).
 scheduler = BackgroundScheduler()
+scheduler.add_listener(_log_job_event, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
 scheduler.start()
+_start_schedule_listener()
 _NOTIFIED_TASK_IDS: set[int] = set()
 _NOTIFIED_DATE: str | None = None
 
@@ -83,62 +307,78 @@ def get_scheduled_job_details():
 
 def load_schedules():
     """Clear existing jobs and reload from DB."""
-    scheduler.remove_all_jobs()
+    with _LOAD_SCHEDULES_LOCK:
+        scheduler.remove_all_jobs()
+        active_job_ids: set[str] = set()
 
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT id, rule_name, start_time, day_of_week FROM schedule_rules WHERE enabled = TRUE",
-    )
-    for rule_id, rule_name, start_time, day_of_week in cur.fetchall():
-        if rule_name in RULE_FUNCTIONS:
-            func = RULE_FUNCTIONS.get(rule_name)
-            if func:
-                scheduler.add_job(
-                    func,
-                    "cron",
-                    id=f"rule_{rule_id}",  # important: job ID tied to DB row
-                    hour=start_time.hour,
-                    minute=start_time.minute,
-                    day_of_week=day_of_week or "*",
-                )
-    cur.close()
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT id, rule_name, start_time, day_of_week FROM schedule_rules WHERE enabled = TRUE",
+        )
+        for rule_id, rule_name, start_time, day_of_week in cur.fetchall():
+            if rule_name in RULE_FUNCTIONS:
+                func = RULE_FUNCTIONS.get(rule_name)
+                if func:
+                    job_id = f"rule_{rule_id}"
+                    active_job_ids.add(job_id)
+                    scheduler.add_job(
+                        _wrap_job(job_id, func),
+                        "cron",
+                        id=job_id,  # important: job ID tied to DB row
+                        name=rule_name,
+                        hour=start_time.hour,
+                        minute=start_time.minute,
+                        day_of_week=day_of_week or "*",
+                    )
+        cur.close()
+        conn.close()
 
-    # Still prefer "cron" compare to ("interval", hours=24)
-    scheduler.add_job(
-        archive_completed_tasks,
-        "cron",
-        hour=2,
-        minute=10,
-        day_of_week="*",
-    )
-    scheduler.add_job(
-        analyze_logs,
-        "cron",
-        hour=0,
-        minute=20,
-        day_of_week="*",
-    )
-    scheduler.add_job(
-        notify_overdue_task_feedback,
-        "interval",
-        minutes=1,
-        id="notify_overdue_task_feedback",
-        replace_existing=True,
-    )
+        # Still prefer "cron" compare to ("interval", hours=24)
+        scheduler.add_job(
+            _wrap_job("archive_completed_tasks", archive_completed_tasks),
+            "cron",
+            id="archive_completed_tasks",
+            name="archive_completed_tasks",
+            hour=2,
+            minute=10,
+            day_of_week="*",
+        )
+        active_job_ids.add("archive_completed_tasks")
+        scheduler.add_job(
+            _wrap_job("analyze_logs", analyze_logs),
+            "cron",
+            id="analyze_logs",
+            name="analyze_logs",
+            hour=0,
+            minute=20,
+            day_of_week="*",
+        )
+        active_job_ids.add("analyze_logs")
+        scheduler.add_job(
+            _wrap_job("notify_overdue_task_feedback", notify_overdue_task_feedback),
+            "interval",
+            minutes=1,
+            id="notify_overdue_task_feedback",
+            name="notify_overdue_task_feedback",
+            replace_existing=True,
+        )
+        active_job_ids.add("notify_overdue_task_feedback")
 
-    # Get all scheduled jobs
-    jobs = get_scheduled_job_details()
+        _release_unused_job_locks(active_job_ids)
 
-    # Iterate through the jobs and log their details
-    logger.info("-" * 20)
-    logger.info("Scheduled Jobs:")
-    for job in jobs:
-        logger.info("  ID:  %s", job["id"])
-        logger.info("  Name: %s", job["name"])
-        logger.info("  Trigger: %s", job["trigger"])
-        logger.info("  Next Run Time: %s", job["next_run_time"])
+        # Get all scheduled jobs
+        jobs = get_scheduled_job_details()
+
+        # Iterate through the jobs and log their details
         logger.info("-" * 20)
+        logger.info("Scheduled Jobs:")
+        for job in jobs:
+            logger.info("  ID:  %s", job["id"])
+            logger.info("  Name: %s", job["name"])
+            logger.info("  Trigger: %s", job["trigger"])
+            logger.info("  Next Run Time: %s", job["next_run_time"])
+            logger.info("-" * 20)
 
 
 def remove_job(rule_id: int):
@@ -225,6 +465,7 @@ def schedule_rules():
             )
             conn.commit()
             load_schedules()
+            notify_schedule_change()
 
         elif action == "add":
             rule_name = request.form["rule_name"]
@@ -245,6 +486,7 @@ def schedule_rules():
                 logger.debug("Inserted rule with id: %d", rule_id)
             conn.commit()
             load_schedules()
+            notify_schedule_change()
 
         elif action == "delete":
             rule_id = request.form["rule_id"]
@@ -252,6 +494,7 @@ def schedule_rules():
             cur.execute("DELETE FROM schedule_rules WHERE id = %s", (rule_id,))
             conn.commit()
             load_schedules()
+            notify_schedule_change()
 
         elif action == "enable":
             rule_id = request.form["rule_id"]
@@ -261,6 +504,7 @@ def schedule_rules():
             )
             conn.commit()
             load_schedules()
+            notify_schedule_change()
 
         elif action == "disable":
             rule_id = request.form["rule_id"]
@@ -270,6 +514,7 @@ def schedule_rules():
             )
             conn.commit()
             load_schedules()
+            notify_schedule_change()
 
         elif action == "assign":
             for key, value in request.form.items():

@@ -39,6 +39,9 @@ LOGGING_CONFIG = {
             "level": "DEBUG",
             "propagate": False,
         },
+        "apscheduler.executors.default": {
+            "level": "WARNING",
+        },
     },
 }
 
