@@ -100,6 +100,25 @@ def send_hammerspoon_alert(message: str):
         logger.exception("❌ Hammerspoon alert failed:")
 
 
+def send_hammerspoon_task(doer: str, task_name: str, time_slot: str):
+    """Send a local desktop task notification via Hammerspoon HTTP server."""
+    task_url = settings.HAMMERSPOON_TASK_URL
+    if not task_url:
+        return
+    if not _is_hammerspoon_available(task_url):
+        return
+
+    payload = {
+        "doer": doer,
+        "task_name": task_name,
+        "time_slot": time_slot,
+    }
+    try:
+        requests.post(task_url, json=payload, timeout=2)
+    except requests.RequestException:
+        logger.exception("❌ Hammerspoon task notification failed:")
+
+
 def _is_hammerspoon_available(alert_url: str) -> bool:
     parsed = urlparse(alert_url)
     host = parsed.hostname

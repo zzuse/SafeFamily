@@ -31,7 +31,14 @@
             <table class="table-modern">
                 <tr>
                     <th>Time Slot</th>
-                    <th>Task</th>
+                    <th>
+                        Task
+                        <button type="button" class="notify-current-task-btn btn border bg-orange-500/10 text-[#ff6b00]"
+                            title="Send current task to Hammerspoon"
+                            style="margin-left: 8px; padding: 2px 6px; font-size: 0.75rem;">
+                            Notify Current
+                        </button>
+                    </th>
                     <th>Completed</th>
                 </tr>
                 {% for todo_id, time_slot, task, completed, completion_status in today_tasks %}

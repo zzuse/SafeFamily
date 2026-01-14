@@ -3,6 +3,32 @@ const element = document.getElementById("bridge-element");
 const selected_user_row_id = element.dataset.value; // Access data-value
 const selected_user_name = element.dataset.user;
 
+const notifyCurrentTaskBtn = document.querySelector(".notify-current-task-btn");
+if (notifyCurrentTaskBtn) {
+    notifyCurrentTaskBtn.addEventListener("click", () => {
+        notifyCurrentTaskBtn.disabled = true;
+        const payload = selected_user_name ? { username: selected_user_name } : {};
+        fetch("/todo/notify_current_task", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) {
+                    alert(data.error || "Notify failed.");
+                }
+            })
+            .catch(err => {
+                console.error("Notify failed:", err);
+                alert("Notify failed.");
+            })
+            .finally(() => {
+                notifyCurrentTaskBtn.disabled = false;
+            });
+    });
+}
+
 document.getElementById("todoForm").addEventListener("submit", function (e) {
     const inputs = document.querySelectorAll(".task-input");
     const pattern = /^([^\[\]/]+\[[^\[\]]+\])$/; // matches: main[sub]

@@ -16,6 +16,7 @@ from src.safe_family.notifications.notifier import (
     send_discord_summary,
     send_email_notification,
     send_hammerspoon_alert,
+    send_hammerspoon_task,
 )
 from src.safe_family.rules.scheduler import (
     RULE_FUNCTIONS,
@@ -500,6 +501,83 @@ def notify_feedback():
 
     send_hammerspoon_alert(message)
     return jsonify({"success": True})
+
+
+@todo_bp.post("/todo/notify_current_task")
+@login_required
+def notify_current_task():
+    """Send a local desktop alert for the current time slot task."""
+    user = get_current_username()
+    if user is None:
+        return jsonify({"success": False, "error": "not logged in"}), 401
+
+    data = request.get_json() or {}
+    requested_user = (data.get("username") or "").strip()
+    target_username = user.username
+    if requested_user:
+        if user.role != "admin" and requested_user != user.username:
+            return jsonify({"success": False, "error": "forbidden"}), 403
+        target_username = requested_user
+
+    now = datetime.now(local_tz)
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT time_slot, task
+        FROM todo_list
+        WHERE date = CURRENT_DATE
+          AND username = %s
+          AND COALESCE(task, '') <> ''
+        ORDER BY time_slot
+        """,
+        (target_username,),
+    )
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    current_task = None
+    for time_slot, task in rows:
+        try:
+            start_str, end_str = [t.strip() for t in time_slot.split("-")]
+            start_time = datetime.strptime(start_str, "%H:%M").time()
+            end_time = datetime.strptime(end_str, "%H:%M").time()
+        except (ValueError, AttributeError):
+            continue
+
+        start_dt = now.replace(
+            hour=start_time.hour,
+            minute=start_time.minute,
+            second=0,
+            microsecond=0,
+        )
+        end_dt = now.replace(
+            hour=end_time.hour,
+            minute=end_time.minute,
+            second=0,
+            microsecond=0,
+        )
+        if end_dt <= start_dt:
+            end_dt += timedelta(days=1)
+
+        if start_dt <= now < end_dt:
+            current_task = (time_slot, task)
+            break
+
+    if not current_task:
+        return jsonify({"success": False, "error": "no current task"}), 404
+
+    time_slot, task_name = current_task
+    send_hammerspoon_task(target_username, task_name, time_slot)
+    return jsonify(
+        {
+            "success": True,
+            "username": target_username,
+            "time_slot": time_slot,
+            "task": task_name,
+        },
+    )
 
 
 @todo_bp.get("/todo/weekly_summary")

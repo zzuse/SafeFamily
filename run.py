@@ -11,5 +11,5 @@ if scheduler.running:
 
 
 if __name__ == "__main__":
-    debug = flask_app.config.get("FLASK_DEBUG", False)
-    flask_app.run(debug=debug)
+    """only hit when you run python3 run.py; gunicorn will not execute this block"""
+    flask_app.run(debug=True)
