@@ -196,7 +196,9 @@ def todo_page():
     conn.close()
 
     now = datetime.now(local_tz).time()
-    show_disable_button = today_tasks != [] and time(16, 0) <= now <= time(18, 0)
+    show_disable_button = (today_tasks != [] and time(16, 0) <= now <= time(18, 0)) or (
+        role == "admin"
+    )
     show_task_feedback = not (role == "admin" and selected_user != username)
 
     return render_template(
@@ -433,7 +435,7 @@ def mark_todo_status():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
-            "SELECT completion_status, time_slot, username, task FROM todo_list WHERE id = %s",
+            "SELECT completion_status, time_slot, username, task, to_char(date, 'YYYY-MM-DD HH24:MI:SS') FROM todo_list WHERE id = %s",
             (todo_id,),
         )
         row = cur.fetchone()
@@ -441,21 +443,26 @@ def mark_todo_status():
             conn.close()
             return jsonify({"success": False, "error": "not found"}), 404
 
-        existing_status, time_slot, task_owner, task_name = row
+        existing_status, time_slot, task_owner, task_name, log_date = row
         is_admin = user is not None and user.role == "admin"
         if existing_status and not is_admin:
             conn.close()
-            return jsonify({"success": False, "error": "status locked"}), 400
+            return jsonify({"success": False, "error": "status locked"}), 401
+
+        logger.debug("Marking todo id %s with status %s", todo_id, status)
 
         try:
             _, end_str = [t.strip() for t in time_slot.split("-")]
-            end_time = datetime.strptime(end_str, "%H:%M").time()
+            end_time = (
+                datetime.strptime(end_str, "%H:%M").replace(tzinfo=local_tz).time()
+            )
         except (ValueError, AttributeError):
             conn.close()
-            return jsonify({"success": False, "error": "invalid time slot"}), 400
+            return jsonify({"success": False, "error": "invalid time slot"}), 402
 
         now = datetime.now(local_tz)
-        end_dt = now.replace(
+        log_date_dt = datetime.fromisoformat(log_date).replace(tzinfo=local_tz)
+        end_dt = log_date_dt.replace(
             hour=end_time.hour,
             minute=end_time.minute,
             second=0,
@@ -463,7 +470,7 @@ def mark_todo_status():
         )
         if now < end_dt and not is_admin:
             conn.close()
-            return jsonify({"success": False, "error": "too early"}), 400
+            return jsonify({"success": False, "error": "too early"}), 403
 
         cur.execute(
             "UPDATE todo_list SET completion_status = %s, completed = %s WHERE id = %s",
