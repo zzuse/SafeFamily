@@ -2,6 +2,7 @@
 const element = document.getElementById("bridge-element");
 const selected_user_row_id = element.dataset.value; // Access data-value
 const selected_user_name = element.dataset.user;
+const selected_user_role = element.dataset.role;
 
 const notifyCurrentTaskBtn = document.querySelector(".notify-current-task-btn");
 if (notifyCurrentTaskBtn) {
@@ -636,12 +637,20 @@ function setupUnknownMetadataFlow() {
 
 setupTaskFeedbackModal();
 setupWeeklySummaryPopup();
-setupUnknownMetadataFlow();
+if (shouldRunUnknownMetadataFlow()) {
+    setupUnknownMetadataFlow();
+}
 setupAdminStatusDropdowns();
 setupScheduleConfig();
 setupTimeOptions();
 updateSlotProgress();
 setInterval(updateSlotProgress, 60000);
+
+function shouldRunUnknownMetadataFlow(now = new Date()) {
+    if (selected_user_role !== "admin") return false;
+    if (now.getDay() !== 0) return false;
+    return now.getHours() >= 16;
+}
 
 function getSlotDurationMinutes(timeSlot) {
     const startTime = parseSlotStartTime(timeSlot);
