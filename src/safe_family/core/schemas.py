@@ -1,11 +1,13 @@
 """Schemas for serializing and deserializing core models."""
 
-from marshmallow import Schema, fields
+from pydantic import BaseModel, ConfigDict
 
 
-class UserSchema(Schema):
-    """Schema for serializing and deserializing User objects."""
+class UserOut(BaseModel):
+    """Schema for serializing User objects."""
 
-    id = fields.String()
-    username = fields.String(required=True)
-    email = fields.Email(required=True)
+    id: str | None = None
+    username: str
+    email: str
+
+    model_config = ConfigDict(from_attributes=True)

@@ -77,7 +77,7 @@ def test_todo_page_admin_renders(client, monkeypatch):
 def test_update_todo_sends_notifications(client, monkeypatch):
     from .conftest import FakeConnection
 
-    conn = FakeConnection(rows=[("09:00 - 10:00", "Read")])
+    conn = FakeConnection(rows=[("09:00 - 10:00", "Read", "")])
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
     sent_email = []
     sent_discord = []
@@ -102,7 +102,7 @@ def test_update_todo_sends_notifications(client, monkeypatch):
 def test_done_todo_updates_status(client, monkeypatch):
     from .conftest import FakeConnection
 
-    conn = FakeConnection()
+    conn = FakeConnection(rows=[("09:00 - 10:00",)])
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
     monkeypatch.setattr(todo, "flash", lambda *a, **k: None)
     _login_session(client, monkeypatch)
@@ -110,4 +110,7 @@ def test_done_todo_updates_status(client, monkeypatch):
     resp = client.post("/todo/mark_done", json={"id": 5, "completed": True})
 
     assert resp.status_code == 200
-    assert conn.cursor_obj.queries[0][1] == (True, 5)
+    assert any(
+        "UPDATE todo_list" in sql and params == (True, 5)
+        for sql, params in conn.cursor_obj.queries
+    )

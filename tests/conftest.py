@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from src.safe_family.app import create_app
+from src.safe_family.core.extensions import db
 
 
 class FakeCursor:
@@ -69,6 +70,37 @@ def client(app):
 
 
 @pytest.fixture
+def notesync_app(tmp_path, monkeypatch):
+    """Flask application configured for notesync tests."""
+    db_path = tmp_path / "notesync.db"
+    monkeypatch.setattr(
+        "config.settings.settings.SQLALCHEMY_DATABASE_URI",
+        f"sqlite:///{db_path}",
+    )
+    monkeypatch.setattr(
+        "config.settings.settings.JWT_SECRET_KEY",
+        "test-secret",
+    )
+    monkeypatch.setattr(
+        "config.settings.settings.NOTESYNC_API_KEY",
+        "test-api-key",
+    )
+    app = create_app()
+    app.config["TESTING"] = True
+    with app.app_context():
+        db.create_all()
+        yield app
+        db.session.remove()
+        db.drop_all()
+
+
+@pytest.fixture
+def notesync_client(notesync_app):
+    """Flask test client for notesync endpoints."""
+    return notesync_app.test_client()
+
+
+@pytest.fixture
 def fake_db():
     """Provide a fresh fake DB connection and cursor."""
     return FakeConnection()
@@ -85,6 +117,10 @@ def patch_requests(monkeypatch):
 
     monkeypatch.setattr("requests.post", lambda *a, **kw: _record("post", *a, **kw))
     monkeypatch.setattr("requests.get", lambda *a, **kw: _record("get", *a, **kw))
+    monkeypatch.setattr("requests.put", lambda *a, **kw: _record("put", *a, **kw))
+    monkeypatch.setattr("requests.Session.post", lambda self, *a, **kw: _record("post", *a, **kw))
+    monkeypatch.setattr("requests.Session.get", lambda self, *a, **kw: _record("get", *a, **kw))
+    monkeypatch.setattr("requests.Session.put", lambda self, *a, **kw: _record("put", *a, **kw))
     return calls
 
 

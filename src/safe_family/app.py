@@ -6,6 +6,7 @@ from flask import Flask, jsonify
 
 from config.logging import setup_logging
 from config.settings import settings
+from src.safe_family.api.routes import api_bp
 from src.safe_family.auto_git.auto_git import auto_git_bp
 from src.safe_family.core.auth import auth_bp
 from src.safe_family.core.extensions import db, jwt, mail
@@ -32,6 +33,7 @@ def create_app():
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(
         hours=settings.JWT_ACCESS_TOKEN_EXPIRES,
     )
+    app.config["MAX_CONTENT_LENGTH"] = settings.NOTESYNC_MAX_REQUEST_BYTES
 
     app.config["MAIL_SERVER"] = settings.MAIL_SERVER
     app.config["MAIL_PORT"] = settings.MAIL_PORT
@@ -47,6 +49,7 @@ def create_app():
     app.register_blueprint(root_bp)
     app.register_blueprint(receiver_bp)
     app.register_blueprint(analyze_bp)
+    app.register_blueprint(api_bp, url_prefix="/api")
     app.register_blueprint(auto_git_bp)
     # The issue was added to the bug tracker: rules_toggle rename to url_blocker
     app.register_blueprint(rules_toggle_bp)

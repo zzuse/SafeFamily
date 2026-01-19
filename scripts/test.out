@@ -1,0 +1,34 @@
+pytest
+# pytest tests/test_notesync_auth.py tests/test_notesync_lww.py tests/test_auth_exchange.py -q '--cov-fail-under=0'
+........................................
+ERROR: Coverage failure: total of 44 is less than fail-under=80
+                                                                         [100%]
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.11.7-final-0 ________________
+
+Name                                        Stmts   Miss Branch BrPart  Cover   Missing
+---------------------------------------------------------------------------------------
+src/safe_family/api/routes.py                  53     14     10      3    70%   28-30, 48-49, 53, 57-59, 63-64, 81-82, 90
+src/safe_family/app.py                         66      3      2      1    94%   70, 75, 79
+src/safe_family/auto_git/auto_git.py           77     26     18      0    62%   67-68, 75-77, 84-110
+src/safe_family/cli/analyze.py                 19      2      4      2    83%   39, 53
+src/safe_family/cli/gentags.py                 31      2     10      2    90%   83, 105
+src/safe_family/cli/weekly_diff.py            112     89     34      1    16%   24-25, 36, 40-46, 55-59, 63-65, 69-71, 75-177, 182-207, 211
+src/safe_family/cli/weekly_metrics.py         127    100     34      1    17%   42-49, 53-63, 67-70, 74-110, 120-136, 144-222, 226
+src/safe_family/core/auth.py                  328    212     76      2    32%   99-101, 109-121, 133-143, 150-162, 169-170, 184-186, 195-200, 209-238, 244-272, 278, 284-288, 300-303, 311-324, 332-333, 339-342, 366-384, 388-389, 396-409, 414-427, 432-532, 537-577, 583-586
+src/safe_family/core/models.py                134     20      8      2    82%   36, 40, 56, 61, 85, 119, 123, 131-138, 142-146, 150-151, 237->239
+src/safe_family/notesync/service.py            97      7     34      4    92%   21, 46, 48-58, 92->95, 102-103
+src/safe_family/notifications/notifier.py      92     57     20      1    36%   35-36, 58-59, 64-85, 90-100, 105-119, 123-142
+src/safe_family/rules/scheduler.py            356    224     88      7    33%   41, 46, 77, 83-122, 128-135, 140-166, 172-177, 186-193, 200-202, 207-220, 226, 230, 241, 250-261, 266-271, 289-292, 320->319, 322->319, 386-391, 397-441, 448-557, 587-588, 616-617, 624-630
+src/safe_family/todo/todo.py                  533    364    122     11    29%   47-64, 66->74, 105-106, 114, 125-126, 142->146, 149-150, 154-167, 180-184, 265-276, 300-301, 307-309, 319, 330-332, 339-419, 426-493, 500-510, 517-580, 594-647, 661-732, 745-774, 781-827, 837-855, 878-894, 904-931, 938-954, 961-977, 984-991, 1002-1015, 1021-1026
+src/safe_family/urls/analyzer.py               87     28     24      5    67%   19, 26-50, 76-77, 80-86, 93-94, 98-99, 103-109
+src/safe_family/urls/blocker.py               129     72      8      0    42%   189-190, 201-225, 230-272, 287, 297-351, 356-361, 366-371, 376-381, 388-394, 401-407, 414-432, 439-441, 448-450, 457-459
+src/safe_family/urls/miscellaneous.py          14      1      0      0    93%   36
+src/safe_family/urls/receiver.py               28      3      2      0    90%   70-72
+src/safe_family/urls/suspicious.py            158     90     14      4    42%   41, 87, 101, 118->121, 142-144, 154-186, 204-214, 220-237, 247-259, 276-283, 301-319
+---------------------------------------------------------------------------------------
+TOTAL                                        2535   1314    510     46    44%
+
+22 files skipped due to complete coverage.
+FAIL Required test coverage of 80.0% not reached. Total coverage: 44.43%
+40 passed, 2 warnings in 6.75s

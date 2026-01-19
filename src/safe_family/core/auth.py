@@ -1,7 +1,9 @@
 """Authentication routes and session management for Safe Family application."""
 
+import hashlib
 import logging
 import secrets
+from datetime import UTC, datetime, timedelta
 from functools import wraps
 from urllib.parse import urlencode
 
@@ -32,11 +34,71 @@ from google.oauth2 import id_token
 from google_auth_oauthlib.flow import Flow
 
 from config.settings import settings
-from src.safe_family.core.models import TokenBlocklist, User
+from src.safe_family.core.extensions import db
+from src.safe_family.core.models import AuthCode, TokenBlocklist, User
 from src.safe_family.utils.constants import HTTP_CREATED, HTTP_OK, SCOPES
 
 logger = logging.getLogger(__name__)
 auth_bp = Blueprint("auth", __name__)
+
+
+def require_api_key(view_func):
+    """Require a valid API key for notesync endpoints."""
+
+    @wraps(view_func)
+    def wrapped(*args, **kwargs):
+        api_key = request.headers.get("X-API-Key", "")
+        expected = settings.NOTESYNC_API_KEY
+        if not expected or api_key != expected:
+            return jsonify({"error": "unauthorized"}), 401
+        return view_func(*args, **kwargs)
+
+    return wrapped
+
+
+def _hash_auth_code(code: str) -> str:
+    return hashlib.sha256(code.encode("utf-8")).hexdigest()
+
+
+def _naive_utc_now() -> datetime:
+    return datetime.utcnow()
+
+
+def create_auth_code(user_id: str) -> str:
+    """Create and persist a short-lived auth code for the user."""
+    raw_code = secrets.token_urlsafe(32)
+    code_hash = _hash_auth_code(raw_code)
+    expires_at = _naive_utc_now() + timedelta(
+        seconds=settings.NOTESYNC_AUTH_CODE_TTL_SECONDS,
+    )
+    auth_code = AuthCode(
+        code_hash=code_hash,
+        user_id=user_id,
+        expires_at=expires_at,
+    )
+    db.session.add(auth_code)
+    db.session.commit()
+    return raw_code
+
+
+def consume_auth_code(raw_code: str) -> AuthCode | None:
+    """Validate and mark an auth code as used."""
+    code_hash = _hash_auth_code(raw_code)
+    auth_code = AuthCode.query.filter_by(code_hash=code_hash).one_or_none()
+    if auth_code is None:
+        return None
+    if auth_code.used_at is not None or auth_code.is_expired():
+        return None
+    auth_code.used_at = _naive_utc_now()
+    db.session.commit()
+    return auth_code
+
+
+def build_notesync_callback_url(code: str) -> str:
+    """Return the universal link used by the iOS app to capture auth codes."""
+    base = settings.NOTESYNC_CALLBACK_URL
+    separator = "&" if "?" in base else "?"
+    return f"{base}{separator}code={code}"
 
 
 # API-based authentication routes
@@ -465,8 +527,9 @@ def github_callback():
     session["access_token"] = create_access_token(identity=user.id)
     session["refresh_token"] = create_refresh_token(identity=user.id)
 
+    auth_code = create_auth_code(user.id)
     flash("Login successful!", "success")
-    return redirect("/")
+    return redirect(build_notesync_callback_url(auth_code))
 
 
 @auth_bp.get("/google/callback")
@@ -509,5 +572,19 @@ def google_callback():
     session["access_token"] = create_access_token(identity=user.id)
     session["refresh_token"] = create_refresh_token(identity=user.id)
 
+    auth_code = create_auth_code(user.id)
     flash("Login successful!", "success")
-    return redirect("/")
+    return redirect(build_notesync_callback_url(auth_code))
+
+
+@auth_bp.get("/callback")
+def notesync_callback():
+    """Fallback page for notesync universal link callback."""
+    code = request.args.get("code", "")
+    if not code:
+        return "Missing auth code. Return to the app and try again.", 400
+    return (
+        "Auth code received. You can return to the app to finish login. "
+        f"If needed, copy this code: {code}",
+        200,
+    )

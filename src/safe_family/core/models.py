@@ -149,3 +149,91 @@ class LongTermGoal(db.Model):
         """Delete goal."""
         db.session.delete(self)
         db.session.commit()
+
+
+note_tags = db.Table(
+    "note_tags",
+    db.Column("note_id", db.String(), db.ForeignKey("notes.id"), primary_key=True),
+    db.Column("tag_id", db.String(), db.ForeignKey("tags.id"), primary_key=True),
+)
+
+
+class Note(db.Model):
+    """Notesync note model."""
+
+    __tablename__ = "notes"
+
+    id = db.Column(db.String(), primary_key=True)
+    user_id = db.Column(db.String(), nullable=False, index=True)
+    text = db.Column(db.Text(), nullable=False)
+    is_pinned = db.Column(db.Boolean(), default=False, nullable=False)
+    created_at = db.Column(db.DateTime(), nullable=False)
+    updated_at = db.Column(db.DateTime(), nullable=False, index=True)
+    deleted_at = db.Column(db.DateTime(), nullable=True)
+    tags = db.relationship("Tag", secondary=note_tags, back_populates="notes")
+    media = db.relationship("Media", back_populates="note")
+
+
+class Tag(db.Model):
+    """Notesync tag model."""
+
+    __tablename__ = "tags"
+    __table_args__ = (db.UniqueConstraint("user_id", "name", name="uq_tags_user_name"),)
+
+    id = db.Column(db.String(), primary_key=True)
+    user_id = db.Column(db.String(), nullable=False, index=True)
+    name = db.Column(db.String(), nullable=False)
+    notes = db.relationship("Note", secondary=note_tags, back_populates="tags")
+
+
+class Media(db.Model):
+    """Notesync media model."""
+
+    __tablename__ = "media"
+
+    id = db.Column(db.String(), primary_key=True)
+    note_id = db.Column(db.String(), db.ForeignKey("notes.id"), nullable=False, index=True)
+    user_id = db.Column(db.String(), nullable=False, index=True)
+    kind = db.Column(db.String(), nullable=False)
+    filename = db.Column(db.String(), nullable=False)
+    content_type = db.Column(db.String(), nullable=False)
+    checksum = db.Column(db.String(), nullable=False)
+    data = db.Column(db.LargeBinary(), nullable=False)
+    created_at = db.Column(db.DateTime(), nullable=False, default=lambda: datetime.now(UTC))
+    note = db.relationship("Note", back_populates="media")
+
+
+class NoteSyncOp(db.Model):
+    """Idempotency record for notesync operations."""
+
+    __tablename__ = "note_sync_ops"
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "op_id", name="uq_notesync_user_op"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(), nullable=False, index=True)
+    op_id = db.Column(db.String(), nullable=False)
+    note_id = db.Column(db.String(), nullable=False, index=True)
+    result = db.Column(db.String(), nullable=False)
+    applied_at = db.Column(db.DateTime(), nullable=False, default=lambda: datetime.now(UTC))
+
+
+class AuthCode(db.Model):
+    """Short-lived auth code for mobile token exchange."""
+
+    __tablename__ = "auth_codes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    code_hash = db.Column(db.String(64), nullable=False, unique=True, index=True)
+    user_id = db.Column(db.String(), nullable=False, index=True)
+    created_at = db.Column(db.DateTime(), nullable=False, default=lambda: datetime.now(UTC))
+    expires_at = db.Column(db.DateTime(), nullable=False)
+    used_at = db.Column(db.DateTime(), nullable=True)
+
+    def is_expired(self, now: datetime | None = None) -> bool:
+        """Return True when the auth code is expired."""
+        now = now or datetime.now(UTC)
+        if self.expires_at.tzinfo is None:
+            now = now.replace(tzinfo=None)
+        return self.expires_at <= now

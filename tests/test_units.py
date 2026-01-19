@@ -11,15 +11,27 @@ from src.safe_family.urls.analyzer import get_time_range
 
 def test_generate_time_slots_weekday_half_hour():
     weekday = datetime(2025, 1, 6, 12, 0)  # Monday
-    slots = generate_time_slots(slot_type="30", holiday="off", today=weekday)
+    slots = generate_time_slots(
+        slot_type="30",
+        schedule_mode="weekday",
+        custom_start="",
+        custom_end="",
+        today=weekday,
+    )
     assert slots[0] == "18:30 - 19:00"
-    assert slots[-1] == "20:30 - 21:00"
-    assert len(slots) == 5
+    assert slots[-1] == "21:00 - 21:30"
+    assert len(slots) == 6
 
 
 def test_generate_time_slots_weekend_hour():
     weekend = datetime(2025, 1, 4, 12, 0)  # Saturday
-    slots = generate_time_slots(slot_type="60", holiday="off", today=weekend)
+    slots = generate_time_slots(
+        slot_type="60",
+        schedule_mode="weekday",
+        custom_start="",
+        custom_end="",
+        today=weekend,
+    )
     assert slots[0] == "09:00 - 10:00"
     assert slots[-1] == "15:00 - 16:00"
     assert len(slots) == 7

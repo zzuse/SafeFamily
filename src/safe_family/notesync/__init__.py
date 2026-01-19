@@ -1,0 +1,1 @@
+"""Notesync package."""

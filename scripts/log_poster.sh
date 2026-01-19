@@ -34,7 +34,7 @@ if [ -f "$LOG_FILE" ]; then
         if [ -n "$line" ]; then
             # Send POST request
             response=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Content-Type: application/json" -d "$line" "$SERVER_URL")
-            if [ "$response" -eq 200 ]; then
+            if [ "$response" -eq 201 ]; then
                 log_message "INFO" "Sent log: $line | Response: $response"
             else
                 log_message "ERROR" "Failed to send log: $line | Response: $response"
@@ -50,7 +50,7 @@ tail -f "$LOG_FILE" | while read -r line; do
     if [ -n "$line" ]; then
         # Send POST request
         response=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Content-Type: application/json" -d "$line" "$SERVER_URL")
-        if [ "$response" -eq 200 ]; then
+        if [ "$response" -eq 201 ]; then
             log_message "INFO" "Sent log: $line | Response: $response"
         else
             log_message "ERROR" "Failed to send log: $line | Response: $response"

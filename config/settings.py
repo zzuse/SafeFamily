@@ -51,6 +51,19 @@ class Settings:
         "http://localhost:9181/task",
     )
 
+    # Notesync settings
+    NOTESYNC_API_KEY = os.environ.get("NOTESYNC_API_KEY", "")
+    NOTESYNC_AUTH_CODE_TTL_SECONDS = int(
+        os.environ.get("NOTESYNC_AUTH_CODE_TTL_SECONDS", "300"),
+    )
+    NOTESYNC_MAX_REQUEST_BYTES = int(
+        os.environ.get("NOTESYNC_MAX_REQUEST_BYTES", "52428800"),
+    )
+    NOTESYNC_CALLBACK_URL = os.environ.get(
+        "NOTESYNC_CALLBACK_URL",
+        "https://zzuse.duckdns.org/auth/callback",
+    )
+
     # OAuth settings
     GITHUB_CLIENT_ID = os.environ.get("GITHUB_CLIENT_ID")
     GITHUB_CLIENT_SECRET = os.environ.get("GITHUB_CLIENT_SECRET")

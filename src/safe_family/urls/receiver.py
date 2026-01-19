@@ -5,6 +5,7 @@ import logging
 from flask import Blueprint, jsonify, request
 
 from src.safe_family.core.extensions import get_db_connection
+from src.safe_family.utils.constants import HTTP_CREATED
 from src.safe_family.utils.exceptions import DatabaseConnectionError
 
 logger = logging.getLogger(__name__)
@@ -65,7 +66,7 @@ def receive_log():
         cur.close()
         conn.close()
         logger.info("Log stored: %s", {qh})
-        return jsonify({"message": "Log received"}), 200
+        return jsonify({"message": "Log received"}), HTTP_CREATED
     except DatabaseConnectionError as e:
         logger.exception("Database error")
         return jsonify({"error": str(e)}), 500
