@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <div class="card-header">Continue with a provider</div>
+    {% if error %}
+    <div class="flash danger">{{ error }}</div>
+    {% endif %}
+    <div class="btn-group">
+        <div>
+            <a class="btn btn-secondary oauth-btn oauth-google max-w-[200px]"
+                href="{% if client == 'ios' %}{{ url_for('auth.login_google') }}?client=ios{% else %}{{ url_for('auth.login_google') }}{% endif %}">
+                <span>Continue with Google</span>
+            </a>
+        </div>
+        <div>
+            <a class="btn btn-secondary oauth-btn oauth-github max-w-[200px]"
+                href="{% if client == 'ios' %}{{ url_for('auth.login_github') }}?client=ios{% else %}{{ url_for('auth.login_github') }}{% endif %}">
+                <span>Continue with GitHub</span>
+            </a>
+        </div>
+        <div>
+            <a class="btn btn-secondary max-w-[200px]" href="{{ url_for('auth.show_login_form') }}">
+                <span>Continue without provider</span>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

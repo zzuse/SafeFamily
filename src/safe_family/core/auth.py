@@ -11,6 +11,7 @@ import jwt as jwt_inner
 import requests
 from flask import (
     Blueprint,
+    current_app,
     flash,
     g,
     jsonify,
@@ -32,6 +33,7 @@ from flask_jwt_extended import (
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 from google_auth_oauthlib.flow import Flow
+from itsdangerous import BadData, URLSafeTimedSerializer
 
 from config.settings import settings
 from src.safe_family.core.extensions import db
@@ -40,6 +42,7 @@ from src.safe_family.utils.constants import HTTP_CREATED, HTTP_OK, SCOPES
 
 logger = logging.getLogger(__name__)
 auth_bp = Blueprint("auth", __name__)
+OAUTH_STATE_TTL_SECONDS = 600
 
 
 def require_api_key(view_func):
@@ -391,14 +394,62 @@ def _oauth_provider_available(name: str) -> bool:
     )
 
 
+def _oauth_state_serializer() -> URLSafeTimedSerializer:
+    secret = current_app.secret_key or settings.APP_SECRET_KEY or settings.JWT_SECRET_KEY
+    if not secret:
+        raise RuntimeError("Missing secret key for OAuth state signing.")
+    return URLSafeTimedSerializer(secret, salt="notesync-oauth-state")
+
+
+def _normalize_oauth_client(value: str | None) -> str:
+    return "ios" if value == "ios" else "web"
+
+
+def _build_oauth_state(client: str) -> str:
+    normalized = _normalize_oauth_client(client)
+    nonce = secrets.token_urlsafe(16)
+    state = _oauth_state_serializer().dumps(
+        {"client": normalized, "nonce": nonce},
+    )
+    session["oauth_state_nonce"] = nonce
+    return state
+
+
+def _read_oauth_state(state: str | None) -> dict | None:
+    if not state:
+        return None
+    try:
+        payload = _oauth_state_serializer().loads(
+            state,
+            max_age=OAUTH_STATE_TTL_SECONDS,
+        )
+    except BadData:
+        return None
+    expected_nonce = session.pop("oauth_state_nonce", None)
+    if expected_nonce and payload.get("nonce") != expected_nonce:
+        return None
+    return payload
+
+
+def _resolve_oauth_client(state_payload: dict | None) -> str:
+    session_client = session.pop("oauth_client", None)
+    if session_client:
+        return _normalize_oauth_client(session_client)
+    if state_payload:
+        return _normalize_oauth_client(state_payload.get("client"))
+    return "web"
+
+
 @auth_bp.get("/login/github")
 def login_github():
+    client = (request.args.get("client") or "").strip().lower()
+    if client == "ios":
+        session["oauth_client"] = "ios"
     if not _oauth_provider_available("github"):
         flash("GitHub login is not configured.", "danger")
         return redirect("/auth/login-ui")
     redirect_uri = url_for("auth.github_callback", _external=True)
-    state = secrets.token_urlsafe(24)
-    session["github_oauth_state"] = state
+    state = _build_oauth_state(client)
     params = {
         "client_id": settings.GITHUB_CLIENT_ID,
         "redirect_uri": redirect_uri,
@@ -411,6 +462,9 @@ def login_github():
 
 @auth_bp.get("/login/google")
 def login_google():
+    client = (request.args.get("client") or "").strip().lower()
+    if client == "ios":
+        session["oauth_client"] = "ios"
     if not _oauth_provider_available("google"):
         flash("Google login is not configured.", "danger")
         return redirect("/auth/login-ui")
@@ -419,12 +473,44 @@ def login_google():
         scopes=SCOPES,
         redirect_uri=url_for("auth.google_callback", _external=True),
     )
+    state = _build_oauth_state(client)
     authorization_url, state = flow.authorization_url(
         access_type="offline",
         include_granted_scopes="true",
+        state=state,
     )
-    session["state"] = state
     return redirect(authorization_url)
+
+
+@auth_bp.get("/oauth_start")
+def oauth_start():
+    """Redirect to the provider-specific OAuth login route."""
+    provider = (request.args.get("provider") or "").strip().lower()
+    client = (request.args.get("client") or "").strip().lower()
+    client = "ios" if client == "ios" else ""
+    if client == "ios":
+        session["oauth_client"] = "ios"
+    if not provider:
+        return render_template(
+            "auth/oauth_start.html",
+            client=client,
+        )
+    if provider == "google":
+        if client:
+            return redirect(url_for("auth.login_google", client=client))
+        return redirect(url_for("auth.login_google"))
+    if provider == "github":
+        if client:
+            return redirect(url_for("auth.login_github", client=client))
+        return redirect(url_for("auth.login_github"))
+    return (
+        render_template(
+            "auth/oauth_start.html",
+            client=client,
+            error="Invalid provider. Choose Google or GitHub.",
+        ),
+        400,
+    )
 
 
 @auth_bp.get("/github/callback")
@@ -437,8 +523,8 @@ def github_callback():
         flash("GitHub login failed.", "danger")
         return redirect("/auth/login-ui")
     state = request.args.get("state")
-    expected_state = session.pop("github_oauth_state", None)
-    if not state or state != expected_state:
+    state_payload = _read_oauth_state(state)
+    if not state_payload:
         flash("GitHub login state mismatch.", "danger")
         return redirect("/auth/login-ui")
     code = request.args.get("code")
@@ -524,17 +610,24 @@ def github_callback():
         user = new_user
 
     logger.info("Logging in GitHub user: %s", name)
+    client = _resolve_oauth_client(state_payload)
+    if client == "ios":
+        auth_code = create_auth_code(user.id)
+        return redirect(build_notesync_callback_url(auth_code))
+
     session["access_token"] = create_access_token(identity=user.id)
     session["refresh_token"] = create_refresh_token(identity=user.id)
-
-    auth_code = create_auth_code(user.id)
     flash("Login successful!", "success")
-    return redirect(build_notesync_callback_url(auth_code))
+    return redirect("/")
 
 
 @auth_bp.get("/google/callback")
 def google_callback():
-    state = session.get("state")
+    state = request.args.get("state")
+    state_payload = _read_oauth_state(state)
+    if not state_payload:
+        flash("Google login state mismatch.", "danger")
+        return redirect("/auth/login-ui")
     flow = Flow.from_client_config(
         google_client_secrets,
         scopes=SCOPES,
@@ -542,7 +635,12 @@ def google_callback():
         redirect_uri=url_for("auth.google_callback", _external=True),
     )
     # Fetch token
-    flow.fetch_token(authorization_response=request.url)
+    try:
+        flow.fetch_token(authorization_response=request.url)
+    except Exception as exc:  # pragma: no cover - defensive handling
+        logger.warning("Google token exchange failed: %s", exc)
+        flash("Google token exchange failed.", "danger")
+        return redirect("/auth/login-ui")
     # Get credentials and verify
     credentials = flow.credentials
     id_info = id_token.verify_oauth2_token(
@@ -568,13 +666,15 @@ def google_callback():
         user = new_user
 
     logger.info("Logging in Google user: %s, state: %s", name, state)
+    client = _resolve_oauth_client(state_payload)
+    if client == "ios":
+        auth_code = create_auth_code(user.id)
+        return redirect(build_notesync_callback_url(auth_code))
 
     session["access_token"] = create_access_token(identity=user.id)
     session["refresh_token"] = create_refresh_token(identity=user.id)
-
-    auth_code = create_auth_code(user.id)
     flash("Login successful!", "success")
-    return redirect(build_notesync_callback_url(auth_code))
+    return redirect("/")
 
 
 @auth_bp.get("/callback")

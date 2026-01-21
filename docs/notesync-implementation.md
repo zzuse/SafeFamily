@@ -18,6 +18,30 @@ Integration Points:
 
 ---
 
+### Login URL and Callback Contract (Custom URL Scheme)
+
+The iOS app opens the login URL in an external browser. This URL must start the OAuth flow and redirect to the provider.
+
+Recommended behavior:
+1) `GET /auth/login/google` or `GET /auth/login/github` generates the provider authorization request.
+2) Backend redirects to the provider authorize URL.
+3) Provider redirects back to your backend callback route with `code`.
+4) Backend creates a short-lived notesync auth code.
+5) Backend redirects to the app callback URL:
+   `zzuse.timeline://auth/callback?code=<notesync-auth-code>`
+
+Expected return:
+- A redirect chain that ends at the app callback URL above.
+- The app receives the callback and calls `POST /api/auth/exchange`.
+- Backend responds with:
+  `{ "access_token": "<jwt>", "token_type": "Bearer", "expires_in": 10800 }`.
+
+Notes:
+- The login URL can be any backend route as long as it ends with the app callback redirect.
+- Keep the scheme/host/path aligned with your iOS configuration.
+
+---
+
 ### Data Model (reference sketch)
 
 Adapt to Flask-SQLAlchemy (`db.Model`, `db.Table`) and add indexes as needed.
@@ -85,7 +109,8 @@ Steps:
 1) Add `NOTESYNC_API_KEY` to settings.
 2) Add `NOTESYNC_AUTH_CODE_TTL_SECONDS` (default: 300).
 3) Add `NOTESYNC_MAX_REQUEST_BYTES` for payload size limits.
-4) Set `MAX_CONTENT_LENGTH` in Flask config to prevent oversized uploads.
+4) Add `NOTESYNC_CALLBACK_URL` (default: `zzuse.timeline://auth/callback`).
+5) Set `MAX_CONTENT_LENGTH` in Flask config to prevent oversized uploads.
 
 ---
 
@@ -213,13 +238,13 @@ Files:
 Steps:
 1) On GitHub/Google login success, generate a short-lived auth code for the user.
 2) Store only a hash in `auth_codes` with expiry and used state.
-3) Redirect to the universal link: `https://zzuse.duckdns.org/auth/callback?code=...`.
-4) Add a fallback HTML page at `/auth/callback` for when the app is not installed.
+3) Redirect to the custom scheme: `zzuse.timeline://auth/callback?code=...`.
+4) Keep a fallback HTML page at `/auth/callback` for when the app is not installed.
 
 Auth code usage (aligned with your flow):
 - OAuth callback in `core/auth.py` creates the code after user identity is confirmed.
-- Server redirects to `https://zzuse.duckdns.org/auth/callback?code=...` (universal link).
-- iOS opens the app via Associated Domains, handles the URL, and calls `POST /api/auth/exchange`.
+- Server redirects to `zzuse.timeline://auth/callback?code=...` (custom URL scheme).
+- iOS handles the URL and calls `POST /api/auth/exchange`.
 - Exchange validates and marks the code as used, then issues an access token.
 
 ---

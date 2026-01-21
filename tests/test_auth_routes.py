@@ -160,6 +160,25 @@ def test_login_providers_unconfigured_redirect(client, monkeypatch):
     assert resp.location.endswith("/auth/login-ui")
 
 
+def test_oauth_start_invalid_provider(client):
+    resp = client.get("/auth/oauth_start?provider=unknown")
+    assert resp.status_code == 400
+    assert "Invalid provider" in resp.get_data(as_text=True)
+
+
+def test_oauth_start_sets_ios_client(client):
+    resp = client.get("/auth/oauth_start?provider=google&client=ios")
+    assert resp.status_code == 302
+    with client.session_transaction() as sess:
+        assert sess.get("oauth_client") == "ios"
+
+
+def test_oauth_start_renders_page(client):
+    resp = client.get("/auth/oauth_start")
+    assert resp.status_code == 200
+    assert "Continue with a provider" in resp.get_data(as_text=True)
+
+
 def test_get_current_username_sets_role(monkeypatch):
     monkeypatch.setattr(
         auth,

@@ -34,7 +34,7 @@ LOGGING_CONFIG = {
             "level": "INFO",
             "propagate": False,
         },
-        "my_project": {
+        "safe_family": {
             "handlers": ["console", "file"],
             "level": "DEBUG",
             "propagate": False,

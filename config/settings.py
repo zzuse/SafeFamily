@@ -61,7 +61,7 @@ class Settings:
     )
     NOTESYNC_CALLBACK_URL = os.environ.get(
         "NOTESYNC_CALLBACK_URL",
-        "https://zzuse.duckdns.org/auth/callback",
+        "zzuse.timeline://auth/callback",
     )
 
     # OAuth settings
