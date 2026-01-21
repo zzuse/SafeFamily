@@ -292,6 +292,35 @@ Steps:
 
 ---
 
+### Task 13: Notes viewer UI (web page)
+
+Goal:
+- Provide a web page to browse notes stored in the notesync tables.
+- Show note text, tags, images, and audio clips.
+- Sort notes with the most recently updated first.
+
+Files:
+- Modify `src/safe_family/urls/miscellaneous.py` (web routes)
+- Add `src/safe_family/templates/notes/notes.html`
+
+Routes:
+- `GET /notes`: list notes (requires session login)
+- `GET /notes/media/<media_id>`: stream image/audio for a note (requires session login)
+
+Steps:
+1) Query notes by `user_id` with `deleted_at is null`, ordered by `updated_at desc`.
+2) Render notes in a template using existing site layout.
+3) For each media record, render:
+   - `<img>` for image content types
+   - `<audio controls>` for audio content types
+4) Serve media blobs from the database using `send_file` and the stored `content_type`.
+
+Notes:
+- Use the session-based `login_required` to protect the page.
+- Scope all note/media queries by the current user id.
+
+---
+
 ## Verification
 
 - `pytest tests/test_notesync_models.py`

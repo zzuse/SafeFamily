@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section>
+    <div class="card-header">Notes</div>
+    {% if notes %}
+    <div class="note">Showing {{ notes | length }} notes (newest first).</div>
+    <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 12px;">
+        {% for note in notes %}
+        <article class="card" style="padding: 16px;">
+            <div style="display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                <div class="card-header" style="margin: 0;">
+                    {% if note.updated_local %}
+                    {{ note.updated_local.strftime("%Y-%m-%d %H:%M") }}
+                    {% endif %}
+                </div>
+                {% if note.is_pinned %}
+                <div class="note">Pinned</div>
+                {% endif %}
+            </div>
+            {% if note.text %}
+            <div class="note" style="margin-top: 8px;">
+                {{ note.text | e | replace("\n", "<br>") | safe }}
+            </div>
+            {% endif %}
+            {% if note.tags %}
+            <div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px;">
+                {% for tag in note.tags %}
+                <span class="note" style="padding: 2px 8px; border-radius: 999px;">
+                    {{ tag.name }}
+                </span>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% if note.media %}
+            <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 12px;">
+                {% for media in note.media %}
+                {% if media.kind == "image" or media.content_type.startswith("image/") %}
+                <img src="{{ url_for('index.notes_media', media_id=media.id) }}" alt="{{ media.filename }}"
+                    style="max-width: 100%; height: auto; border-radius: 12px;" loading="lazy">
+                {% elif media.kind == "audio" or media.content_type.startswith("audio/") %}
+                <audio controls preload="none" style="width: 100%;">
+                    <source src="{{ url_for('index.notes_media', media_id=media.id) }}"
+                        type="{{ media.content_type }}">
+                    Your browser does not support the audio element.
+                </audio>
+                {% else %}
+                <a href="{{ url_for('index.notes_media', media_id=media.id) }}">
+                    Download {{ media.filename }}
+                </a>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="note">No notes found yet.</div>
+    {% endif %}
+</section>
+
+{% endblock %}
