@@ -296,11 +296,23 @@ def login_required(view_func):
     def wrapped(*args, **kwargs):
         token = session.get("access_token")
         if not token:
+            logger.warning(
+                "login_required: missing token path=%s method=%s ua=%s",
+                request.path,
+                request.method,
+                request.headers.get("User-Agent", "-"),
+            )
             flash("Please log in first.", "warning")
             return redirect("/auth/login-ui")
         try:
             decode_token(token)
         except (jwt_inner.ExpiredSignatureError, jwt_inner.InvalidTokenError):
+            logger.warning(
+                "login_required: expired/invalid token path=%s method=%s ua=%s",
+                request.path,
+                request.method,
+                request.headers.get("User-Agent", "-"),
+            )
             flash("Session expired. Please log in again.", "danger")
             session.pop("access_token", None)
             return redirect("/auth/login-ui")

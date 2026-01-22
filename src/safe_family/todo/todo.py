@@ -425,11 +425,23 @@ def mark_todo_status():
     """Store completion status feedback for a to-do item."""
     try:
         user = get_current_username()
-        data = request.get_json()
+        logger.info(
+            "mark_status request: user=%s json=%s content_type=%s path=%s",
+            getattr(user, "username", None),
+            request.is_json,
+            request.content_type,
+            request.path,
+        )
+        try:
+            data = request.get_json()
+        except Exception:
+            logger.exception("mark_status: invalid json payload")
+            raise
         todo_id = data.get("id")
         status = (data.get("status") or "").strip().lower()
         allowed = {"skipped", "partially done", "half done", "mostly done", "done"}
         if status not in allowed:
+            logger.warning("mark_status: invalid status id=%s status=%s", todo_id, status)
             return jsonify({"success": False, "error": "invalid status"}), 400
 
         conn = get_db_connection()
@@ -441,12 +453,14 @@ def mark_todo_status():
         row = cur.fetchone()
         if not row:
             conn.close()
+            logger.warning("mark_status: not found id=%s", todo_id)
             return jsonify({"success": False, "error": "not found"}), 404
 
         existing_status, time_slot, task_owner, task_name, log_date = row
         is_admin = user is not None and user.role == "admin"
         if existing_status and not is_admin:
             conn.close()
+            logger.warning("mark_status: status locked id=%s user=%s", todo_id, user)
             return jsonify({"success": False, "error": "status locked"}), 401
 
         logger.debug("Marking todo id %s with status %s", todo_id, status)
@@ -458,6 +472,7 @@ def mark_todo_status():
             )
         except (ValueError, AttributeError):
             conn.close()
+            logger.warning("mark_status: invalid time slot id=%s time_slot=%s", todo_id, time_slot)
             return jsonify({"success": False, "error": "invalid time slot"}), 402
 
         now = datetime.now(local_tz)
@@ -470,6 +485,7 @@ def mark_todo_status():
         )
         if now < end_dt and not is_admin:
             conn.close()
+            logger.warning("mark_status: too early id=%s now=%s end=%s", todo_id, now, end_dt)
             return jsonify({"success": False, "error": "too early"}), 403
 
         cur.execute(
