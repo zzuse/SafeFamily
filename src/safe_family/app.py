@@ -59,6 +59,19 @@ def create_app():
     app.register_blueprint(user_bp, url_prefix="/users")
     app.register_blueprint(todo_bp)
 
+    # For debug
+    # from flask import current_app
+
+    # @app.after_request
+    # def log_response_info(response):
+    #     # Check if the response is JSON
+    #     if response.content_type == "application/json":
+    #         # Access the raw data and decode it to log the content
+    #         current_app.logger.info(
+    #             f"Response Body: {response.get_data(as_text=True)}",
+    #         )
+    #     return response
+
     @jwt.user_lookup_loader
     def user_lookup_callback(_jwt_header, jwt_data):
         identity = jwt_data["sub"]

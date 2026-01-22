@@ -34,7 +34,7 @@ Expected return:
 - A redirect chain that ends at the app callback URL above.
 - The app receives the callback and calls `POST /api/auth/exchange`.
 - Backend responds with:
-  `{ "access_token": "<jwt>", "token_type": "Bearer", "expires_in": 10800 }`.
+  `{ "access_token": "<jwt>", "refresh_token": "<jwt>", "token_type": "Bearer", "expires_in": 10800 }`.
 
 Notes:
 - The login URL can be any backend route as long as it ends with the app callback redirect.
@@ -192,7 +192,10 @@ Steps:
    - Replace note tags with payload tags on accepted updates.
    - Create missing tags per user.
 4) Media:
-   - Decode `dataBase64` and upsert by `id`.
+   - Deduplicate per note by `checksum` (SHA-256 hex). If the note already has a
+     media item with the same checksum, ignore the new media payload.
+   - Decode `dataBase64` and upsert by `id` when needed; skip re-decoding if the
+     checksum is unchanged.
    - Decide whether to delete media not present in payload (document the rule).
 5) Return authoritative note state and result per op: "applied", "skipped", "conflict".
 
@@ -212,6 +215,71 @@ Steps:
 2) Validate request schema.
 3) Call sync service and return results list.
 
+Example:
+```bash
+curl -X POST https://zzuse.duckdns.org/api/notesync \
+  -H "X-API-Key: <your-api-key>" \
+  -H "Authorization: Bearer <access-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ops": [{
+      "opId": "op-1",
+      "opType": "upsert",
+      "note": {
+        "id": "note-1",
+        "text": "Hello",
+        "isPinned": false,
+        "tags": [],
+        "createdAt": "2025-01-01T12:00:00Z",
+        "updatedAt": "2025-01-01T12:00:00Z",
+        "deletedAt": null
+      },
+      "media": []
+    }]
+  }'
+```
+
+---
+
+### Task 7b: Notes list endpoint
+
+Endpoint:
+- `GET /api/notes?limit=10`
+
+Behavior:
+- Requires API key + JWT.
+- Returns the most recently updated notes first (non-deleted only).
+- Response includes a top-level `media` array (may be empty).
+- Datetimes are returned in ISO-8601 with a `Z` suffix (UTC).
+
+Response shape:
+```json
+{
+  "notes": [
+    {
+      "id": "note-1",
+      "text": "Hello",
+      "isPinned": false,
+      "tags": [],
+      "createdAt": "2025-01-01T12:00:00Z",
+      "updatedAt": "2025-01-01T12:00:00Z",
+      "deletedAt": null
+    }
+  ],
+  "media": [
+    {
+      "id": "media-1",
+      "noteId": "note-1",
+      "kind": "image",
+      "filename": "photo.jpg",
+      "contentType": "image/jpeg",
+      "checksum": "sha256hex...",
+      "dataBase64": "..."
+    }
+  ]
+}
+```
+
 ---
 
 ### Task 8: Auth code exchange endpoint (API routes)
@@ -225,8 +293,8 @@ Endpoint:
 Steps:
 1) Hash and look up code in `auth_codes`.
 2) Validate expiry and used state.
-3) Mark code as used and issue JWT access token.
-4) Return `access_token`, `token_type`, `expires_in`, and `user`.
+3) Mark code as used and issue JWT access + refresh tokens.
+4) Return `access_token`, `refresh_token`, `token_type`, `expires_in`, and `user`.
 
 ---
 

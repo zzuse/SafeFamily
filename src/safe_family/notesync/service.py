@@ -96,12 +96,27 @@ def _sync_tags(note: Note, tags: list[str], user_id: str) -> None:
 
 
 def _sync_media(note: Note, media_payloads: list) -> None:
+    existing_media = Media.query.filter_by(note_id=note.id, user_id=note.user_id).all()
+    seen_checksums = {media.checksum for media in existing_media if media.checksum}
     for payload in media_payloads:
-        try:
-            data = base64.b64decode(payload.dataBase64.encode("utf-8"), validate=True)
-        except (ValueError, TypeError, binascii.Error):
-            raise ValueError("invalid_base64") from None
+        checksum = payload.checksum.strip()
         media = Media.query.filter_by(id=payload.id, user_id=note.user_id).first()
+        if media is None and checksum and checksum in seen_checksums:
+            continue
+        if checksum:
+            seen_checksums.add(checksum)
+
+        should_decode = media is None or media.checksum != checksum
+        data = None
+        if should_decode:
+            try:
+                data = base64.b64decode(
+                    payload.dataBase64.encode("utf-8"),
+                    validate=True,
+                )
+            except (ValueError, TypeError, binascii.Error):
+                raise ValueError("invalid_base64") from None
+
         if media is None:
             media = Media(
                 id=payload.id,
@@ -110,7 +125,7 @@ def _sync_media(note: Note, media_payloads: list) -> None:
                 kind=payload.kind,
                 filename=payload.filename,
                 content_type=payload.contentType,
-                checksum=payload.checksum,
+                checksum=checksum,
                 data=data,
                 created_at=_now_utc(),
             )
@@ -120,8 +135,9 @@ def _sync_media(note: Note, media_payloads: list) -> None:
             media.kind = payload.kind
             media.filename = payload.filename
             media.content_type = payload.contentType
-            media.checksum = payload.checksum
-            media.data = data
+            media.checksum = checksum
+            if data is not None:
+                media.data = data
 
 
 def apply_sync_ops(ops, user_id: str) -> list[tuple[Note | None, str, object]]:

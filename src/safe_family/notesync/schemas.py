@@ -1,9 +1,9 @@
 """Pydantic schemas for notesync payloads."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 
 
 class MediaPayload(BaseModel):
@@ -24,6 +24,16 @@ class NotePayload(BaseModel):
     createdAt: datetime
     updatedAt: datetime
     deletedAt: datetime | None = None
+
+    @field_serializer("createdAt", "updatedAt", "deletedAt", when_used="json")
+    def _serialize_datetime(self, value: datetime | None) -> str | None:
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        else:
+            value = value.astimezone(timezone.utc)
+        return value.isoformat().replace("+00:00", "Z")
 
 
 class OperationPayload(BaseModel):
@@ -59,6 +69,7 @@ class UserInfo(BaseModel):
 
 class AuthExchangeResponse(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "Bearer"
     expires_in: int
     user: UserInfo
