@@ -6,7 +6,7 @@ from flask_jwt_extended import create_access_token
 
 from src.safe_family.core.extensions import db
 from src.safe_family.core.models import Media, Note, User
-from src.safe_family.urls import miscellaneous
+from src.safe_family.urls import notes
 
 
 def _login_session(app, client, user_id):
@@ -17,7 +17,7 @@ def _login_session(app, client, user_id):
 
 
 def test_notes_view_requires_login(notesync_app, notesync_client, monkeypatch):
-    monkeypatch.setattr(miscellaneous, "render_template", lambda *a, **k: ("ok", 200))
+    monkeypatch.setattr(notes, "render_template", lambda *a, **k: ("ok", 200))
 
     resp = notesync_client.get("/notes")
 
@@ -42,7 +42,7 @@ def test_notes_view_renders(notesync_app, notesync_client, monkeypatch):
         db.session.commit()
 
     _login_session(notesync_app, notesync_client, "u-notes")
-    monkeypatch.setattr(miscellaneous, "render_template", lambda *a, **k: ("ok", 200))
+    monkeypatch.setattr(notes, "render_template", lambda *a, **k: ("ok", 200))
 
     resp = notesync_client.get("/notes")
 
