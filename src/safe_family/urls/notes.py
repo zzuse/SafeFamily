@@ -4,7 +4,7 @@ import io
 from datetime import UTC, datetime
 
 from flask import Blueprint, abort, flash, redirect, render_template, send_file
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import selectinload
 
 from src.safe_family.core.auth import get_current_username, login_required
 from src.safe_family.core.extensions import local_tz
@@ -46,9 +46,11 @@ def notes_view():
 def timeline():
     """Render the timeline (max 3 public notes per user)."""
     public_notes = (
-        Note.query.join(Note.tags)
-        .filter(Note.deleted_at.is_(None), Tag.name.ilike("public"))
-        .options(joinedload(Note.tags), joinedload(Note.media))
+        Note.query.filter(
+            Note.deleted_at.is_(None),
+            Note.tags.any(Tag.name.ilike("public")),
+        )
+        .options(selectinload(Note.tags), selectinload(Note.media))
         .order_by(Note.user_id, Note.created_at.desc())
         .all()
     )
