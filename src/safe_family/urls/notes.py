@@ -50,7 +50,19 @@ def timeline():
             Note.deleted_at.is_(None),
             Note.tags.any(Tag.name.ilike("public")),
         )
-        .options(selectinload(Note.tags), selectinload(Note.media))
+        .options(
+            selectinload(Note.tags),
+            selectinload(Note.media).load_only(
+                Media.id,
+                Media.note_id,
+                Media.user_id,
+                Media.kind,
+                Media.filename,
+                Media.content_type,
+                Media.checksum,
+                Media.created_at,
+            ),
+        )
         .order_by(Note.user_id, Note.created_at.desc())
         .all()
     )
