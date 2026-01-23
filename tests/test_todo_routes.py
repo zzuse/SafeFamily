@@ -200,10 +200,17 @@ def test_mark_todo_status_success(client, monkeypatch):
 
 
 def test_notify_current_task_success(client, monkeypatch):
-    now = datetime.now(todo.local_tz)
-    start = (now - timedelta(minutes=5)).strftime("%H:%M")
-    end = (now + timedelta(minutes=10)).strftime("%H:%M")
-    time_slot = f"{start} - {end}"
+    fixed_now = todo.local_tz.localize(datetime(2025, 1, 1, 9, 5))
+
+    class FixedDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            if tz is None:
+                return fixed_now.replace(tzinfo=None)
+            return fixed_now
+
+    monkeypatch.setattr(todo, "datetime", FixedDateTime)
+    time_slot = "09:00 - 09:10"
     cursor = SeqCursor(fetchall_values=[[(time_slot, "Read")]])
     conn = SeqConnection(cursor)
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)

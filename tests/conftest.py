@@ -87,6 +87,7 @@ def notesync_app(tmp_path, monkeypatch):
     )
     app = create_app()
     app.config["TESTING"] = True
+    app.config["SECRET_KEY"] = "test"
     with app.app_context():
         db.create_all()
         yield app
