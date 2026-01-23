@@ -37,11 +37,44 @@ def test_generate_time_slots_weekend_hour():
     assert len(slots) == 7
 
 
+def test_generate_time_slots_custom_invalid_falls_back():
+    weekday = datetime(2025, 1, 6, 12, 0)  # Monday
+    slots = generate_time_slots(
+        slot_type="60",
+        schedule_mode="custom",
+        custom_start="bad",
+        custom_end="bad",
+        today=weekday,
+    )
+    assert slots
+
+
+def test_generate_time_slots_custom_valid():
+    weekday = datetime(2025, 1, 6, 12, 0)  # Monday
+    slots = generate_time_slots(
+        slot_type="30",
+        schedule_mode="custom",
+        custom_start="08:00",
+        custom_end="09:00",
+        today=weekday,
+    )
+    assert slots[0] == "08:00 - 08:30"
+    assert slots[-1] == "08:30 - 09:00"
+
+
 def test_get_time_range_last_hour_uses_midnight_start():
     now = datetime(2025, 1, 2, 15, 30)
     start_time, end_time = get_time_range(range="last_hour", now=now)
     assert start_time.strftime("%Y-%m-%d %H:%M:%S") == "2025-01-02 00:00:00"
     assert end_time.strftime("%Y-%m-%d %H:%M:%S") == "2025-01-02 14:30:00"
+
+
+def test_get_time_range_custom_valid():
+    start_time, end_time = get_time_range(
+        custom=("2025-01-02T10:00:00", "2025-01-02T11:00:00"),
+    )
+    assert start_time.strftime("%H:%M:%S") == "10:00:00"
+    assert end_time.strftime("%H:%M:%S") == "11:00:00"
 
 
 def test_get_time_range_invalid_raises():

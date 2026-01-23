@@ -124,3 +124,122 @@ def test_idempotent_ops_skip(notesync_app):
         results = apply_sync_ops(req.ops, user_id=user_id)
 
     assert results[0][1] == "skipped"
+
+
+def test_delete_uses_deleted_at_recency(notesync_app):
+    user_id = "user-4"
+    now = datetime.utcnow()
+    older = now - timedelta(minutes=10)
+    newer_deleted = now + timedelta(minutes=10)
+    with notesync_app.app_context():
+        note = Note(
+            id="n4",
+            user_id=user_id,
+            text="hello",
+            is_pinned=False,
+            created_at=now,
+            updated_at=now,
+            deleted_at=None,
+        )
+        db.session.add(note)
+        db.session.commit()
+
+        payload = {
+            "ops": [
+                {
+                    "opId": "op4",
+                    "opType": "delete",
+                    "note": {
+                        "id": "n4",
+                        "text": "hello",
+                        "isPinned": False,
+                        "tags": [],
+                        "createdAt": now,
+                        "updatedAt": older,
+                        "deletedAt": newer_deleted,
+                    },
+                    "media": [],
+                },
+            ],
+        }
+        req = SyncRequest.model_validate(payload)
+        results = apply_sync_ops(req.ops, user_id=user_id)
+        db.session.refresh(note)
+
+    assert results[0][1] == "applied"
+    assert note.deleted_at == newer_deleted
+
+
+def test_delete_skips_when_existing_newer(notesync_app):
+    user_id = "user-5"
+    now = datetime.utcnow()
+    existing_deleted = now + timedelta(minutes=5)
+    older = now - timedelta(minutes=5)
+    with notesync_app.app_context():
+        note = Note(
+            id="n5",
+            user_id=user_id,
+            text="hello",
+            is_pinned=False,
+            created_at=now,
+            updated_at=existing_deleted,
+            deleted_at=existing_deleted,
+        )
+        db.session.add(note)
+        db.session.commit()
+
+        payload = {
+            "ops": [
+                {
+                    "opId": "op5",
+                    "opType": "delete",
+                    "note": {
+                        "id": "n5",
+                        "text": "hello",
+                        "isPinned": False,
+                        "tags": [],
+                        "createdAt": now,
+                        "updatedAt": older,
+                        "deletedAt": older,
+                    },
+                    "media": [],
+                },
+            ],
+        }
+        req = SyncRequest.model_validate(payload)
+        results = apply_sync_ops(req.ops, user_id=user_id)
+        db.session.refresh(note)
+
+    assert results[0][1] == "skipped"
+    assert note.deleted_at == existing_deleted
+
+
+def test_delete_creates_tombstone_for_missing_note(notesync_app):
+    user_id = "user-6"
+    now = datetime.utcnow()
+    with notesync_app.app_context():
+        payload = {
+            "ops": [
+                {
+                    "opId": "op6",
+                    "opType": "delete",
+                    "note": {
+                        "id": "n6",
+                        "text": "hello",
+                        "isPinned": False,
+                        "tags": [],
+                        "createdAt": now,
+                        "updatedAt": now,
+                        "deletedAt": now,
+                    },
+                    "media": [],
+                },
+            ],
+        }
+        req = SyncRequest.model_validate(payload)
+        results = apply_sync_ops(req.ops, user_id=user_id)
+        note = Note.query.filter_by(id="n6", user_id=user_id).first()
+
+    assert results[0][1] == "applied"
+    assert note is not None
+    assert note.deleted_at == now

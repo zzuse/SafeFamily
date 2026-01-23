@@ -5,6 +5,7 @@ from datetime import datetime
 import pandas as pd
 
 from src.safe_family.urls import analyzer
+from src.safe_family.core import auth
 
 
 class AnalysisCursor:
@@ -58,3 +59,25 @@ def test_log_analysis_inserts(monkeypatch):
     assert any("logs_daily" in sql for sql, _ in cursor.executed)
     assert any("suspicious" in sql for sql, _ in cursor.executed)
     assert conn.commits >= 1
+
+
+def test_analyze_logs_invalid_time_range(client, monkeypatch):
+    monkeypatch.setattr(
+        auth,
+        "decode_token",
+        lambda token: {"sub": "admin", "is_admin": "admin"},
+    )
+    with client.session_transaction() as sess:
+        sess["access_token"] = "token"
+
+    resp = client.post("/analyze", json={"time_range": "invalid"})
+
+    assert resp.status_code == 400
+
+
+def test_analyze_routes_page(client, monkeypatch):
+    monkeypatch.setattr(analyzer, "render_template", lambda *a, **k: ("ok", 200))
+
+    resp = client.get("/analyze_route")
+
+    assert resp.status_code == 200

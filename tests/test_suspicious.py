@@ -84,3 +84,217 @@ def test_view_suspicious_renders(monkeypatch, admin_session):
     assert conn.closed
     # validate at least the first query used the provided date
     assert cursor.executed[0][1][0] == today
+
+
+def test_update_filter_rule_inserts(monkeypatch, admin_session):
+    class SimpleCursor:
+        def __init__(self):
+            self.executed = []
+
+        def execute(self, sql, params=None):
+            self.executed.append((sql, params))
+
+        def close(self):
+            return None
+
+    class SimpleConn:
+        def __init__(self):
+            self.cursor_obj = SimpleCursor()
+            self.commits = 0
+
+        def cursor(self):
+            return self.cursor_obj
+
+        def commit(self):
+            self.commits += 1
+
+        def close(self):
+            return None
+
+    conn = SimpleConn()
+    monkeypatch.setattr(suspicious, "get_db_connection", lambda: conn)
+
+    resp = admin_session.post(
+        "/update_filter_rule",
+        data={"rule": ["example.com"], "date": "2025-01-01"},
+    )
+
+    assert resp.status_code == 302
+    assert any("INSERT INTO filter_rule" in sql for sql, _ in conn.cursor_obj.executed)
+
+
+def test_delete_block_deletes_row(monkeypatch, admin_session):
+    class SimpleCursor:
+        def __init__(self):
+            self.executed = []
+
+        def execute(self, sql, params=None):
+            self.executed.append((sql, params))
+
+        def close(self):
+            return None
+
+    class SimpleConn:
+        def __init__(self):
+            self.cursor_obj = SimpleCursor()
+
+        def cursor(self):
+            return self.cursor_obj
+
+        def commit(self):
+            return None
+
+        def close(self):
+            return None
+
+    conn = SimpleConn()
+    monkeypatch.setattr(suspicious, "get_db_connection", lambda: conn)
+
+    resp = admin_session.get("/delete_block/10")
+
+    assert resp.status_code == 302
+    assert any("DELETE FROM block_list" in sql for sql, _ in conn.cursor_obj.executed)
+
+
+def test_tag_block_inserts(monkeypatch, client):
+    class SimpleCursor:
+        def __init__(self):
+            self.executed = []
+
+        def execute(self, sql, params=None):
+            self.executed.append((sql, params))
+
+        def close(self):
+            return None
+
+    class SimpleConn:
+        def __init__(self):
+            self.cursor_obj = SimpleCursor()
+
+        def cursor(self):
+            return self.cursor_obj
+
+        def commit(self):
+            return None
+
+        def close(self):
+            return None
+
+    conn = SimpleConn()
+    monkeypatch.setattr(suspicious, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(suspicious, "flash", lambda *a, **k: None)
+
+    resp = client.post(
+        "/tag_block",
+        data={"qh": "example.com", "type": "game", "date": "2025-01-01"},
+    )
+
+    assert resp.status_code == 302
+    assert any("INSERT INTO block_list" in sql for sql, _ in conn.cursor_obj.executed)
+
+
+def test_add_block_inserts(monkeypatch, admin_session):
+    class SimpleCursor:
+        def __init__(self):
+            self.executed = []
+
+        def execute(self, sql, params=None):
+            self.executed.append((sql, params))
+
+        def close(self):
+            return None
+
+    class SimpleConn:
+        def __init__(self):
+            self.cursor_obj = SimpleCursor()
+
+        def cursor(self):
+            return self.cursor_obj
+
+        def commit(self):
+            return None
+
+        def close(self):
+            return None
+
+    conn = SimpleConn()
+    monkeypatch.setattr(suspicious, "get_db_connection", lambda: conn)
+
+    resp = admin_session.post(
+        "/add_block?date=2025-01-01",
+        data={"qh": "example.com", "type": "game"},
+    )
+
+    assert resp.status_code == 302
+    assert any("INSERT INTO block_list" in sql for sql, _ in conn.cursor_obj.executed)
+
+
+def test_delete_filter_rule_deletes(monkeypatch, admin_session):
+    class SimpleCursor:
+        def __init__(self):
+            self.executed = []
+
+        def execute(self, sql, params=None):
+            self.executed.append((sql, params))
+
+        def close(self):
+            return None
+
+    class SimpleConn:
+        def __init__(self):
+            self.cursor_obj = SimpleCursor()
+
+        def cursor(self):
+            return self.cursor_obj
+
+        def commit(self):
+            return None
+
+        def close(self):
+            return None
+
+    conn = SimpleConn()
+    monkeypatch.setattr(suspicious, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(suspicious, "flash", lambda *a, **k: None)
+
+    resp = admin_session.post("/delete_filter_rule/rule-1?date=2025-01-01")
+
+    assert resp.status_code == 302
+    assert any("DELETE FROM filter_rule" in sql for sql, _ in conn.cursor_obj.executed)
+
+
+def test_modify_block_updates(monkeypatch, admin_session):
+    class SimpleCursor:
+        def __init__(self):
+            self.executed = []
+
+        def execute(self, sql, params=None):
+            self.executed.append((sql, params))
+
+        def close(self):
+            return None
+
+    class SimpleConn:
+        def __init__(self):
+            self.cursor_obj = SimpleCursor()
+
+        def cursor(self):
+            return self.cursor_obj
+
+        def commit(self):
+            return None
+
+        def close(self):
+            return None
+
+    conn = SimpleConn()
+    monkeypatch.setattr(suspicious, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(suspicious, "flash", lambda *a, **k: None)
+
+    resp = admin_session.post(
+        "/modify_block/10?date=2025-01-01",
+        data={"qh": "example.com", "type": "game"},
+    )
+
+    assert resp.status_code == 302
+    assert any("UPDATE block_list" in sql for sql, _ in conn.cursor_obj.executed)
