@@ -67,6 +67,22 @@ or
 flask --app src.safe_family.app run
 ```
 
+## Tests
+Run the full suite with coverage enforcement:
+```bash
+pytest -q
+```
+
+Run a targeted test without coverage (useful for quick iterations):
+```bash
+pytest -q tests/test_misc_routes.py::test_notes_media_public_note_for_other_user --no-cov
+```
+
+Run with coverage but disable the fail-under gate:
+```bash
+pytest -q tests/test_misc_routes.py::test_notes_media_public_note_for_other_user --cov-fail-under=0
+```
+
 ### CSS build (only if you change styles)
 Edit `src/safe_family/static/css/input.css` and run:
 ```bash

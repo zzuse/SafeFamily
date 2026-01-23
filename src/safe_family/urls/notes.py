@@ -92,9 +92,22 @@ def notes_media(media_id: str):
     if not user:
         flash("Please log in first.", "warning")
         return redirect("/auth/login-ui")
-    media = Media.query.filter_by(id=media_id, user_id=user.id).one_or_none()
+    media = (
+        Media.query.options(joinedload(Media.note).joinedload(Note.tags))
+        .filter_by(id=media_id)
+        .one_or_none()
+    )
     if not media:
         abort(404)
+    if media.user_id != user.id:
+        note = media.note
+        is_public = (
+            note is not None
+            and note.deleted_at is None
+            and any(tag.name.lower() == "public" for tag in note.tags)
+        )
+        if not is_public:
+            abort(404)
     return send_file(
         io.BytesIO(media.data),
         mimetype=media.content_type,

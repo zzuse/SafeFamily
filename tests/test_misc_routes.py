@@ -5,7 +5,7 @@ from datetime import datetime
 from flask_jwt_extended import create_access_token
 
 from src.safe_family.core.extensions import db
-from src.safe_family.core.models import Media, Note, User
+from src.safe_family.core.models import Media, Note, Tag, User
 from src.safe_family.urls import notes
 
 
@@ -93,6 +93,45 @@ def test_notes_media_success(notesync_app, notesync_client):
     _login_session(notesync_app, notesync_client, "u-media2")
 
     resp = notesync_client.get("/notes/media/m1")
+
+    assert resp.status_code == 200
+    assert resp.mimetype == "image/jpeg"
+
+
+def test_notes_media_public_note_for_other_user(notesync_app, notesync_client):
+    with notesync_app.app_context():
+        owner = User(id="u-owner", username="owner", email="owner@example.com")
+        owner.set_password("secret")
+        viewer = User(id="u-viewer", username="viewer", email="viewer@example.com")
+        viewer.set_password("secret")
+        note = Note(
+            id="n-public",
+            user_id="u-owner",
+            text="public note",
+            is_pinned=False,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+            deleted_at=None,
+        )
+        tag = Tag(id="t-public", user_id="u-owner", name="public")
+        note.tags.append(tag)
+        media = Media(
+            id="m-public",
+            note_id="n-public",
+            user_id="u-owner",
+            kind="image",
+            filename="public.jpg",
+            content_type="image/jpeg",
+            checksum="sha256:def",
+            data=b"public",
+            created_at=datetime.utcnow(),
+        )
+        db.session.add_all([owner, viewer, note, tag, media])
+        db.session.commit()
+
+    _login_session(notesync_app, notesync_client, "u-viewer")
+
+    resp = notesync_client.get("/notes/media/m-public")
 
     assert resp.status_code == 200
     assert resp.mimetype == "image/jpeg"
