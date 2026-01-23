@@ -110,3 +110,51 @@ def test_notesync_media_updates(notesync_app):
         media = Media.query.filter_by(id="media-2", user_id=user_id).first()
         assert media is not None
         assert media.data == updated_data
+
+
+def test_notesync_skips_duplicate_checksum(notesync_app):
+    user_id = "user-dup"
+    now = datetime.utcnow()
+    raw_data = b"dup"
+    encoded = base64.b64encode(raw_data).decode("utf-8")
+    payload = {
+        "ops": [
+            {
+                "opId": "op-dup-1",
+                "opType": "create",
+                "note": {
+                    "id": "note-dup",
+                    "text": "note",
+                    "isPinned": False,
+                    "tags": [],
+                    "createdAt": now,
+                    "updatedAt": now,
+                    "deletedAt": None,
+                },
+                "media": [
+                    {
+                        "id": "media-dup-1",
+                        "noteId": "note-dup",
+                        "kind": "image",
+                        "filename": "photo.jpg",
+                        "contentType": "image/jpeg",
+                        "checksum": "sha256:same",
+                        "dataBase64": encoded,
+                    },
+                ],
+            },
+        ],
+    }
+    req = SyncRequest.model_validate(payload)
+    with notesync_app.app_context():
+        apply_sync_ops(req.ops, user_id=user_id)
+
+        payload["ops"][0]["opId"] = "op-dup-2"
+        payload["ops"][0]["note"]["updatedAt"] = datetime.utcnow()
+        payload["ops"][0]["media"][0]["id"] = "media-dup-2"
+        req = SyncRequest.model_validate(payload)
+        apply_sync_ops(req.ops, user_id=user_id)
+
+        media = Media.query.filter_by(user_id=user_id).all()
+
+    assert len(media) == 1

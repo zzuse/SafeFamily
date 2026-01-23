@@ -1,6 +1,7 @@
 """Tests for auto_git utilities."""
 
 from src.safe_family.auto_git import auto_git
+from src.safe_family.core import auth
 
 
 def test_rule_auto_commit_writes_files(monkeypatch, tmp_path):
@@ -47,3 +48,52 @@ def test_rule_auto_commit_writes_files(monkeypatch, tmp_path):
     filter_file = tmp_path / "filter.txt"
     assert filter_file.exists()
     assert calls
+
+
+def test_auto_import_inserts_blocks(client, monkeypatch, tmp_path):
+    class ImportCursor:
+        def __init__(self):
+            self.queries = []
+
+        def execute(self, sql, params=None):
+            self.queries.append((sql, params))
+
+        def close(self):
+            return None
+
+    class ImportConn:
+        def __init__(self):
+            self.cursor_obj = ImportCursor()
+            self.commits = 0
+            self.rollbacks = 0
+
+        def cursor(self):
+            return self.cursor_obj
+
+        def commit(self):
+            self.commits += 1
+
+        def rollback(self):
+            self.rollbacks += 1
+
+        def close(self):
+            return None
+
+    (tmp_path / "block_game.txt").write_text("||example.com^\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    conn = ImportConn()
+    monkeypatch.setattr(auto_git, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(auto_git, "flash", lambda *a, **k: None)
+    monkeypatch.setattr(
+        auth,
+        "decode_token",
+        lambda token: {"sub": "admin", "is_admin": "admin"},
+    )
+    with client.session_transaction() as sess:
+        sess["access_token"] = "token"
+
+    resp = client.get("/auto_import")
+
+    assert resp.status_code == 302
+
+    assert any("INSERT INTO block_list" in sql for sql, _ in conn.cursor_obj.queries)

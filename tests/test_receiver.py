@@ -34,3 +34,24 @@ def test_receive_log_invalid_json(client):
     )
     assert resp.status_code == 400
     assert resp.get_json()["error"] == "Invalid JSON"
+
+
+def test_receive_log_db_error(client, monkeypatch):
+    from src.safe_family.utils.exceptions import DatabaseConnectionError
+
+    def _raise():
+        raise DatabaseConnectionError("db down")
+
+    monkeypatch.setattr(receiver, "get_db_connection", _raise)
+
+    resp = client.post(
+        "/logs",
+        json={
+            "T": "2025-01-01T00:00:00",
+            "IP": "1.1.1.1",
+            "QH": "abc",
+            "Result": {"IsFiltered": True},
+        },
+    )
+
+    assert resp.status_code == 500
