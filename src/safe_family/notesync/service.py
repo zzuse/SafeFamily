@@ -2,11 +2,14 @@
 
 import base64
 import binascii
+import logging
 import uuid
 from datetime import datetime
 
 from src.safe_family.core.extensions import db
 from src.safe_family.core.models import Media, Note, NoteSyncOp, Tag
+
+logger = logging.getLogger(__name__)
 
 
 def _now_utc() -> datetime:
@@ -39,10 +42,28 @@ def _normalize_tags(tags: list[str]) -> list[str]:
     return cleaned
 
 
+def _max_timestamp(*values: datetime | None) -> datetime | None:
+    timestamps = [value for value in values if value is not None]
+    if not timestamps:
+        return None
+    return max(timestamps)
+
+
 def _apply_delete(existing: Note | None, payload, user_id: str) -> tuple[Note, str]:
-    incoming_ts = _naive(payload.updatedAt)
+    incoming_ts = _max_timestamp(
+        _naive(payload.updatedAt),
+        _naive(payload.deletedAt),
+    )
     deleted_at = _naive(payload.deletedAt) or incoming_ts
-    if not _should_apply(existing, incoming_ts):
+    existing_ts = _max_timestamp(
+        _naive(existing.updated_at) if existing else None,
+        _naive(existing.deleted_at) if existing else None,
+    )
+    if existing is not None and incoming_ts is not None and existing_ts is not None:
+        should_apply = existing_ts < incoming_ts
+    else:
+        should_apply = existing is None
+    if not should_apply:
         return existing, "skipped"
     if existing is None:
         note = Note(
@@ -144,12 +165,24 @@ def apply_sync_ops(ops, user_id: str) -> list[tuple[Note | None, str, object]]:
     """Apply sync ops and return (note, result, op_note_payload) tuples."""
     results: list[tuple[Note | None, str, object]] = []
     for op in ops:
+        incoming_updated_at = _naive(op.note.updatedAt)
+        incoming_deleted_at = _naive(op.note.deletedAt)
         existing_op = NoteSyncOp.query.filter_by(
             user_id=user_id,
             op_id=op.opId,
         ).first()
         if existing_op is not None:
             note = Note.query.filter_by(id=op.note.id, user_id=user_id).first()
+            if op.opType == "delete":
+                logger.info(
+                    "notesync skip user=%s op_id=%s note_id=%s op_type=%s reason=duplicate_op incoming_updated_at=%s incoming_deleted_at=%s",
+                    user_id,
+                    op.opId,
+                    op.note.id,
+                    op.opType,
+                    incoming_updated_at,
+                    incoming_deleted_at,
+                )
             results.append((note, "skipped", op.note))
             continue
 
@@ -158,6 +191,21 @@ def apply_sync_ops(ops, user_id: str) -> list[tuple[Note | None, str, object]]:
             note, result = _apply_delete(note, op.note, user_id)
         else:
             note, result = _apply_upsert(note, op.note, user_id)
+
+        if result == "skipped" and op.opType == "delete":
+            existing_updated_at = _naive(note.updated_at) if note else None
+            existing_deleted_at = _naive(note.deleted_at) if note else None
+            logger.info(
+                "notesync skip user=%s op_id=%s note_id=%s op_type=%s reason=stale_update incoming_updated_at=%s incoming_deleted_at=%s existing_updated_at=%s existing_deleted_at=%s",
+                user_id,
+                op.opId,
+                op.note.id,
+                op.opType,
+                incoming_updated_at,
+                incoming_deleted_at,
+                existing_updated_at,
+                existing_deleted_at,
+            )
 
         if result == "applied" and note is not None and op.opType != "delete":
             _sync_tags(note, op.note.tags, user_id)
