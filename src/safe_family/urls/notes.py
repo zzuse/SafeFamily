@@ -4,6 +4,7 @@ import io
 from datetime import UTC, datetime
 
 from flask import Blueprint, abort, flash, redirect, render_template, send_file
+from sqlalchemy import func
 from sqlalchemy.orm import selectinload
 
 from src.safe_family.core.auth import get_current_username, login_required
@@ -45,11 +46,25 @@ def notes_view():
 @login_required
 def timeline():
     """Render the timeline (max 3 public notes per user)."""
-    public_notes = (
-        Note.query.filter(
+    note_rankings = (
+        Note.query.with_entities(
+            Note.id.label("note_id"),
+            Note.user_id.label("user_id"),
+            Note.created_at.label("created_at"),
+            func.row_number()
+            .over(partition_by=Note.user_id, order_by=Note.created_at.desc())
+            .label("rn"),
+        )
+        .filter(
             Note.deleted_at.is_(None),
             Note.tags.any(Tag.name.ilike("public")),
         )
+        .subquery()
+    )
+
+    public_notes = (
+        Note.query.join(note_rankings, Note.id == note_rankings.c.note_id)
+        .filter(note_rankings.c.rn <= 3)
         .options(
             selectinload(Note.tags),
             selectinload(Note.media).load_only(
@@ -63,15 +78,13 @@ def timeline():
                 Media.created_at,
             ),
         )
-        .order_by(Note.user_id, Note.created_at.desc())
+        .order_by(note_rankings.c.user_id, note_rankings.c.created_at.desc())
         .all()
     )
 
     notes_by_user: dict[str, list[Note]] = {}
     for note in public_notes:
         bucket = notes_by_user.setdefault(note.user_id, [])
-        if len(bucket) >= 3:
-            continue
         _attach_local_timestamp(note)
         bucket.append(note)
 
