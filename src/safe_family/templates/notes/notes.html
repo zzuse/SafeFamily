@@ -4,7 +4,7 @@
 <section>
     <div class="card-header">Notes</div>
     {% if notes %}
-    <div class="note">Showing {{ notes | length }} notes (newest first).</div>
+    <div class="note">Showing {{ notes | length }} notes (newest created first; timestamps show last update).</div>
     <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 12px;">
         {% for note in notes %}
         <article class="card" style="padding: 16px;">

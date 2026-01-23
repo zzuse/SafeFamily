@@ -4,7 +4,7 @@
 <section>
     <div class="card-header">Public Timeline</div>
     {% if entries %}
-    <div class="note">Showing up to 3 public notes per user.</div>
+    <div class="note">Showing up to 3 public notes per user (newest created first; timestamps show last update).</div>
     <div style="display: flex; flex-direction: column; gap: 20px; margin-top: 12px;">
         {% for entry in entries %}
         <article class="card" style="padding: 16px;">
