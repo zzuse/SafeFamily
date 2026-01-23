@@ -95,7 +95,7 @@ def notes_media(media_id: str):
         flash("Please log in first.", "warning")
         return redirect("/auth/login-ui")
     media = (
-        Media.query.options(joinedload(Media.note).joinedload(Note.tags))
+        Media.query.options(selectinload(Media.note).selectinload(Note.tags))
         .filter_by(id=media_id)
         .one_or_none()
     )
