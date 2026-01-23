@@ -467,22 +467,17 @@ def mark_todo_status():
 
         try:
             _, end_str = [t.strip() for t in time_slot.split("-")]
-            end_time = (
-                datetime.strptime(end_str, "%H:%M").replace(tzinfo=local_tz).time()
-            )
+            end_time = datetime.strptime(end_str, "%H:%M").time()
         except (ValueError, AttributeError):
             conn.close()
             logger.warning("mark_status: invalid time slot id=%s time_slot=%s", todo_id, time_slot)
             return jsonify({"success": False, "error": "invalid time slot"}), 402
 
         now = datetime.now(local_tz)
-        log_date_dt = datetime.fromisoformat(log_date).replace(tzinfo=local_tz)
-        end_dt = log_date_dt.replace(
-            hour=end_time.hour,
-            minute=end_time.minute,
-            second=0,
-            microsecond=0,
-        )
+        log_date_naive = datetime.fromisoformat(log_date)
+        log_date_dt = local_tz.localize(log_date_naive)
+        end_dt_naive = datetime.combine(log_date_naive.date(), end_time)
+        end_dt = local_tz.localize(end_dt_naive)
         if now < end_dt and not is_admin:
             conn.close()
             logger.warning("mark_status: too early id=%s now=%s end=%s", todo_id, now, end_dt)
