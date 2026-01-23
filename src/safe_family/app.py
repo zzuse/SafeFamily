@@ -16,6 +16,7 @@ from src.safe_family.todo.todo import todo_bp
 from src.safe_family.urls.analyzer import analyze_bp
 from src.safe_family.urls.blocker import rules_toggle_bp
 from src.safe_family.urls.miscellaneous import root_bp
+from src.safe_family.urls.notes import notes_bp
 from src.safe_family.urls.receiver import receiver_bp
 from src.safe_family.urls.suspicious import suspicious_bp
 from src.safe_family.users.users import user_bp
@@ -47,6 +48,7 @@ def create_app():
     mail.init_app(app)
 
     app.register_blueprint(root_bp)
+    app.register_blueprint(notes_bp)
     app.register_blueprint(receiver_bp)
     app.register_blueprint(analyze_bp)
     app.register_blueprint(api_bp, url_prefix="/api")
