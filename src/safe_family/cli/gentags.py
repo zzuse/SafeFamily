@@ -10,6 +10,7 @@ from src.safe_family.core.extensions import get_db_connection
 
 logger = logging.getLogger(__name__)
 
+# Keyword mapping for tag inference, is it possible to self grown based on the human marked tags?
 KEYWORDS = {
     "math": ["math", "algebra", "calculus", "tutor"],
     "science": ["science", "biology", "chemistry", "physics", "lab"],
@@ -39,6 +40,9 @@ KEYWORDS = {
         "dev",
         "gemini",
         "game",
+        "code",
+        "coding",
+        "programming",
     ],
     "leasure": [
         "sleep",

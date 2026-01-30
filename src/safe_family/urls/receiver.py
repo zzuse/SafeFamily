@@ -1,13 +1,20 @@
 """Receiver URL routes for log server."""
 
+import hashlib
 import logging
+import re
+from datetime import UTC, datetime, timedelta
 
-from flask import Blueprint, jsonify, request
+import requests
+from flask import Blueprint, jsonify
 
+from config.settings import settings
 from src.safe_family.core.extensions import get_db_connection
-from src.safe_family.utils.constants import HTTP_CREATED
-from src.safe_family.utils.exceptions import DatabaseConnectionError
 
+ADGUARD_QUERY_API = f"http://{settings.ADGUARD_HOSTPORT}/control/querylog"
+ADGUARD_AUTH = (f"{settings.ADGUARD_USERNAME}", f"{settings.ADGUARD_PASSWORD}")
+PULL_LIMIT = 100
+OVERLAP_SECONDS = 2
 logger = logging.getLogger(__name__)
 receiver_bp = Blueprint("receiver", __name__)
 
@@ -40,33 +47,111 @@ def receive_log():
         ValueError: If the log data is not in the expected format or is missing required fields.
         psycopg2.Error: If there is an error while interacting with the database.
 
+    Pull logs from AdGuard and store new entries in the database.
+
     """
-    log_data = request.get_json()
-    if not log_data:
-        return jsonify({"error": "Invalid JSON"}), 400
-
-    ip = log_data.get("IP")
-    qh = log_data.get("QH")
-    is_filtered = (
-        log_data.get("Result", {}).get("IsFiltered") if log_data.get("Result") else None
-    )
-    logger.debug("Received log: %s", {qh})
-
     try:
-        conn = get_db_connection()
-        cur = conn.cursor()
+        inserted = run_adguard_pull()
+        return jsonify({"inserted": inserted}), 200
+
+    except Exception as e:
+        logger.exception("AdGuard pull failed")
+        return jsonify({"error": str(e)}), 500
+
+
+def make_dedupe_hash(row: dict) -> str:
+    """Generate a stable deduplication hash.
+
+    Stored in `ip` column (semantic repurpose).
+    """
+    raw = f"{row.get('time')}|{row.get('name')}"
+    return hashlib.sha1(raw.encode()).hexdigest()
+
+
+def parse_ts(ts: str) -> datetime:
+    """Timestamp parser from AdGuard format to datetime."""
+    # 1. Handle "Z" for older Python
+    ts = ts.replace("Z", "+00:00")
+    # 2. Truncate nanoseconds to microseconds if necessary
+    # (Find the dot and the +/- offset, keep only 2 digits after dot)
+    if "." in ts:
+        prefix, remainder = ts.split(".", 1)
+        # Find where the timezone starts (+ or -)
+
+        tz_match = re.search(r"[+-]", remainder)
+        if tz_match:
+            tz_start = tz_match.start()
+            # Keep only 2 digits of fractional seconds
+            ts = f"{prefix}.{remainder[:2]}{remainder[tz_start:]}"
+
+    return datetime.fromisoformat(ts)
+
+
+def run_adguard_pull() -> int:
+    """Core logic to pull logs from AdGuard and store them."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    # 1. 找最后一条时间
+    cur.execute("SELECT MAX(timestamp) FROM logs")
+    # Use 1970-01-01 as a safe default instead of datetime.min to avoid OverflowError on subtraction
+    safe_default = datetime(1970, 1, 1, tzinfo=UTC)
+    last_ts = cur.fetchone()[0] or safe_default
+    since = last_ts - timedelta(seconds=OVERLAP_SECONDS)
+
+    # 2. 拉 AdGuard
+    resp = requests.get(
+        ADGUARD_QUERY_API,
+        params={"limit": PULL_LIMIT},
+        auth=ADGUARD_AUTH,
+        timeout=5,
+    )
+    resp.raise_for_status()
+
+    # ───────────────────────────────────────────────
+    # Extract the fields you want
+    # ───────────────────────────────────────────────
+
+    rows = []
+
+    for entry in resp.json().get("data", []):
+        question = entry.get("question", {})
+        row = {
+            "name": question.get("name"),
+            "time": entry.get("time"),
+            "client": entry.get("client"),
+            "reason": entry.get("reason"),
+        }
+        rows.append(row)
+
+    inserted = 0
+
+    # API returns reversed
+    for row in reversed(rows):
+        ts = parse_ts(row["time"])
+        if ts < since:
+            continue
+
+        qh = row.get("name")
+        dedupe_hash = make_dedupe_hash(row)
+
+        is_filtered = row.get("reason") == "FilteredBlackList"
+
         cur.execute(
             """
             INSERT INTO logs (timestamp, ip, qh, is_filtered)
             VALUES (%s, %s, %s, %s)
+            ON CONFLICT (ip) DO NOTHING
             """,
-            (log_data.get("T"), ip, qh, is_filtered),
+            (ts, dedupe_hash, qh, is_filtered),
         )
-        conn.commit()
-        cur.close()
-        conn.close()
-        logger.info("Log stored: %s", {qh})
-        return jsonify({"message": "Log received"}), HTTP_CREATED
-    except DatabaseConnectionError as e:
-        logger.exception("Database error")
-        return jsonify({"error": str(e)}), 500
+
+        if cur.rowcount:
+            inserted += 1
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    logger.info("AdGuard pull finished, inserted=%d", inserted)
+    return inserted

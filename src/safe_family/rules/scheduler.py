@@ -5,6 +5,7 @@ import logging
 import os
 import select
 import threading
+import time
 import uuid
 import zlib
 from datetime import datetime, timedelta
@@ -29,6 +30,7 @@ from src.safe_family.urls.blocker import (
     rule_enable_all_except_ai,
     rule_stop_traffic_all,
 )
+from src.safe_family.urls.receiver import run_adguard_pull
 from src.safe_family.utils.constants import DAYS_IN_WEEK
 
 logger = logging.getLogger(__name__)
@@ -168,6 +170,7 @@ def _ensure_job_lock(job_id: str) -> bool:
 
 def _wrap_job(job_id: str, func):
     """Wrap a scheduled function with a per-job advisory lock."""
+
     def _wrapped(*args, **kwargs):
         if not _ensure_scheduler_leader():
             return _JOB_SKIPPED
@@ -193,16 +196,15 @@ def _release_unused_job_locks(active_job_ids: set[str]) -> None:
                 logger.exception("Failed to release job lock for %s", job_id)
 
 
-def _listen_for_schedule_changes() -> None:
-    """Listen for schedule change notifications and reload jobs."""
-    try:
-        conn = get_db_connection()
-        conn.autocommit = True
-        cur = conn.cursor()
-        cur.execute(f"LISTEN {SCHEDULE_CHANGE_CHANNEL}")
-    except Exception:
-        logger.exception("Failed to start schedule change listener.")
-        return
+def _listen_once() -> None:
+    """Listen for schedule change notifications and reload jobs.
+
+    Three empty lists ([], [], []), it means the 1-second timeout finished and nothing happened (no notifications arrived)
+    """
+    conn = get_db_connection()
+    conn.autocommit = True
+    cur = conn.cursor()
+    cur.execute(f"LISTEN {SCHEDULE_CHANGE_CHANNEL}")
 
     try:
         while not _LISTENER_STOP.is_set():
@@ -218,6 +220,15 @@ def _listen_for_schedule_changes() -> None:
     finally:
         cur.close()
         conn.close()
+
+
+def _listen_for_schedule_changes() -> None:
+    while not _LISTENER_STOP.is_set():
+        try:
+            _listen_once()
+        except Exception:
+            logger.exception("Listener crashed, retrying in 5s")
+            time.sleep(5)
 
 
 def _start_schedule_listener() -> None:
@@ -363,7 +374,16 @@ def load_schedules():
             name="notify_overdue_task_feedback",
             replace_existing=True,
         )
-        active_job_ids.add("notify_overdue_task_feedback")
+        active_job_ids.add("run_adguard_pull")
+        scheduler.add_job(
+            _wrap_job("run_adguard_pull", run_adguard_pull),
+            "interval",
+            seconds=30,
+            id="run_adguard_pull",
+            name="run_adguard_pull",
+            replace_existing=True,
+        )
+        active_job_ids.add("run_adguard_pull")
 
         _release_unused_job_locks(active_job_ids)
 
