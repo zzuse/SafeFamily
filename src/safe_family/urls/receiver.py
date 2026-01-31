@@ -13,7 +13,7 @@ from src.safe_family.core.extensions import get_db_connection
 
 ADGUARD_QUERY_API = f"http://{settings.ADGUARD_HOSTPORT}/control/querylog"
 ADGUARD_AUTH = (f"{settings.ADGUARD_USERNAME}", f"{settings.ADGUARD_PASSWORD}")
-PULL_LIMIT = 100
+PULL_LIMIT = 1000
 OVERLAP_SECONDS = 2
 logger = logging.getLogger(__name__)
 receiver_bp = Blueprint("receiver", __name__)

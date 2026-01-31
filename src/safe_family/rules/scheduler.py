@@ -378,7 +378,7 @@ def load_schedules():
         scheduler.add_job(
             _wrap_job("run_adguard_pull", run_adguard_pull),
             "interval",
-            seconds=30,
+            minutes=3,
             id="run_adguard_pull",
             name="run_adguard_pull",
             replace_existing=True,
