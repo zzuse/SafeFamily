@@ -20,7 +20,7 @@ ROUTER_BASE_URL = f"http://{settings.ROUTER_IP}"
 ADGUARD_AUTH = (f"{settings.ADGUARD_USERNAME}", f"{settings.ADGUARD_PASSWORD}")
 SESSION = requests.Session()
 DISABLE_AI_LOCK = threading.Lock()
-DISABLE_AI_COOLDOWN_SECONDS = 10.0
+DISABLE_AI_COOLDOWN_SECONDS = 300.0
 DISABLE_AI_STATE = {"last_run": 0.0}
 rules_toggle_bp = Blueprint("rules_toggle", __name__)
 """
