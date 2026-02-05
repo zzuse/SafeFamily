@@ -472,8 +472,8 @@ def schedule_rules():
         action = request.form.get("action")
         if action == "update":
             rule_id = request.form["rule_id"]
-            start_time = request.form["start_time"]
-            end_time = request.form["end_time"]
+            start_time = request.form["start_time"] or None
+            end_time = request.form["end_time"] or None
             selected_days = request.form.getlist("day_of_week")
             if not selected_days or len(selected_days) == DAYS_IN_WEEK:
                 day_of_week = "*"  # all days
@@ -481,7 +481,7 @@ def schedule_rules():
                 day_of_week = ",".join(selected_days)
             cur.execute(
                 "UPDATE schedule_rules SET start_time = %s, end_time = %s, day_of_week = %s WHERE id = %s",
-                (start_time, end_time if end_time else None, day_of_week, rule_id),
+                (start_time, end_time, day_of_week, rule_id),
             )
             conn.commit()
             load_schedules()
@@ -489,7 +489,7 @@ def schedule_rules():
 
         elif action == "add":
             rule_name = request.form["rule_name"]
-            start_time = request.form["start_time"]
+            start_time = request.form["start_time"] or None
             end_time = request.form["end_time"] or None
 
             cur.execute(
@@ -498,7 +498,7 @@ def schedule_rules():
                 VALUES (%s, %s, %s, %s)
                 RETURNING id
                 """,
-                (rule_name, start_time, end_time if end_time else None, True),
+                (rule_name, start_time, end_time, True),
             )
             new_rule = cur.fetchone()
             if new_rule:  # always check
