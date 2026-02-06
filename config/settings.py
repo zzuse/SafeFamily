@@ -63,6 +63,10 @@ class Settings:
         "NOTESYNC_CALLBACK_URL",
         "zzuse.timeline://auth/callback",
     )
+    NOTESYNC_ANDROID_CALLBACK_URL = os.environ.get(
+        "NOTESYNC_ANDROID_CALLBACK_URL",
+        "com.zzuse.timeline://auth/callback",
+    )
 
     # OAuth settings
     GITHUB_CLIENT_ID = os.environ.get("GITHUB_CLIENT_ID")

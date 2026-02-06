@@ -3,7 +3,7 @@
 import hashlib
 import logging
 import secrets
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from functools import wraps
 from urllib.parse import urlencode
 
@@ -97,9 +97,12 @@ def consume_auth_code(raw_code: str) -> AuthCode | None:
     return auth_code
 
 
-def build_notesync_callback_url(code: str) -> str:
-    """Return the universal link used by the iOS app to capture auth codes."""
-    base = settings.NOTESYNC_CALLBACK_URL
+def build_notesync_callback_url(code: str, client: str = "ios") -> str:
+    """Return the universal link used by the mobile app to capture auth codes."""
+    if client == "android":
+        base = settings.NOTESYNC_ANDROID_CALLBACK_URL
+    else:
+        base = settings.NOTESYNC_CALLBACK_URL
     separator = "&" if "?" in base else "?"
     return f"{base}{separator}code={code}"
 
@@ -330,13 +333,13 @@ def get_current_username():
         payload = decode_token(token)
         user_id = payload.get("sub")
         user = User.query.get(user_id)
-        if payload.get("is_admin") != "admin":
-            user.role = "user"
-        else:
-            user.role = "admin"
+        if user:
+            expected_role = "admin" if payload.get("is_admin") == "admin" else "user"
+            if user.role != expected_role:
+                user.role = expected_role
     except (jwt_inner.ExpiredSignatureError, jwt_inner.InvalidTokenError):
         return None
-    return user if user else None
+    return user
 
 
 def admin_required(view_func):
@@ -407,14 +410,18 @@ def _oauth_provider_available(name: str) -> bool:
 
 
 def _oauth_state_serializer() -> URLSafeTimedSerializer:
-    secret = current_app.secret_key or settings.APP_SECRET_KEY or settings.JWT_SECRET_KEY
+    secret = (
+        current_app.secret_key or settings.APP_SECRET_KEY or settings.JWT_SECRET_KEY
+    )
     if not secret:
         raise RuntimeError("Missing secret key for OAuth state signing.")
     return URLSafeTimedSerializer(secret, salt="notesync-oauth-state")
 
 
 def _normalize_oauth_client(value: str | None) -> str:
-    return "ios" if value == "ios" else "web"
+    if value in ("ios", "android"):
+        return value
+    return "web"
 
 
 def _build_oauth_state(client: str) -> str:
@@ -455,8 +462,8 @@ def _resolve_oauth_client(state_payload: dict | None) -> str:
 @auth_bp.get("/login/github")
 def login_github():
     client = (request.args.get("client") or "").strip().lower()
-    if client == "ios":
-        session["oauth_client"] = "ios"
+    if client in ("ios", "android"):
+        session["oauth_client"] = client
     if not _oauth_provider_available("github"):
         flash("GitHub login is not configured.", "danger")
         return redirect("/auth/login-ui")
@@ -475,8 +482,8 @@ def login_github():
 @auth_bp.get("/login/google")
 def login_google():
     client = (request.args.get("client") or "").strip().lower()
-    if client == "ios":
-        session["oauth_client"] = "ios"
+    if client in ("ios", "android"):
+        session["oauth_client"] = client
     if not _oauth_provider_available("google"):
         flash("Google login is not configured.", "danger")
         return redirect("/auth/login-ui")
@@ -499,9 +506,10 @@ def oauth_start():
     """Redirect to the provider-specific OAuth login route."""
     provider = (request.args.get("provider") or "").strip().lower()
     client = (request.args.get("client") or "").strip().lower()
-    client = "ios" if client == "ios" else ""
-    if client == "ios":
-        session["oauth_client"] = "ios"
+    if client not in ("ios", "android"):
+        client = ""
+    if client:
+        session["oauth_client"] = client
     if not provider:
         return render_template(
             "auth/oauth_start.html",
@@ -623,9 +631,9 @@ def github_callback():
 
     logger.info("Logging in GitHub user: %s", name)
     client = _resolve_oauth_client(state_payload)
-    if client == "ios":
+    if client in ("ios", "android"):
         auth_code = create_auth_code(user.id)
-        return redirect(build_notesync_callback_url(auth_code))
+        return redirect(build_notesync_callback_url(auth_code, client))
 
     session["access_token"] = create_access_token(identity=user.id)
     session["refresh_token"] = create_refresh_token(identity=user.id)
@@ -679,9 +687,9 @@ def google_callback():
 
     logger.info("Logging in Google user: %s, state: %s", name, state)
     client = _resolve_oauth_client(state_payload)
-    if client == "ios":
+    if client in ("ios", "android"):
         auth_code = create_auth_code(user.id)
-        return redirect(build_notesync_callback_url(auth_code))
+        return redirect(build_notesync_callback_url(auth_code, client))
 
     session["access_token"] = create_access_token(identity=user.id)
     session["refresh_token"] = create_refresh_token(identity=user.id)

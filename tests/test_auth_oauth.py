@@ -9,7 +9,10 @@ from src.safe_family.core import auth
 
 def test_session_login_success_sets_session(client, monkeypatch):
     def fake_login_user():
-        return (jsonify({"tokens": {"access_token": "access", "refresh_token": "refresh"}}), 200)
+        return (
+            jsonify({"tokens": {"access_token": "access", "refresh_token": "refresh"}}),
+            200,
+        )
 
     monkeypatch.setattr(auth, "login_user", fake_login_user)
 
@@ -145,8 +148,12 @@ def test_github_callback_ios_redirects_to_app(client, monkeypatch):
 
     def fake_get(url, **_kwargs):
         if url.endswith("/user/emails"):
-            return FakeResp(200, [{"email": "user@example.com", "primary": True, "verified": True}])
-        return FakeResp(200, {"id": 1, "email": "user@example.com", "name": "User", "login": "user"})
+            return FakeResp(
+                200, [{"email": "user@example.com", "primary": True, "verified": True}]
+            )
+        return FakeResp(
+            200, {"id": 1, "email": "user@example.com", "name": "User", "login": "user"}
+        )
 
     fake_user = SimpleNamespace(id="1", username="user", email="user@example.com")
 
@@ -156,11 +163,17 @@ def test_github_callback_ios_redirects_to_app(client, monkeypatch):
 
     monkeypatch.setattr(auth, "_oauth_provider_available", lambda name: True)
     monkeypatch.setattr(auth, "_read_oauth_state", lambda state: {"client": "ios"})
-    monkeypatch.setattr(auth.requests, "post", lambda *a, **k: FakeResp(200, {"access_token": "token"}))
+    monkeypatch.setattr(
+        auth.requests, "post", lambda *a, **k: FakeResp(200, {"access_token": "token"})
+    )
     monkeypatch.setattr(auth.requests, "get", fake_get)
     monkeypatch.setattr(auth.User, "query", FakeQuery(), raising=False)
     monkeypatch.setattr(auth, "create_auth_code", lambda user_id: "code123")
-    monkeypatch.setattr(auth, "build_notesync_callback_url", lambda code: f"app://callback?code={code}")
+    monkeypatch.setattr(
+        auth,
+        "build_notesync_callback_url",
+        lambda code, client="ios": f"app://callback?code={code}",
+    )
 
     resp = client.get("/auth/github/callback?state=abc&code=123")
 

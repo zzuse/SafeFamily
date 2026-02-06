@@ -98,6 +98,7 @@ def notesync():
 
     try:
         results = apply_sync_ops(payload.ops, user_id=user_id)
+        db.session.commit()
     except ValueError as exc:
         db.session.rollback()
         error_payload = {"error": str(exc)}
@@ -107,6 +108,10 @@ def notesync():
             error_payload,
         )
         return jsonify(error_payload), 400
+    except Exception:
+        db.session.rollback()
+        logger.exception("notesync failed with unhandled exception user=%s", user_id)
+        raise
 
     counts = {"applied": 0, "skipped": 0, "conflict": 0}
     for _, result, _ in results:
