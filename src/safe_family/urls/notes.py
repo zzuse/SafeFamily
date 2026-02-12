@@ -34,10 +34,11 @@ def notes_view():
         return redirect("/auth/login-ui")
     
     page = request.args.get('page', 1, type=int)
-    per_page = 20
+    per_page = 5
 
     pagination = (
         Note.query.filter(Note.user_id == user.id, Note.deleted_at.is_(None))
+        .options(selectinload(Note.tags), selectinload(Note.media))
         .order_by(Note.created_at.desc())
         .paginate(page=page, per_page=per_page, error_out=False)
     )
