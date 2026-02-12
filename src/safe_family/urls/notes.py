@@ -3,7 +3,7 @@
 import io
 from datetime import UTC, datetime
 
-from flask import Blueprint, abort, flash, redirect, render_template, send_file
+from flask import Blueprint, abort, flash, redirect, render_template, send_file, request
 from sqlalchemy import func
 from sqlalchemy.orm import selectinload
 
@@ -32,14 +32,21 @@ def notes_view():
     if not user:
         flash("Please log in first.", "warning")
         return redirect("/auth/login-ui")
-    notes = (
+    
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+
+    pagination = (
         Note.query.filter(Note.user_id == user.id, Note.deleted_at.is_(None))
         .order_by(Note.created_at.desc())
-        .all()
+        .paginate(page=page, per_page=per_page, error_out=False)
     )
+    
+    notes = pagination.items
     for note in notes:
         _attach_local_timestamp(note)
-    return render_template("notes/notes.html", notes=notes)
+        
+    return render_template("notes/notes.html", notes=notes, pagination=pagination)
 
 
 @notes_bp.get("/timeline")

@@ -4,7 +4,7 @@
 <section>
     <div class="card-header">Notes</div>
     {% if notes %}
-    <div class="note">Showing {{ notes | length }} notes (newest created first; timestamps show last update).</div>
+    <div class="note">Showing {{ notes | length }} notes (Total: {{ pagination.total }}) (newest created first; timestamps show last update).</div>
     <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 12px;">
         {% for note in notes %}
         <article class="card" style="padding: 16px;">
@@ -55,6 +55,24 @@
         </article>
         {% endfor %}
     </div>
+
+    <!-- Pagination Controls -->
+    <div style="display: flex; justify-content: center; gap: 16px; margin-top: 20px; align-items: center;">
+        {% if pagination.has_prev %}
+        <a href="{{ url_for('notes.notes_view', page=pagination.prev_num) }}" class="note" style="text-decoration: none; padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px;">&laquo; Previous</a>
+        {% else %}
+        <span class="note" style="opacity: 0.5; padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px;">&laquo; Previous</span>
+        {% endif %}
+
+        <span class="note">Page {{ pagination.page }} of {{ pagination.pages }}</span>
+
+        {% if pagination.has_next %}
+        <a href="{{ url_for('notes.notes_view', page=pagination.next_num) }}" class="note" style="text-decoration: none; padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px;">Next &raquo;</a>
+        {% else %}
+        <span class="note" style="opacity: 0.5; padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px;">Next &raquo;</span>
+        {% endif %}
+    </div>
+
     {% else %}
     <div class="note">No notes found yet.</div>
     {% endif %}
