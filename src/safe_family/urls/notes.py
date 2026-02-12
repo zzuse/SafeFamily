@@ -143,8 +143,13 @@ def notes_media(media_id: str):
         )
         if not is_public:
             abort(404)
+    
+    mimetype = media.content_type
+    if media.filename.lower().endswith(".m4a"):
+        mimetype = "audio/mp4"
+
     return send_file(
         io.BytesIO(media.data),
-        mimetype=media.content_type,
+        mimetype=mimetype,
         download_name=media.filename,
     )
