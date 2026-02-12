@@ -33,7 +33,7 @@
             </div>
             {% endif %}
             {% if note.media %}
-            <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 12px;">
+            <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 12px; align-items: center;">
                 {% for media in note.media %}
                 {% if media.kind == "image" or media.content_type.startswith("image/") %}
                 <a href="{{ url_for('notes.notes_media', media_id=media.id) }}" target="_blank">
