@@ -159,64 +159,6 @@
         </div>
     </div>
 
-    <div class="longterm-section">
-        <div class="pt-[10px]">
-            <div class="card-header">Mid-Term & Long-Term Goals Tracking</div>
-            <div id="long-term-container" class="flex flex-col gap-6 p-6 rounded-xl shadow-sm">
-                <div class="note"> Track tasks more than 3 days to finish. You can long press to drag to sort the long
-                    term goals. Toggle checkbox to finished tasks. Finished tasks will automatically dispear after 3
-                    days.
-                </div>
-                <form id="add-longterm-form" class="flex gap-2">
-                    <div class="flex-grow w-21/41">
-                        <input type="text" id="longterm-task-text" placeholder="New Target[Sub Problem]">
-                    </div>
-                    <div class="w-10/41">
-                        <div class="relative">
-                            <select id="longterm-priority">
-                                <option value="1">High</option>
-                                <option value="2">Medium-High</option>
-                                <option value="3" selected>Medium</option>
-                                <option value="4">Medium-Low</option>
-                                <option value="5">Low</option>
-                            </select>
-                            <div
-                                class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
-                                    viewBox="0 0 20 20">
-                                    <path
-                                        d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                    <button type="submit"
-                        class="w-9/41 h-10 px-6 bg-[#172a45] hover:bg-purple-500/10 text-purple-300 uppercase font-small rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 whitespace-nowrap">
-                        <span>🏆</span>
-                        <span>Add</span>
-                    </button>
-                </form>
-                <div class="grid grid-cols-41 text-sm font-bold border-b">
-                    <div class="col-span-1 text-left">
-                        <span class="help-btn">☑️</span>
-                        <div class="help-popup hidden">
-                            <p>Complete? <br><b>You can toggle the multi select input to finish the task.</b></p>
-                        </div>
-                    </div>
-                    <div class="col-span-20 text-center uppercase flex-grow">Task Name</div>
-                    <div class="col-span-20 flex justify-between items-center text-center uppercase">
-                        <span class="w-3/11 ">Due</span>
-                        <span class="w-3/11 min-w-10">Track</span>
-                        <span class="w-5/11 min-w-20 pr-2 ">Actions</span>
-                    </div>
-                </div>
-                <div>
-                    <ul id="longterm-list"></ul>
-                </div>
-            </div>
-        </div>
-    </div>
-
     {% if show_task_feedback %}
     <div id="task-feedback-modal" class="task-feedback-modal" aria-hidden="true">
         <div class="task-feedback-panel">

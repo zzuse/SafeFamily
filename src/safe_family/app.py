@@ -12,6 +12,7 @@ from src.safe_family.core.auth import auth_bp
 from src.safe_family.core.extensions import db, jwt, mail
 from src.safe_family.core.models import User
 from src.safe_family.rules.scheduler import schedule_rules_bp
+from src.safe_family.todo.goals import goals_bp
 from src.safe_family.todo.todo import todo_bp
 from src.safe_family.urls.analyzer import analyze_bp
 from src.safe_family.urls.blocker import rules_toggle_bp
@@ -65,6 +66,7 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(user_bp, url_prefix="/users")
     app.register_blueprint(todo_bp)
+    app.register_blueprint(goals_bp)
 
     # For debug
     # from flask import current_app

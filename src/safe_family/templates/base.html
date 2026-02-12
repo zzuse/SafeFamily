@@ -19,8 +19,9 @@
             <nav class="main-nav">
                 <ul>
                     {% if session.access_token %}
-                    <li><a href="{{ url_for('suspicious.view_suspicious') }}">HOME</a></li>
+                    <li><a href="{{ url_for('suspicious.view_suspicious') }}">MGMT</a></li>
                     <li><a href="{{ url_for('todo.todo_page') }}">TODO</a></li>
+                    <li><a href="{{ url_for('goals.goals_page') }}">GOAL</a></li>
                     <li><a href="{{ url_for('notes.notes_view') }}">NOTE</a></li>
                     <li><a href="{{ url_for('notes.timeline') }}">TIMELINE</a></li>
                     <li><a href="{{ url_for('index.ninja_nightmare') }}">GAME</a></li>
