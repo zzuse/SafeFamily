@@ -36,8 +36,10 @@
             <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 12px;">
                 {% for media in note.media %}
                 {% if media.kind == "image" or media.content_type.startswith("image/") %}
-                <img src="{{ url_for('notes.notes_media', media_id=media.id) }}" alt="{{ media.filename }}"
-                    style="max-width: 100%; height: auto; border-radius: 12px;" loading="lazy">
+                <a href="{{ url_for('notes.notes_media', media_id=media.id) }}" target="_blank">
+                    <img src="{{ url_for('notes.notes_media', media_id=media.id) }}" alt="{{ media.filename }}"
+                        style="max-width: 300px; height: auto; border-radius: 12px;" loading="lazy">
+                </a>
                 {% elif media.kind == "audio" or media.content_type.startswith("audio/") or media.filename.lower().endswith(".m4a") %}
                 <audio controls preload="none" style="width: 100%;">
                     <source src="{{ url_for('notes.notes_media', media_id=media.id) }}"
