@@ -47,6 +47,11 @@ def create_app():
     jwt.init_app(app)
     mail.init_app(app)
 
+    @app.context_processor
+    def inject_motto():
+        """Inject the app motto into all templates."""
+        return {"motto": settings.APP_MOTTO}
+
     app.register_blueprint(root_bp)
     app.register_blueprint(notes_bp)
     app.register_blueprint(receiver_bp)

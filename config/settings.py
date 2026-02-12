@@ -77,5 +77,10 @@ class Settings:
     GOOGLE_CALLBACK_ROUTE = os.environ.get("GOOGLE_CALLBACK_ROUTE")
     OAUTHLIB_INSECURE_TRANSPORT = os.environ.get("OAUTHLIB_INSECURE_TRANSPORT")
 
+    # UI Settings
+    APP_MOTTO = os.environ.get(
+        "APP_MOTTO",
+    )
+
 
 settings = Settings()
