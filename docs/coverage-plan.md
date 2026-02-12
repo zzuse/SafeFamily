@@ -2,27 +2,26 @@
 
 ## Current status
 - Coverage now meets the 80% gate (last run: 81.6% with branch coverage enabled).
-- Biggest gaps remain in large modules (auth, scheduler, blocker, analyzer).
+- Biggest gaps remain in large modules (auth, scheduler, blocker).
 - Goal: keep coverage >= 80% while closing remaining branch/error-path gaps.
 
 ## High-impact modules (priority order)
 File | Statements | Current cover | Why it matters
 --- | --- | --- | ---
-src/safe_family/todo/todo.py | 545 | 9% | Largest file, core UI and notifications
-src/safe_family/core/auth.py | 397 | 25% | Auth, JWT, session, OAuth, notesync codes
-src/safe_family/rules/scheduler.py | 356 | 17% | Background jobs and advisory locks
-src/safe_family/notesync/service.py | 127 | 7% | LWW conflict handling for notes
-src/safe_family/api/routes.py | 101 | 7% | Notesync API + notes list
-src/safe_family/urls/suspicious.py | 158 | 17% | Suspicious review and blocklist ops
-src/safe_family/urls/blocker.py | 129 | 39% | AdGuard and router rule toggles
-src/safe_family/cli/weekly_metrics.py | 127 | 17% | Reporting used by scheduler
-src/safe_family/cli/weekly_diff.py | 112 | 16% | Reporting used by scheduler
-src/safe_family/notifications/notifier.py | 92 | 14% | Email/Discord/Hammerspoon output
+src/safe_family/todo/todo.py | 462 | 79% | Core UI and notifications (improved from 9%)
+src/safe_family/core/auth.py | 403 | 76% | Auth, JWT, session, OAuth, notesync codes
+src/safe_family/rules/scheduler.py | 363 | 73% | Background jobs and advisory locks
+src/safe_family/urls/blocker.py | 129 | 61% | AdGuard and router rule toggles
+src/safe_family/urls/analyzer.py | 87 | 75% | Log parsing and analysis
+src/safe_family/api/routes.py | 106 | 77% | Notesync API + notes list
+src/safe_family/todo/goals.py | 115 | 92% | Separated long-term goals logic (New)
+src/safe_family/urls/notes.py | 68 | 86% | UI for notes viewer (pagination/media)
 
-Secondary modules close to 80:
-- src/safe_family/core/models.py (70%)
-- src/safe_family/notesync/schemas.py (71%)
-- src/safe_family/app.py (76%)
+Secondary modules close to 80 or above:
+- src/safe_family/core/models.py (93%)
+- src/safe_family/notesync/schemas.py (96%)
+- src/safe_family/app.py (95%)
+- src/safe_family/notifications/notifier.py (82%)
 
 ## Test cases to add (by feature)
 Legend: [x] done, [ ] pending.
@@ -50,7 +49,7 @@ Suggested files to extend:
 - tests/test_notesync_media_tags.py
 - tests/test_notesync_auth.py
 - tests/test_auth_exchange.py
-- tests/test_routes.py or a new tests/test_api_notesync.py
+- tests/test_api_notes.py
 
 ### Auth and session routes
 - [x] Register/login success and failure paths
@@ -72,7 +71,7 @@ Suggested files to extend:
 - tests/test_auth_routes.py
 - tests/test_auth_exchange.py
 
-### Todo planner
+### Todo planner & Goals
 - [x] generate_time_slots weekday vs weekend
 - [ ] generate_time_slots holiday mode
 - [x] generate_time_slots custom valid
@@ -87,13 +86,15 @@ Suggested files to extend:
 - [x] mark_status invalid + success paths
 - [x] notify_feedback/notify_current_task routes
 - [x] split_slot success + forbidden paths
-- [x] long-term goal create/update/reorder/start/stop/delete/update due
+- [x] long-term goal create/update/reorder/start/stop/delete/update due (in goals.py)
 - [x] update_tag success + forbidden paths
 - [x] unknown_metadata filtering
+- [x] goals page renders and admin user switching
 
 Suggested files to extend:
 - tests/test_todo.py
 - tests/test_units.py
+- tests/test_goals_route.py
 
 ### Scheduler and automation
 - [x] _ensure_scheduler_leader returns False when lock not acquired
@@ -160,17 +161,21 @@ Suggested files to extend:
 
 Suggested files to extend:
 - tests/test_cli_analyze.py
-- add tests for weekly_diff, weekly_metrics, gentags
+- tests/test_cli_reports.py
 
 ### Misc routes and users
 - [x] notes view requires login
 - [x] notes media endpoint 404 when missing
-- [ ] notes media 404 when not owned
+- [x] notes media endpoint 404 when not owned (private notes)
+- [x] notes media endpoint success when owned or public
+- [x] notes view pagination logic
+- [x] notes media M4A mimetype correction
 - [x] users list and serialization basics
 
 Suggested files to extend:
 - tests/test_routes.py
 - tests/test_users.py
+- tests/test_misc_routes.py
 
 ## Fixtures and mocks to reuse
 - tests/conftest.py provides:
