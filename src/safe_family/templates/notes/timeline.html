@@ -7,7 +7,8 @@
     <div class="note">Showing up to 3 public notes per user (newest created first; timestamps show last update).</div>
     <div style="display: flex; flex-direction: column; gap: 20px; margin-top: 12px;">
         {% for entry in entries %}
-        <article class="card" style="padding: 16px;">
+        <article class="card matrix-card" style="padding: 16px;">
+            <canvas class="matrix-canvas"></canvas>
             <div class="card-header" style="margin: 0;">
                 {{ entry.username }}
             </div>
@@ -39,15 +40,17 @@
                     </div>
                     {% endif %}
                     {% if note.media %}
-                    <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 12px;">
+                    <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 12px; align-items: center;">
                         {% for media in note.media %}
                         {% if media.kind == "image" or media.content_type.startswith("image/") %}
-                        <img src="{{ url_for('notes.notes_media', media_id=media.id) }}" alt="{{ media.filename }}"
-                            style="max-width: 100%; height: auto; border-radius: 12px;" loading="lazy">
-                        {% elif media.kind == "audio" or media.content_type.startswith("audio/") %}
+                        <a href="{{ url_for('notes.notes_media', media_id=media.id) }}" target="_blank">
+                            <img src="{{ url_for('notes.notes_media', media_id=media.id) }}" alt="{{ media.filename }}"
+                                style="max-width: 300px; height: auto; border-radius: 12px;" loading="lazy">
+                        </a>
+                        {% elif media.kind == "audio" or media.content_type.startswith("audio/") or media.filename.lower().endswith(".m4a") %}
                         <audio controls preload="none" style="width: 100%;">
                             <source src="{{ url_for('notes.notes_media', media_id=media.id) }}"
-                                type="{{ media.content_type }}">
+                                type="{% if media.filename.lower().endswith('.m4a') %}audio/mp4{% else %}{{ media.content_type }}{% endif %}">
                             Your browser does not support the audio element.
                         </audio>
                         {% else %}
@@ -68,5 +71,49 @@
     <div class="note">No public notes found yet.</div>
     {% endif %}
 </section>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const canvases = document.querySelectorAll('.matrix-canvas');
+    const chars = '0123456789ABCDEF@#$%^&*()_+-=[]{}|;:,.<>?';
+    
+    canvases.forEach(canvas => {
+        const ctx = canvas.getContext('2d');
+        let width, height, columns, drops;
+        const fontSize = 14;
+
+        const resize = () => {
+            const parent = canvas.parentElement;
+            width = canvas.width = parent.offsetWidth;
+            height = canvas.height = parent.offsetHeight;
+            columns = Math.ceil(width / fontSize);
+            drops = new Array(columns).fill(1);
+        };
+
+        resize();
+        new ResizeObserver(resize).observe(canvas.parentElement);
+
+        const draw = () => {
+            ctx.fillStyle = 'rgba(23, 42, 69, 0.1)'; 
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.fillStyle = '#64ffda'; 
+            ctx.font = fontSize + 'px monospace';
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = chars[Math.floor(Math.random() * chars.length)];
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                if (drops[i] * fontSize > height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        };
+
+        setInterval(draw, 50);
+    });
+});
+</script>
 
 {% endblock %}
