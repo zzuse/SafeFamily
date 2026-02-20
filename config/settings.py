@@ -1,6 +1,7 @@
 # config/settings.py
 """Application settings module."""
 
+import json
 import os
 from pathlib import Path
 
@@ -19,11 +20,36 @@ class Settings:
     # FLASK settings
     FLASK_DEBUG = os.getenv("FLASK_DEBUG", "False") == "True"
     SQLALCHEMY_DATABASE_URI = os.environ.get("FLASK_SQLALCHEMY_DATABASE_URI")
-    DB_PARAMS = os.environ.get("DB_PARAMS", None)
     SQLALCHEMY_ECHO = os.environ.get("FLASK_SQLALCHEMY_ECHO") == "True"
     APP_SECRET_KEY = os.environ.get("FLASK_APP_SECRET_KEY")
     JWT_SECRET_KEY = os.environ.get("FLASK_JWT_SECRET_KEY")
     JWT_ACCESS_TOKEN_EXPIRES = 3
+
+    # Database settings
+    # 1. Try to load individual vars (preferred for Docker)
+    DB_USER = os.environ.get("DB_USER")
+    DB_PASSWORD = os.environ.get("DB_PASSWORD")
+    DB_HOST = os.environ.get("DB_HOST")
+    DB_PORT = os.environ.get("DB_PORT", "5432")
+    DB_NAME = os.environ.get("DB_NAME")
+
+    # 2. Try to load legacy JSON string
+    _db_params_raw = os.environ.get("DB_PARAMS")
+
+    if DB_HOST and DB_USER and DB_NAME:
+        # If we have specific docker/env vars, construct the JSON
+        DB_PARAMS = json.dumps(
+            {
+                "dbname": DB_NAME,
+                "user": DB_USER,
+                "password": DB_PASSWORD,
+                "host": DB_HOST,
+                "port": DB_PORT,
+            },
+        )
+    else:
+        # Fallback to the raw string (or None)
+        DB_PARAMS = _db_params_raw
 
     # Mail settings
     MAIL_SERVER = "smtp.gmail.com"

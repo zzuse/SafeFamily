@@ -1,0 +1,58 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: safefamily_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-pass}
+      POSTGRES_DB: ${DB_NAME:-logdb}
+    ports:
+      - "5432:5432" # Allows pgAdmin from your laptop to connect
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      # Auto-import sql dump on first start
+      - ./deploy/init_db:/docker-entrypoint-initdb.d
+
+  app:
+    build: .
+    container_name: safefamily_app
+    restart: always
+    depends_on:
+      - db
+    volumes:
+      - ./.env:/app/.env
+      - ./logs:/app/logs
+      # Mount your local AdGuard repo directory
+      - ${HOST_ADGUARD_RULE_PATH}:/app/adguard_rules
+      # Mount SSH keys for git push operations
+      - ~/.ssh:/root/.ssh:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - GUNICORN_WORKERS=4
+      # Override the rule path in Docker
+      - ADGUARD_RULE_PATH=/app/adguard_rules/
+      # Database connection for Docker
+      - DB_HOST=db
+      - DB_NAME=${DB_NAME:-logdb}
+      - DB_USER=${DB_USER:-user}
+      - DB_PASSWORD=${DB_PASSWORD:-pass}
+      - DB_PORT=5432
+
+  proxy:
+    image: nginx:alpine
+    container_name: safefamily_proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/nginx.docker.conf:/etc/nginx/conf.d/default.conf:ro
+      # Replace these with your actual local cert paths
+      - /etc/ssl/certs/safefamily.crt:/etc/nginx/ssl/safefamily.crt:ro
+      - /etc/ssl/private/safefamily.key:/etc/nginx/ssl/safefamily.key:ro
+    depends_on:
+      - app
+
+volumes:
+  db_data:
