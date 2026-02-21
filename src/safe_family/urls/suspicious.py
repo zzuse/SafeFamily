@@ -1,7 +1,7 @@
 """Suspicious URL routes for admin interface."""
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import psycopg2
 from flask import (
@@ -13,7 +13,7 @@ from flask import (
 )
 
 from src.safe_family.core.auth import admin_required
-from src.safe_family.core.extensions import get_db_connection
+from src.safe_family.core.extensions import get_db_connection, local_tz
 from src.safe_family.utils.exceptions import DatabaseConnectionError
 
 suspicious_bp = Blueprint("suspicious", __name__)
@@ -38,7 +38,7 @@ def view_suspicious():
 
     date = request.args.get("date")
     if date is None:
-        date = datetime.today().strftime("%Y-%m-%d")
+        date = datetime.now(local_tz).strftime("%Y-%m-%d")
     error = request.args.get("error")
 
     limit = 10
@@ -112,11 +112,13 @@ def view_suspicious():
         cur.execute("SELECT name FROM block_types ORDER BY name")
         block_types = [row[0] for row in cur.fetchall()]
 
-        cur.execute("SELECT COUNT(*) FROM logs_daily where date = CURRENT_DATE - 1")
+        # Check for yesterday's logs (local time) as the scheduler runs on completed days
+        yesterday_local = (datetime.now(local_tz) - timedelta(days=1)).date()
+        cur.execute("SELECT COUNT(*) FROM logs_daily WHERE date = %s", (yesterday_local,))
         count_yesterday = cur.fetchone()[0]
 
         if count_yesterday == 0:
-            flash("⚠️ Warning: No logs found in logs_daily for yesterday.", "danger")
+            flash(f"⚠️ Warning: No logs found in logs_daily for yesterday ({yesterday_local}).", "danger")
 
         cur.close()
         conn.close()

@@ -283,7 +283,7 @@ def _log_job_event(event) -> None:
 
 
 # 0-6 → Sunday to Saturday (APScheduler uses 0=Monday, 6=Sunday).
-scheduler = BackgroundScheduler()
+scheduler = BackgroundScheduler(timezone=local_tz)
 scheduler.add_listener(_log_job_event, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
 scheduler.start()
 _start_schedule_listener()
