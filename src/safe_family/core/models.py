@@ -171,7 +171,7 @@ class Note(db.Model):
     updated_at = db.Column(db.DateTime(), nullable=False, index=True)
     deleted_at = db.Column(db.DateTime(), nullable=True)
     tags = db.relationship("Tag", secondary=note_tags, back_populates="notes")
-    media = db.relationship("Media", back_populates="note")
+    media = db.relationship("Media", back_populates="note", cascade="all, delete-orphan")
 
 
 class Tag(db.Model):

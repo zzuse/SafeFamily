@@ -21,9 +21,21 @@
                             {{ note.updated_local.strftime("%Y-%m-%d %H:%M") }}
                             {% endif %}
                         </div>
-                        {% if note.is_pinned %}
-                        <div class="note">Pinned</div>
-                        {% endif %}
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            {% if note.is_pinned %}
+                            <div class="note">Pinned</div>
+                            {% endif %}
+                            {% if note.user_id == current_user_id %}
+                            <form action="{{ url_for('notes.unpublish_note', note_id=note.id) }}" method="POST" 
+                                onsubmit="return confirm('Remove this note from public timeline?');"
+                                style="display: inline;">
+                                <button type="submit" class="btn border border-orange-500/30 bg-orange-500/10 text-orange-500 hover:bg-orange-500/20" 
+                                    style="padding: 2px 8px; font-size: 0.75rem;" title="Remove from timeline">
+                                    🌐 Unpublish
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
                     </div>
                     {% if note.text %}
                     <div class="note" style="margin-top: 8px;">
@@ -43,10 +55,21 @@
                     <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 12px; align-items: center;">
                         {% for media in note.media %}
                         {% if media.kind == "image" or media.content_type.startswith("image/") %}
-                        <a href="{{ url_for('notes.notes_media', media_id=media.id) }}" target="_blank">
-                            <img src="{{ url_for('notes.notes_media', media_id=media.id) }}" alt="{{ media.filename }}"
-                                style="max-width: 300px; height: auto; border-radius: 12px;" loading="lazy">
-                        </a>
+                        <div class="image-container" style="position: relative; display: inline-block;">
+                            <a href="{{ url_for('notes.notes_media', media_id=media.id) }}" target="_blank">
+                                <img src="{{ url_for('notes.notes_media', media_id=media.id) }}" alt="{{ media.filename }}"
+                                    class="rotatable-image" data-media-id="{{ media.id }}"
+                                    style="max-width: 300px; height: auto; border-radius: 12px; transition: transform 0.3s ease; display: block;" loading="lazy">
+                            </a>
+                            <button type="button" class="rotate-btn" data-media-id="{{ media.id }}" 
+                                style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.5); border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10;"
+                                title="Rotate 90 degrees">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M23 4v6h-6"></path>
+                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                                </svg>
+                            </button>
+                        </div>
                         {% elif media.kind == "audio" or media.content_type.startswith("audio/") or media.filename.lower().endswith(".m4a") %}
                         <audio controls preload="none" style="width: 100%;">
                             <source src="{{ url_for('notes.notes_media', media_id=media.id) }}"
@@ -67,11 +90,36 @@
         </article>
         {% endfor %}
     </div>
+
+    <!-- Pagination Controls -->
+    <div style="display: flex; justify-content: center; gap: 8px; margin-top: 20px; align-items: center; flex-wrap: wrap;">
+        {% if pagination.has_prev %}
+        <a href="{{ url_for(endpoint, page=pagination.prev_num) }}" class="note" style="text-decoration: none; padding: 6px 12px; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; background: rgba(255,255,255,0.05);">&laquo;</a>
+        {% endif %}
+
+        {% for p in pagination.iter_pages(left_edge=2, left_current=2, right_current=3, right_edge=2) %}
+            {% if p %}
+                {% if p == pagination.page %}
+                <span class="note" style="padding: 6px 12px; border: 1px solid #ff6b00; border-radius: 4px; background: rgba(255,107,0,0.2); color: #ff6b00;">{{ p }}</span>
+                {% else %}
+                <a href="{{ url_for(endpoint, page=p) }}" class="note" style="text-decoration: none; padding: 6px 12px; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; background: rgba(255,255,255,0.05);">{{ p }}</a>
+                {% endif %}
+            {% else %}
+                <span class="note" style="padding: 6px 12px;">&hellip;</span>
+            {% endif %}
+        {% endfor %}
+
+        {% if pagination.has_next %}
+        <a href="{{ url_for(endpoint, page=pagination.next_num) }}" class="note" style="text-decoration: none; padding: 6px 12px; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; background: rgba(255,255,255,0.05);">&raquo;</a>
+        {% endif %}
+    </div>
+
     {% else %}
     <div class="note">No public notes found yet.</div>
     {% endif %}
 </section>
 
 <script src="{{ url_for('static', filename='js/matrix_rain.js') }}"></script>
+<script src="{{ url_for('static', filename='js/image_rotate.js') }}"></script>
 
 {% endblock %}

@@ -3,12 +3,12 @@
 import io
 from datetime import UTC, datetime
 
-from flask import Blueprint, abort, flash, redirect, render_template, send_file, request
+from flask import Blueprint, abort, flash, redirect, render_template, send_file, request, url_for
 from sqlalchemy import func
 from sqlalchemy.orm import selectinload
 
 from src.safe_family.core.auth import get_current_username, login_required
-from src.safe_family.core.extensions import local_tz
+from src.safe_family.core.extensions import db, local_tz
 from src.safe_family.core.models import Media, Note, Tag, User
 
 notes_bp = Blueprint("notes", __name__)
@@ -47,13 +47,44 @@ def notes_view():
     for note in notes:
         _attach_local_timestamp(note)
         
-    return render_template("notes/notes.html", notes=notes, pagination=pagination)
+    return render_template(
+        "notes/notes.html", 
+        notes=notes, 
+        pagination=pagination,
+        endpoint='notes.notes_view'
+    )
 
 
 @notes_bp.get("/timeline")
 @login_required
 def timeline():
     """Render the timeline (max 3 public notes per user)."""
+    page = request.args.get('page', 1, type=int)
+    per_page = 5
+
+    # Base query for public notes
+    base_query = Note.query.filter(
+        Note.deleted_at.is_(None),
+        Note.tags.any(Tag.name.ilike("public")),
+    )
+
+    # Note: The original timeline logic fetched 3 notes per user. 
+    # To properly paginate, we should probably paginate by users who have public notes,
+    # then fetch notes for those users.
+    
+    # Get distinct user_ids with public notes
+    user_ids_query = (
+        db.session.query(Note.user_id)
+        .filter(Note.deleted_at.is_(None), Note.tags.any(Tag.name.ilike("public")))
+        .distinct()
+    )
+    
+    pagination = user_ids_query.paginate(page=page, per_page=per_page, error_out=False)
+    target_user_ids = [r[0] for r in pagination.items]
+
+    if not target_user_ids:
+        return render_template("notes/timeline.html", entries=[], pagination=pagination, endpoint='notes.timeline')
+
     note_rankings = (
         Note.query.with_entities(
             Note.id.label("note_id"),
@@ -66,6 +97,7 @@ def timeline():
         .filter(
             Note.deleted_at.is_(None),
             Note.tags.any(Tag.name.ilike("public")),
+            Note.user_id.in_(target_user_ids)
         )
         .subquery()
     )
@@ -96,12 +128,12 @@ def timeline():
         _attach_local_timestamp(note)
         bucket.append(note)
 
-    user_ids = list(notes_by_user.keys())
-    users = User.query.filter(User.id.in_(user_ids)).all() if user_ids else []
+    users = User.query.filter(User.id.in_(target_user_ids)).all()
     user_map = {user.id: user.username for user in users}
 
     entries = []
-    for user_id, notes in notes_by_user.items():
+    for user_id in target_user_ids:
+        notes = notes_by_user.get(user_id, [])
         latest = notes[0].created_at if notes else None
         entries.append(
             {
@@ -111,12 +143,65 @@ def timeline():
                 "latest": latest,
             },
         )
+    
+    # Sort entries by the latest note within the set of users we fetched
     entries.sort(
         key=lambda entry: entry["latest"] or datetime.min,
         reverse=True,
     )
 
-    return render_template("notes/timeline.html", entries=entries)
+    user = get_current_username()
+    current_user_id = user.id if user else None
+
+    return render_template(
+        "notes/timeline.html", 
+        entries=entries, 
+        current_user_id=current_user_id, 
+        pagination=pagination,
+        endpoint='notes.timeline'
+    )
+
+
+@notes_bp.post("/notes/delete/<note_id>")
+@login_required
+def delete_note(note_id: str):
+    """Delete a note and its associated media."""
+    user = get_current_username()
+    if not user:
+        flash("Please log in first.", "warning")
+        return redirect("/auth/login-ui")
+
+    note = Note.query.filter_by(id=note_id, user_id=user.id).one_or_none()
+    if not note:
+        abort(404)
+
+    db.session.delete(note)
+    db.session.commit()
+    flash("Note deleted successfully.", "success")
+    return redirect(url_for("notes.notes_view"))
+
+
+@notes_bp.post("/notes/unpublish/<note_id>")
+@login_required
+def unpublish_note(note_id: str):
+    """Remove the 'public' tag from a note so it no longer appears on the timeline."""
+    user = get_current_username()
+    if not user:
+        flash("Please log in first.", "warning")
+        return redirect("/auth/login-ui")
+
+    note = Note.query.filter_by(id=note_id, user_id=user.id).one_or_none()
+    if not note:
+        abort(404)
+
+    # Remove the 'public' tag
+    public_tags = [t for t in note.tags if t.name.lower() == "public"]
+    for t in public_tags:
+        note.tags.remove(t)
+
+    db.session.commit()
+    flash("Note removed from public timeline.", "success")
+    return redirect(url_for("notes.timeline"))
 
 
 @notes_bp.get("/notes/media/<media_id>")
