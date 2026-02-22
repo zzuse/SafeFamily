@@ -148,19 +148,21 @@ def todo_page():
         flash("Target user not found", "warning")
         selected_user = username
     selected_user_id = selected_user_row[1]
+    today_date = datetime.now(local_tz).date()
+
     # Save selected user's todo list
     if request.method == "POST" and "save_todo" in request.form:
         cur.execute(
-            "DELETE FROM todo_list WHERE date = CURRENT_DATE AND username = %s",
-            (selected_user,),
+            "DELETE FROM todo_list WHERE date = %s AND username = %s",
+            (today_date, selected_user),
         )
         for slot in slots:
             task = request.form.get(slot, "").strip()
             logger.debug("Saving task for slot %s: %s", slot, task)
             if task:
                 cur.execute(
-                    "INSERT INTO todo_list (username, time_slot, task, date) VALUES (%s, %s, %s, CURRENT_DATE)",
-                    (selected_user, slot, task),
+                    "INSERT INTO todo_list (username, time_slot, task, date) VALUES (%s, %s, %s, %s)",
+                    (selected_user, slot, task, today_date),
                 )
         conn.commit()
         message = f"Todo list saved for {selected_user} successfully."
@@ -169,10 +171,10 @@ def todo_page():
         """
         SELECT id, time_slot, task, completed, COALESCE(completion_status, '')
         FROM todo_list
-        WHERE date = CURRENT_DATE AND username = %s
+        WHERE date = %s AND username = %s
         ORDER BY time_slot
         """,
-        (selected_user,),
+        (today_date, selected_user),
     )
     today_tasks = cur.fetchall()
     if request.method == "POST" and message != "":
@@ -234,14 +236,15 @@ def update_todo(selected_username: str):
             (task, todo_id, selected_username),
         )
     conn.commit()
+    today_date = datetime.now(local_tz).date()
     cur.execute(
         """
         SELECT time_slot, task, COALESCE(completion_status, '')
         FROM todo_list
-        WHERE date = CURRENT_DATE AND username = %s
+        WHERE date = %s AND username = %s
         ORDER BY time_slot
         """,
-        (selected_username,),
+        (today_date, selected_username),
     )
     tasks = [
         {"time_slot": r[0], "task": r[1], "completion_status": r[2]}
@@ -348,13 +351,14 @@ def split_slot():
 
         conn = get_db_connection()
         cur = conn.cursor()
+        today_date = datetime.now(local_tz).date()
         cur.execute(
             """
             SELECT username, time_slot, task, completed
             FROM todo_list
-            WHERE id = %s AND date = CURRENT_DATE
+            WHERE id = %s AND date = %s
             """,
-            (todo_id,),
+            (todo_id, today_date),
         )
         row = cur.fetchone()
         if not row:
@@ -390,11 +394,11 @@ def split_slot():
             """
             SELECT 1
             FROM todo_list
-            WHERE date = CURRENT_DATE
+            WHERE date = %s
               AND username = %s
               AND time_slot = %s
             """,
-            (username, second_slot),
+            (today_date, username, second_slot),
         )
         if cur.fetchone():
             conn.close()
@@ -407,9 +411,9 @@ def split_slot():
         cur.execute(
             """
             INSERT INTO todo_list (username, time_slot, task, date, completed, completion_status)
-            VALUES (%s, %s, %s, CURRENT_DATE, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s)
             """,
-            (username, second_slot, "", False, None),
+            (username, second_slot, "", today_date, False, None),
         )
         conn.commit()
         conn.close()
@@ -539,16 +543,17 @@ def notify_current_task():
     now = datetime.now(local_tz)
     conn = get_db_connection()
     cur = conn.cursor()
+    today_date = now.date()
     cur.execute(
         """
         SELECT time_slot, task
         FROM todo_list
-        WHERE date = CURRENT_DATE
+        WHERE date = %s
           AND username = %s
           AND COALESCE(task, '') <> ''
         ORDER BY time_slot
         """,
-        (target_username,),
+        (today_date, target_username),
     )
     rows = cur.fetchall()
     cur.close()
@@ -681,22 +686,23 @@ def unknown_metadata():
 
     conn = get_db_connection()
     cur = conn.cursor()
+    today_date = datetime.now(local_tz).date()
     cur.execute(
         """
         SELECT id, time_slot, task, tags, date, completion_status
         FROM todo_list
         WHERE username = %s
-          AND date <= CURRENT_DATE
+          AND date <= %s
           AND (tags IS NULL OR tags = '' OR tags = 'unknown' OR completion_status IS NULL OR completion_status = '')
         ORDER BY date DESC, time_slot
         """,
-        (username,),
+        (username, today_date),
     )
     rows = cur.fetchall()
     cur.close()
     conn.close()
 
-    today = datetime.now(local_tz).date()
+    today = today_date
     now = datetime.now(local_tz)
     unknown_tags = []
     unknown_status = []

@@ -421,13 +421,15 @@ def notify_overdue_task_feedback():
 
     conn = get_db_connection()
     cur = conn.cursor()
+    today_date = datetime.now(local_tz).date()
     cur.execute(
         """
         SELECT id, username, time_slot, task
         FROM todo_list
-        WHERE date = CURRENT_DATE
+        WHERE date = %s
           AND COALESCE(completion_status, '') = ''
         """,
+        (today_date,),
     )
     rows = cur.fetchall()
     cur.close()

@@ -67,6 +67,37 @@ or
 flask --app src.safe_family.app run
 ```
 
+## Dockerization
+
+SafeFamily can be run as a multi-container application using Docker Compose.
+
+### 1. Build and Run
+Ensure you have a `.env` file configured (see [Configuration](#configuration)). Then run:
+```bash
+docker-compose up -d --build
+```
+This will start:
+- **db**: PostgreSQL 15 (data persisted in `db_data` volume).
+- **app**: Flask backend running on Gunicorn.
+- **proxy**: Nginx acting as a reverse proxy (handles SSL/HTTP).
+
+### 2. Database Initialization
+On the first run, the `db` service automatically imports `deploy/init_db/dump.sql`.
+
+### 3. Key Mounts and Overrides
+- **Logs**: Backend logs are mirrored to the local `./logs` directory.
+- **SSH Keys**: Local `~/.ssh` is mounted read-only to `/root/.ssh` in the `app` container to support Git operations.
+- **AdGuard Rules**: The directory specified by `HOST_ADGUARD_RULE_PATH` in your `.env` is mounted to allow rule manipulation.
+
+### 4. Useful Commands
+- **View Logs**: `docker-compose logs -f app`
+- **Restart App**: `docker-compose restart app`
+- **Rebuild and Restart**: `docker-compose up -d --build app`
+- **Run Migrations/CLI**:
+  ```bash
+  docker-compose exec app python -m safe_family.cli.analyze --range last_5min
+  ```
+
 ## Tests
 Run the full suite with coverage enforcement:
 ```bash

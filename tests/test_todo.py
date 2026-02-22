@@ -114,3 +114,34 @@ def test_done_todo_updates_status(client, monkeypatch):
         "UPDATE todo_list" in sql and params == (True, 5)
         for sql, params in conn.cursor_obj.queries
     )
+
+
+def test_todo_page_uses_parameterized_date(client, monkeypatch):
+    cursor = SeqCursor(
+        fetchone_values=[("user", "1")],
+        fetchall_values=[
+            [],  # today_tasks
+        ],
+    )
+    conn = SeqConnection(cursor)
+    monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(
+        todo,
+        "get_current_username",
+        lambda: SimpleNamespace(username="user", role="user"),
+    )
+    monkeypatch.setattr(todo, "render_template", lambda *a, **k: ("ok", 200))
+    _login_session(client, monkeypatch)
+
+    resp = client.get("/todo")
+
+    assert resp.status_code == 200
+    # Verify that the SELECT query uses %s for date and passes a date object
+    found_query = False
+    for sql, params in cursor.queries:
+        if "SELECT id, time_slot, task, completed" in sql:
+            assert "WHERE date = %s" in sql
+            from datetime import date
+            assert isinstance(params[0], date)
+            found_query = True
+    assert found_query
