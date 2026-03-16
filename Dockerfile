@@ -35,4 +35,4 @@ ENV GUNICORN_WORKERS=4
 ENV GUNICORN_BIND=0.0.0.0:8000
 
 # Run the application
-CMD gunicorn --workers=${GUNICORN_WORKERS} --bind=${GUNICORN_BIND} run:flask_app
+CMD gunicorn --workers=${GUNICORN_WORKERS} --forwarded-allow-ips="*" --bind=${GUNICORN_BIND} run:flask_app
