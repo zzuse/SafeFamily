@@ -154,9 +154,8 @@
             {% else %}
             <p class="note" style="background-color: transparent;">Not proper time to disable rules
                 (button
-                available between 4 PM and 6 PM)</p>
-            {% endif %}
-        </div>
+                available between {{ show_disable_button_start }} and {{ show_disable_button_end }})</p>
+            {% endif %}        </div>
     </div>
 
     {% if show_task_feedback %}

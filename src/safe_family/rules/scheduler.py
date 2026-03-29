@@ -18,6 +18,7 @@ from src.safe_family.auto_git.auto_git import rule_auto_commit
 from src.safe_family.core.auth import admin_required
 from src.safe_family.core.extensions import get_db_connection, local_tz
 from src.safe_family.notifications.notifier import send_hammerspoon_alert
+from src.safe_family.utils.helpers import get_agile_config, set_agile_config
 from src.safe_family.urls.analyzer import (
     get_time_range,
     log_analysis,
@@ -555,6 +556,13 @@ def schedule_rules():
             conn.commit()
             flash("Rule assignments updated.", "success")
 
+        elif action == "update_agile_config":
+            for key, value in request.form.items():
+                if key.startswith("config_"):
+                    config_key = key.replace("config_", "")
+                    set_agile_config(config_key, value)
+            flash("Agile configurations updated.", "success")
+
         return redirect(url_for("schedule_rules.schedule_rules"))
 
     cur.execute("""
@@ -572,6 +580,11 @@ def schedule_rules():
         ORDER BY enabled DESC, start_time ASC
     """)
     rules = cur.fetchall()
+
+    # Fetch agile configs
+    cur.execute("SELECT config_key, config_value FROM agile_config ORDER BY config_key")
+    agile_configs = {r[0]: r[1] for r in cur.fetchall()}
+
     cur.close()
 
     scheduled_jobs = get_scheduled_job_details()
@@ -582,6 +595,7 @@ def schedule_rules():
         assigned_rules=assigned_rules,
         available_rules=RULE_FUNCTIONS.keys(),
         scheduled_jobs=scheduled_jobs,
+        agile_configs=agile_configs,
     )
 
 

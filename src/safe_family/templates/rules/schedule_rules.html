@@ -140,4 +140,32 @@
     </form>
 </div>
 
+<div class="card">
+    <div class="card-header">Agile Configuration Management</div>
+    <form method="POST">
+        <input type="hidden" name="action" value="update_agile_config">
+        <table class="table-modern">
+            <tr>
+                <th>Configuration Key</th>
+                <th>Value</th>
+            </tr>
+            <tr>
+                <td>show_disable_button_start</td>
+                <td>
+                    <input type="time" name="config_show_disable_button_start"
+                        value="{{ agile_configs.get('show_disable_button_start', '16:00') }}">
+                </td>
+            </tr>
+            <tr>
+                <td>show_disable_button_end</td>
+                <td>
+                    <input type="time" name="config_show_disable_button_end"
+                        value="{{ agile_configs.get('show_disable_button_end', '18:00') }}">
+                </td>
+            </tr>
+        </table>
+        <button class="btn btn-primary" type="submit">Update Agile Config</button>
+    </form>
+</div>
+
 {% endblock %}

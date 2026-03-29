@@ -237,3 +237,22 @@ class AuthCode(db.Model):
         if self.expires_at.tzinfo is None:
             now = now.replace(tzinfo=None)
         return self.expires_at <= now
+
+
+class AgileConfig(db.Model):
+    """Configuration table for agile settings."""
+
+    __tablename__ = "agile_config"
+
+    id = db.Column(db.Integer, primary_key=True)
+    config_key = db.Column(db.String(100), unique=True, nullable=False)
+    config_value = db.Column(db.Text, nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
+
+    def __repr__(self) -> str:
+        """Return a string representation of the AgileConfig."""
+        return f"<AgileConfig(key='{self.config_key}', value='{self.config_value}')>"

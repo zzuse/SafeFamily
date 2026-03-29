@@ -22,6 +22,7 @@ from src.safe_family.rules.scheduler import (
     load_schedules,
     notify_schedule_change,
 )
+from src.safe_family.utils.helpers import get_agile_config
 from src.safe_family.utils.constants import Saturday
 
 logger = logging.getLogger(__name__)
@@ -197,7 +198,16 @@ def todo_page():
     conn.close()
 
     now = datetime.now(local_tz).time()
-    show_disable_button = (today_tasks != [] and time(16, 0) <= now <= time(18, 0)) or (
+    config_start = get_agile_config("show_disable_button_start", "16:00")
+    config_end = get_agile_config("show_disable_button_end", "18:00")
+    try:
+        start_time = datetime.strptime(config_start, "%H:%M").time()
+        end_time = datetime.strptime(config_end, "%H:%M").time()
+    except ValueError:
+        start_time = time(16, 0)
+        end_time = time(18, 0)
+
+    show_disable_button = (today_tasks != [] and start_time <= now <= end_time) or (
         role == "admin"
     )
     show_task_feedback = not (role == "admin" and selected_user != username)
@@ -216,6 +226,8 @@ def todo_page():
         message=message,
         today_tasks=today_tasks,
         show_disable_button=show_disable_button,
+        show_disable_button_start=config_start,
+        show_disable_button_end=config_end,
         selected_user_row_id=selected_user_id,
         show_task_feedback=show_task_feedback,
     )
