@@ -61,6 +61,7 @@ def test_todo_page_saves_tasks_and_notifies(client, monkeypatch):
     )
     conn = SeqConnection(cursor)
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(todo, "get_agile_config", lambda k, d="": d)
     monkeypatch.setattr(
         todo,
         "get_current_username",
@@ -135,6 +136,7 @@ def test_split_slot_success(client, monkeypatch):
     )
     conn = SeqConnection(cursor)
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(todo, "get_agile_config", lambda k, d="": d)
     monkeypatch.setattr(
         todo,
         "get_current_username",
@@ -184,6 +186,7 @@ def test_mark_todo_status_success(client, monkeypatch):
     )
     conn = SeqConnection(cursor)
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(todo, "get_agile_config", lambda k, d="": d)
     monkeypatch.setattr(
         todo,
         "get_current_username",
@@ -214,6 +217,7 @@ def test_notify_current_task_success(client, monkeypatch):
     cursor = SeqCursor(fetchall_values=[[(time_slot, "Read")]])
     conn = SeqConnection(cursor)
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(todo, "get_agile_config", lambda k, d="": d)
     monkeypatch.setattr(
         todo,
         "get_current_username",
@@ -276,6 +280,7 @@ def test_update_tag_forbidden(client, monkeypatch):
     cursor = SeqCursor(fetchone_values=[("bob",)])
     conn = SeqConnection(cursor)
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(todo, "get_agile_config", lambda k, d="": d)
     monkeypatch.setattr(
         todo,
         "get_current_username",
@@ -293,6 +298,7 @@ def test_update_tag_success(client, monkeypatch):
     cursor = SeqCursor(fetchone_values=[("alice",)])
     conn = SeqConnection(cursor)
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(todo, "get_agile_config", lambda k, d="": d)
     monkeypatch.setattr(
         todo,
         "get_current_username",

@@ -60,6 +60,7 @@ def test_todo_page_admin_renders(client, monkeypatch):
     )
     conn = SeqConnection(cursor)
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(todo, "get_agile_config", lambda k, d="": d)
     monkeypatch.setattr(
         todo,
         "get_current_username",
@@ -125,6 +126,7 @@ def test_todo_page_uses_parameterized_date(client, monkeypatch):
     )
     conn = SeqConnection(cursor)
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(todo, "get_agile_config", lambda k, d="": d)
     monkeypatch.setattr(
         todo,
         "get_current_username",

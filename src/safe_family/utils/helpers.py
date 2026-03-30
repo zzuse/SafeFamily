@@ -7,9 +7,11 @@ logger = logging.getLogger(__name__)
 
 def get_agile_config(config_key: str, default_value: str = "") -> str:
     """Retrieve an agile configuration value by key."""
-    conn = get_db_connection()
-    cur = conn.cursor()
+    conn = None
+    cur = None
     try:
+        conn = get_db_connection()
+        cur = conn.cursor()
         cur.execute(
             "SELECT config_value FROM agile_config WHERE config_key = %s",
             (config_key,),
@@ -22,14 +24,18 @@ def get_agile_config(config_key: str, default_value: str = "") -> str:
         logger.error("Error fetching agile config %s: %s", config_key, e)
         return default_value
     finally:
-        cur.close()
-        conn.close()
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
 
 def set_agile_config(config_key: str, config_value: str):
     """Update or insert an agile configuration value."""
-    conn = get_db_connection()
-    cur = conn.cursor()
+    conn = None
+    cur = None
     try:
+        conn = get_db_connection()
+        cur = conn.cursor()
         cur.execute(
             """
             INSERT INTO agile_config (config_key, config_value)
@@ -42,7 +48,10 @@ def set_agile_config(config_key: str, config_value: str):
         conn.commit()
     except Exception as e:
         logger.error("Error setting agile config %s: %s", config_key, e)
-        conn.rollback()
+        if conn:
+            conn.rollback()
     finally:
-        cur.close()
-        conn.close()
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
