@@ -33,8 +33,8 @@ def test_generate_time_slots_weekend_hour():
         today=weekend,
     )
     assert slots[0] == "09:00 - 10:00"
-    assert slots[-1] == "15:00 - 16:00"
-    assert len(slots) == 7
+    assert slots[-1] == "16:00 - 17:00"
+    assert len(slots) == 8
 
 
 def test_generate_time_slots_custom_invalid_falls_back():

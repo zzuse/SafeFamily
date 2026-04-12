@@ -323,6 +323,11 @@ def test_exec_rules_no_lock(client, monkeypatch):
 
     monkeypatch.setattr(todo, "RULE_EXEC_LOCK", DummyLock())
     monkeypatch.setattr(todo, "flash", lambda *a, **k: None)
+    monkeypatch.setattr(
+        todo,
+        "get_current_username",
+        lambda: SimpleNamespace(username="user", role="user"),
+    )
     _login_session(client, monkeypatch)
 
     resp = client.post("/exec_rules/u1")
@@ -338,12 +343,32 @@ def test_exec_rules_disable_all_triggers_schedule(client, monkeypatch):
         def release(self):
             return None
 
-    cursor = SeqCursor(fetchone_values=[("Rule disable all",)])
+    # Seq of fetchones in exec_rules:
+    # 1. Assigned rule name: ("Rule disable all",)
+    # 2. SELECT username FROM users WHERE id = %s: ("user",)
+    # 3. SELECT 1 FROM todo_list WHERE username = %s AND date = CURRENT_DATE: (1,)
+    cursor = SeqCursor(fetchone_values=[("Rule disable all",), ("user",), (1,)])
     conn = SeqConnection(cursor)
     monkeypatch.setattr(todo, "RULE_EXEC_LOCK", DummyLock())
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
     monkeypatch.setattr(todo, "flash", lambda *a, **k: None)
     monkeypatch.setattr(todo.time_module, "monotonic", lambda: 100.0)
+    monkeypatch.setattr(
+        todo,
+        "get_current_username",
+        lambda: SimpleNamespace(username="user", role="user"),
+    )
+    
+    # Mock time to be within 16:00 - 18:00
+    mock_now = datetime(2026, 4, 12, 17, 0, 0)
+    class MockDatetime:
+        @classmethod
+        def now(cls, tz=None): return mock_now
+        @classmethod
+        def strptime(cls, *args, **kwargs): return datetime.strptime(*args, **kwargs)
+    monkeypatch.setattr(todo, "datetime", MockDatetime)
+    monkeypatch.setattr(todo, "get_agile_config", lambda k, d: d)
+
     todo.RULE_EXEC_STATE["last_run"] = 0.0
     called = {"load": 0, "notify": 0}
     monkeypatch.setattr(todo, "load_schedules", lambda: called.__setitem__("load", called["load"] + 1))
