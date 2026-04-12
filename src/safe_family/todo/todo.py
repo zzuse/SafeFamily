@@ -22,8 +22,8 @@ from src.safe_family.rules.scheduler import (
     load_schedules,
     notify_schedule_change,
 )
-from src.safe_family.utils.helpers import get_agile_config
 from src.safe_family.utils.constants import Saturday
+from src.safe_family.utils.helpers import get_agile_config
 
 logger = logging.getLogger(__name__)
 todo_bp = Blueprint("todo", __name__)
@@ -66,7 +66,7 @@ def generate_time_slots(
     if schedule_mode != "custom":
         if schedule_mode == "holiday" or is_weekend:
             start_hour, start_minute = 9, 0
-            end_hour, end_minute = 16, 0
+            end_hour, end_minute = 17, 0
         else:
             start_hour, start_minute = 18, 30
             end_hour, end_minute = 21, 30
@@ -456,7 +456,9 @@ def mark_todo_status():
         status = (data.get("status") or "").strip().lower()
         allowed = {"skipped", "partially done", "half done", "mostly done", "done"}
         if status not in allowed:
-            logger.warning("mark_status: invalid status id=%s status=%s", todo_id, status)
+            logger.warning(
+                "mark_status: invalid status id=%s status=%s", todo_id, status
+            )
             return jsonify({"success": False, "error": "invalid status"}), 400
 
         conn = get_db_connection()
@@ -485,7 +487,9 @@ def mark_todo_status():
             end_time = datetime.strptime(end_str, "%H:%M").time()
         except (ValueError, AttributeError):
             conn.close()
-            logger.warning("mark_status: invalid time slot id=%s time_slot=%s", todo_id, time_slot)
+            logger.warning(
+                "mark_status: invalid time slot id=%s time_slot=%s", todo_id, time_slot
+            )
             return jsonify({"success": False, "error": "invalid time slot"}), 402
 
         now = datetime.now(local_tz)
@@ -495,7 +499,9 @@ def mark_todo_status():
         end_dt = local_tz.localize(end_dt_naive)
         if now < end_dt and not is_admin:
             conn.close()
-            logger.warning("mark_status: too early id=%s now=%s end=%s", todo_id, now, end_dt)
+            logger.warning(
+                "mark_status: too early id=%s now=%s end=%s", todo_id, now, end_dt
+            )
             return jsonify({"success": False, "error": "too early"}), 403
 
         cur.execute(
@@ -806,6 +812,11 @@ def update_tag():
 @login_required
 def exec_rules(selected_user_id: str):
     """Execute assigned rules for the selected user."""
+    user = get_current_username()
+    if user is None:
+        flash("Please log in to access this feature.", "warning")
+        return redirect("/auth/login-ui")
+
     if not RULE_EXEC_LOCK.acquire(blocking=False):
         flash("Rules update already in progress.", "warning")
         return redirect(url_for("todo.todo_page"))
@@ -830,6 +841,33 @@ def exec_rules(selected_user_id: str):
         if not rule_name:
             flash("No rule assigned to the user.", "warning")
             return redirect(url_for("todo.todo_page"))
+
+        if rule_name == "Rule disable all" and user.role != "admin":
+            now_time = datetime.now(local_tz).time()
+            config_start = get_agile_config("show_disable_button_start", "16:00")
+            config_end = get_agile_config("show_disable_button_end", "18:00")
+            try:
+                start_time = datetime.strptime(config_start, "%H:%M").time()
+                end_time = datetime.strptime(config_end, "%H:%M").time()
+            except ValueError:
+                start_time = time(16, 0)
+                end_time = time(18, 0)
+
+            if not (start_time <= now_time <= end_time):
+                flash("Not proper time to disable rules.", "warning")
+                return redirect(url_for("todo.todo_page"))
+
+            cur.execute("SELECT username FROM users WHERE id = %s", (user_id,))
+            u_row = cur.fetchone()
+            selected_username = u_row[0] if u_row else None
+            if selected_username:
+                cur.execute(
+                    "SELECT 1 FROM todo WHERE username = %s AND date = CURRENT_DATE LIMIT 1",
+                    (selected_username,),
+                )
+                if not cur.fetchone():
+                    flash("No tasks for today, cannot disable rules.", "warning")
+                    return redirect(url_for("todo.todo_page"))
 
         func = RULE_FUNCTIONS.get(rule_name)
         if func:
