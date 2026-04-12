@@ -862,7 +862,7 @@ def exec_rules(selected_user_id: str):
             selected_username = u_row[0] if u_row else None
             if selected_username:
                 cur.execute(
-                    "SELECT 1 FROM todo WHERE username = %s AND date = CURRENT_DATE LIMIT 1",
+                    "SELECT 1 FROM todo_list WHERE username = %s AND date = CURRENT_DATE LIMIT 1",
                     (selected_username,),
                 )
                 if not cur.fetchone():
