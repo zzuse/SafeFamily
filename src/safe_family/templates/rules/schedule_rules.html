@@ -166,6 +166,20 @@
         </table>
         <button class="btn btn-primary" type="submit">Update Agile Config</button>
     </form>
+
+    <div style="margin-top: 20px; padding: 15px; border-top: 1px solid #ddd;">
+        <h4 style="margin-top: 0;">Calculate from Timestamp</h4>
+        <form method="POST" style="display: flex; align-items: center; gap: 10px;">
+            <input type="hidden" name="action" value="calc_agile_config">
+            <label for="timestamp_input">Select Time (HH:MM):</label>
+            <input type="text" name="timestamp_input" id="timestamp_input" required 
+                placeholder="09:30" pattern="(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]"
+                title="Enter time in 24-hour format (e.g. 09:30 or 14:15)"
+                class="bg-orange-500/10 text-[#ff6b00]" style="padding: 4px 8px; border: 1px solid #ff6b00; width: 80px; text-align: center;">
+            <button class="btn border bg-orange-500/10 text-[#ff6b00]" type="submit">Calculate & Update</button>
+        </form>
+        <div class="note">Formula: start = ((-3)*input+46)/4 + 12, end = start + 0.5h</div>
+    </div>
 </div>
 
 {% endblock %}

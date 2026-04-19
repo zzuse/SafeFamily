@@ -18,7 +18,11 @@ from src.safe_family.auto_git.auto_git import rule_auto_commit
 from src.safe_family.core.auth import admin_required
 from src.safe_family.core.extensions import get_db_connection, local_tz
 from src.safe_family.notifications.notifier import send_hammerspoon_alert
-from src.safe_family.utils.helpers import get_agile_config, set_agile_config
+from src.safe_family.utils.helpers import (
+    get_agile_config,
+    set_agile_config,
+    update_agile_config_by_timestamp,
+)
 from src.safe_family.urls.analyzer import (
     get_time_range,
     log_analysis,
@@ -562,6 +566,13 @@ def schedule_rules():
                     config_key = key.replace("config_", "")
                     set_agile_config(config_key, value)
             flash("Agile configurations updated.", "success")
+
+        elif action == "calc_agile_config":
+            timestamp_str = request.form.get("timestamp_input", "00:00")
+            if update_agile_config_by_timestamp(timestamp_str):
+                flash(f"Agile config calculated and updated for input: {timestamp_str}", "success")
+            else:
+                flash("Failed to calculate agile config.", "error")
 
         return redirect(url_for("schedule_rules.schedule_rules"))
 
