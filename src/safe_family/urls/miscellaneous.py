@@ -19,9 +19,19 @@ def index():
 @root_bp.route("/store_sum")
 @login_required
 def store_sum():
-    """Redirect to the store_sum page.
+    """Render the dynamic store sum calculator.
 
-    This route redirects users to the store_sum page.
+    This route renders a page where users can calculate lotto and other item sums in real-time.
+    """
+    return render_template("miscellaneous/store_calculator.html")
+
+
+@root_bp.route("/store_sum_static")
+@login_required
+def store_sum_static():
+    """Render the static store_sum page.
+
+    This route renders the original static accounting page.
     """
     return render_template("miscellaneous/store_sum.html")
 

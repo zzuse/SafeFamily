@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="calculator-container p-4 max-w-6xl mx-auto">
+    <h1 class="card-header">Store Accounting Tool</h1>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <!-- LOTTO SECTION -->
+        <section class="flex flex-col gap-6">
+            <h2 class="text-2xl font-black text-black border-b-4 border-black pb-2 uppercase tracking-tighter">Lotto
+                Calculator</h2>
+            <div class="bg-white p-6 shadow-md rounded-lg border border-gray-300">
+                <table class="w-full text-lg">
+                    <thead>
+                        <tr class="border-b-2 border-black">
+                            <th class="py-3 text-left text-black font-bold uppercase tracking-wider">Price</th>
+                            <th class="py-3 text-center text-black font-bold uppercase tracking-wider">Till 1</th>
+                            <th class="py-3 text-center text-black font-bold uppercase tracking-wider">Till 2</th>
+                            <th class="py-3 text-center text-blue-700 font-bold uppercase tracking-wider">Count</th>
+                            <th class="py-3 text-right text-black font-bold uppercase tracking-wider">Sum</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in [1, 2, 3, 4, 5, 7, 10, 20, 30, 50, 100] %}
+                        <tr class="lotto-row border-b last:border-0 border-gray-200" data-price="{{ p }}">
+                            <td class="py-3 font-black text-black text-2xl">${{ p }}</td>
+                            <td class="py-3 text-center">
+                                <input type="number" min="0" value="0"
+                                    class="till1-input w-20 text-center text-xl font-semibold border-2 border-gray-400 rounded focus:border-blue-600 focus:ring-0 focus:outline-none py-1">
+                            </td>
+                            <td class="py-3 text-center">
+                                <input type="number" min="0" value="0"
+                                    class="till2-input w-20 text-center text-xl font-semibold border-2 border-gray-400 rounded focus:border-blue-600 focus:ring-0 focus:outline-none py-1">
+                            </td>
+                            <td class="py-3 text-center">
+                                <span class="total-count font-bold text-blue-700 text-xl">0</span>
+                            </td>
+                            <td class="row-sum text-right font-bold text-black text-xl">$0.00</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="p-6 bg-slate-900 text-white rounded-xl shadow-lg border-4 border-black text-center">
+                <div class="text-sm text-slate-300 uppercase font-black mb-1">Lotto Grand Total</div>
+                <div id="lotto-grand-total" class="text-5xl font-black text-green-400">$0.00</div>
+            </div>
+        </section>
+
+        <!-- CASH SECTION -->
+        <section class="flex flex-col gap-6">
+            <h2 class="text-2xl font-black text-black border-b-4 border-black pb-2 uppercase tracking-tighter">Cash
+                Counter</h2>
+            <div class="bg-white p-6 shadow-md rounded-lg border border-gray-300">
+                <table class="w-full text-lg">
+                    <thead>
+                        <tr class="border-b-2 border-black">
+                            <th class="py-3 text-left text-black font-bold uppercase tracking-wider">Denom</th>
+                            <th class="py-3 text-center text-black font-bold uppercase tracking-wider">Count</th>
+                            <th class="py-3 text-right text-black font-bold uppercase tracking-wider">Sum</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in [100, 50, 20, 10, 5, 2, 1, 0.25, 0.1, 0.05] %}
+                        <tr class="cash-row border-b last:border-0 border-gray-200" data-denom="{{ d }}">
+                            <td class="py-3 font-black text-black text-2xl">${{ "%.2f"|format(d) if d < 1 else d|int
+                                    }}</td>
+                            <td class="py-3 text-center">
+                                <input type="number" min="0" value="0"
+                                    class="cash-input w-32 text-center text-xl font-semibold border-2 border-gray-400 rounded focus:border-green-600 focus:ring-0 focus:outline-none py-1">
+                            </td>
+                            <td class="cash-sum text-right font-bold text-black text-xl">$0.00</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="p-6 bg-slate-900 text-white rounded-xl shadow-lg border-4 border-black text-center">
+                <div class="text-sm text-slate-300 uppercase font-black mb-1">Cash Grand Total</div>
+                <div id="cash-grand-total" class="text-5xl font-black text-yellow-400">$0.00</div>
+            </div>
+        </section>
+    </div>
+
+    <!-- GLOBAL ACTIONS -->
+    <div class="mt-12 flex justify-center space-x-6">
+        <button id="reset-btn" class="btn border bg-orange-500/10 text-[#ff6b00] active:scale-95">Reset All
+            Fields</button>
+        <a href="{{ url_for('index.store_sum_static') }}" class="btn btn-primary active:scale-95">Static
+            View</a>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const calcLotto = () => {
+            let grandTotal = 0;
+            document.querySelectorAll('.lotto-row').forEach(r => {
+                const price = parseFloat(r.dataset.price);
+                const count1 = parseInt(r.querySelector('.till1-input').value) || 0;
+                const count2 = parseInt(r.querySelector('.till2-input').value) || 0;
+                const totalCount = count1 + count2;
+                const rowSum = price * totalCount;
+                r.querySelector('.total-count').textContent = totalCount;
+                r.querySelector('.row-sum').textContent = '$' + rowSum.toFixed(2);
+                grandTotal += rowSum;
+            });
+            document.getElementById('lotto-grand-total').textContent = '$' + grandTotal.toFixed(2);
+        };
+
+        const calcCash = () => {
+            let grandTotal = 0;
+            document.querySelectorAll('.cash-row').forEach(r => {
+                const denom = parseFloat(r.dataset.denom);
+                const count = parseInt(r.querySelector('.cash-input').value) || 0;
+                const rowSum = denom * count;
+                r.querySelector('.cash-sum').textContent = '$' + rowSum.toFixed(2);
+                grandTotal += rowSum;
+            });
+            document.getElementById('cash-grand-total').textContent = '$' + grandTotal.toFixed(2);
+        };
+
+        const updateAll = () => {
+            calcLotto();
+            calcCash();
+        };
+
+        document.querySelectorAll('input').forEach(i => {
+            i.addEventListener('input', updateAll);
+            i.addEventListener('focus', function () { this.select(); });
+        });
+
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            if (confirm('Reset all accounting data to zero?')) {
+                document.querySelectorAll('input').forEach(i => i.value = 0);
+                updateAll();
+            }
+        });
+
+        // Initial run
+        updateAll();
+    });
+</script>
+{% endblock %}
