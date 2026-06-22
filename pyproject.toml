@@ -1,5 +1,6 @@
 [tool.ruff]
 lint.extend-select = ["ALL"]
+lint.per-file-ignores = {"tests/*" = ["S101", "ANN001", "ANN202"]}
 lint.ignore = [
     "T201",
     "E501",

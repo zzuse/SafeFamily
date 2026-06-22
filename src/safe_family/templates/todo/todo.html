@@ -154,8 +154,10 @@
             {% else %}
             <p class="note" style="background-color: transparent;">Not proper time to disable rules
                 (button
-                available between {{ show_disable_button_start }} and {{ show_disable_button_end }})</p>
-            {% endif %}        </div>
+                available between {{ show_disable_button_start }} and {{ show_disable_button_end }}) ******
+                disable = ((-3) * start(HH:MM) + 46) / 4 + delay(MM)/60 + eating(MM)/60 + 12</p>
+            {% endif %}
+        </div>
     </div>
 
     {% if show_task_feedback %}

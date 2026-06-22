@@ -60,10 +60,10 @@ def set_agile_config(config_key: str, config_value: str):
             conn.close()
 
 
-def update_agile_config_by_timestamp(time_str: str):
+def update_agile_config_by_timestamp(time_str: str, delay_minutes: float = 0, eating_minutes: float = 0):
     """Update agile_config show_disable_button_start and end based on a formula.
     Accepts time_str in "HH:MM" format, converts to float hours, then:
-    show_disable_button_start = ((-3) * input + 46) / 4 + 12
+    show_disable_button_start = ((-3) * input + 46) / 4 + delay/60 + eating/60 + 12
     show_disable_button_end = show_disable_button_start + 0.5 hours
     """
     try:
@@ -76,7 +76,7 @@ def update_agile_config_by_timestamp(time_str: str):
         minutes = int(parts[1])
         input_val = hours + (minutes / 60.0)
 
-        start_hours = ((-3.0) * input_val + 46.0) / 4.0 + 12.0
+        start_hours = ((-3.0) * input_val + 46.0) / 4.0 + delay_minutes / 60.0 + eating_minutes / 60.0 + 12.0
         end_hours = start_hours + 0.5
 
         def format_hours(h):

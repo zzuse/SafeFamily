@@ -90,6 +90,7 @@ On the first run, the `db` service automatically imports `deploy/init_db/dump.sq
 - **AdGuard Rules**: The directory specified by `HOST_ADGUARD_RULE_PATH` in your `.env` is mounted to allow rule manipulation.
 
 ### 4. Useful Commands
+- **Start / Stop (daily use)**: `docker compose start` / `docker compose stop`
 - **View Logs**: `docker-compose logs -f app`
 - **Restart App**: `docker-compose restart app`
 - **Rebuild and Restart**: `docker-compose up -d --build app`

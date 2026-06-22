@@ -569,7 +569,9 @@ def schedule_rules():
 
         elif action == "calc_agile_config":
             timestamp_str = request.form.get("timestamp_input", "00:00")
-            if update_agile_config_by_timestamp(timestamp_str):
+            delay_minutes = float(request.form.get("delay_input", 0) or 0)
+            eating_minutes = float(request.form.get("eating_input", 0) or 0)
+            if update_agile_config_by_timestamp(timestamp_str, delay_minutes, eating_minutes):
                 flash(f"Agile config calculated and updated for input: {timestamp_str}", "success")
             else:
                 flash("Failed to calculate agile config.", "error")
