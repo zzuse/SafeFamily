@@ -4,7 +4,7 @@
 <div class="calculator-container p-4 max-w-6xl mx-auto">
     <h1 class="card-header">Store Accounting Tool</h1>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
         <!-- LOTTO SECTION -->
         <section class="flex flex-col gap-6">
             <h2 class="text-2xl font-black text-black border-b-4 border-black pb-2 uppercase tracking-tighter">Lotto
@@ -80,6 +80,48 @@
                 <div id="cash-grand-total" class="text-5xl font-black text-yellow-400">$0.00</div>
             </div>
         </section>
+        <!-- CIGAR SECTION -->
+        <section class="flex flex-col gap-6">
+            <h2 class="text-2xl font-black text-black border-b-4 border-black pb-2 uppercase tracking-tighter">Cigar
+                Counter</h2>
+            <div class="bg-white p-6 shadow-md rounded-lg border border-gray-300">
+                <table class="w-full text-lg">
+                    <thead>
+                        <tr class="border-b-2 border-black">
+                            <th class="py-3 text-left text-black font-bold uppercase tracking-wider">#</th>
+                            <th class="py-3 text-center text-black font-bold uppercase tracking-wider">1</th>
+                            <th class="py-3 text-center text-black font-bold uppercase tracking-wider">8</th>
+                            <th class="py-3 text-center text-black font-bold uppercase tracking-wider">10</th>
+                            <th class="py-3 text-right text-purple-700 font-bold uppercase tracking-wider">Sum</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in range(1, 10) %}
+                        <tr class="cigar-row border-b last:border-0 border-gray-200">
+                            <td class="py-3 font-black text-black text-2xl">{{ r }}</td>
+                            <td class="py-3 text-center">
+                                <input type="number" min="0" value="0"
+                                    class="cigar1-input w-14 text-center text-xl font-semibold border-2 border-gray-400 rounded focus:border-purple-600 focus:ring-0 focus:outline-none py-1">
+                            </td>
+                            <td class="py-3 text-center">
+                                <input type="number" min="0" value="0"
+                                    class="cigar8-input w-14 text-center text-xl font-semibold border-2 border-gray-400 rounded focus:border-purple-600 focus:ring-0 focus:outline-none py-1">
+                            </td>
+                            <td class="py-3 text-center">
+                                <input type="number" min="0" value="0"
+                                    class="cigar10-input w-14 text-center text-xl font-semibold border-2 border-gray-400 rounded focus:border-purple-600 focus:ring-0 focus:outline-none py-1">
+                            </td>
+                            <td class="cigar-row-sum text-right font-bold text-purple-700 text-xl">0</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="p-6 bg-slate-900 text-white rounded-xl shadow-lg border-4 border-black text-center">
+                <div class="text-sm text-slate-300 uppercase font-black mb-1">Cigar Grand Total</div>
+                <div id="cigar-grand-total" class="text-5xl font-black text-purple-400">0</div>
+            </div>
+        </section>
     </div>
 
     <!-- GLOBAL ACTIONS -->
@@ -120,9 +162,23 @@
             document.getElementById('cash-grand-total').textContent = '$' + grandTotal.toFixed(2);
         };
 
+        const calcCigar = () => {
+            let grandTotal = 0;
+            document.querySelectorAll('.cigar-row').forEach(r => {
+                const c1  = parseInt(r.querySelector('.cigar1-input').value)  || 0;
+                const c8  = parseInt(r.querySelector('.cigar8-input').value)  || 0;
+                const c10 = parseInt(r.querySelector('.cigar10-input').value) || 0;
+                const rowSum = c1 * 1 + c8 * 8 + c10 * 10;
+                r.querySelector('.cigar-row-sum').textContent = rowSum;
+                grandTotal += rowSum;
+            });
+            document.getElementById('cigar-grand-total').textContent = grandTotal;
+        };
+
         const updateAll = () => {
             calcLotto();
             calcCash();
+            calcCigar();
         };
 
         document.querySelectorAll('input').forEach(i => {
