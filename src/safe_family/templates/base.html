@@ -5,43 +5,515 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title or motto }}</title>
+
+    <!-- existing third-party libs -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+    <!-- your existing tailwind output stays, so any utility you use elsewhere keeps working -->
     <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet" />
+
+    <!-- new look: typography + theme -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap"
+        rel="stylesheet">
+
+    <style>
+        /* ===== SafeFamily redesign · Quest theme =====
+         * Swap to Hearth by replacing the :root block with the
+         * commented one at the bottom of this style sheet.
+         */
+        :root {
+            --sf-bg: #0A0E1A;
+            --sf-surface: #131829;
+            --sf-surface-2: #1B2236;
+            --sf-surface-3: #0F1422;
+            --sf-border: #1F2940;
+            --sf-border-strong: #25304F;
+            --sf-ink: #E8ECF5;
+            --sf-ink-muted: #8B95B0;
+            --sf-ink-dim: #5B6680;
+            --sf-accent: #FF7A2E;
+            --sf-accent-soft: rgba(255, 122, 46, .14);
+            --sf-accent-glow: #FFB876;
+            --sf-success: #4ADE80;
+            --sf-success-soft: rgba(74, 222, 128, .18);
+            --sf-info: #06B6D4;
+            --sf-purple: #A78BFA;
+            --sf-danger: #F87171;
+            --sf-danger-soft: rgba(248, 113, 113, .15);
+
+            --sf-radius: 8px;
+            --sf-radius-sm: 5px;
+            --sf-mono: 'JetBrains Mono', ui-monospace, monospace;
+            --sf-display: 'Space Grotesk', system-ui, sans-serif;
+            --sf-ui: 'Geist', system-ui, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--sf-bg);
+            color: var(--sf-ink);
+            font-family: var(--sf-ui);
+        }
+
+        a {
+            color: inherit;
+        }
+
+        .sf-shell {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 0 24px 60px;
+        }
+
+        /* ===== top bar ===== */
+        .sf-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--sf-border);
+            margin-bottom: 18px;
+        }
+
+        .sf-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-family: var(--sf-display);
+            font-weight: 600;
+            font-size: 17px;
+        }
+
+        .sf-brand-mark {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--sf-accent), var(--sf-accent-glow));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--sf-bg);
+            font-weight: 800;
+            font-family: var(--sf-display);
+        }
+
+        .sf-brand-tm {
+            color: var(--sf-ink-dim);
+            font-weight: 500;
+            font-size: 12px;
+            margin-left: 6px;
+        }
+
+        .sf-nav {
+            display: flex;
+            gap: 2px;
+            font-size: 13px;
+        }
+
+        .sf-nav a {
+            padding: 6px 10px;
+            border-radius: 6px;
+            color: var(--sf-ink-muted);
+            text-decoration: none;
+        }
+
+        .sf-nav a:hover {
+            color: var(--sf-ink);
+            background: var(--sf-surface);
+        }
+
+        .sf-nav a.active {
+            background: var(--sf-accent-soft);
+            color: var(--sf-accent);
+            font-weight: 600;
+        }
+
+        .sf-user {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: var(--sf-ink-muted);
+        }
+
+        .sf-user-badge {
+            background: var(--sf-accent-soft);
+            color: var(--sf-accent);
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 700;
+            letter-spacing: .1em;
+        }
+
+        .sf-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--sf-accent), var(--sf-accent-glow));
+            color: var(--sf-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        /* ===== flash ===== */
+        .flash {
+            padding: 10px 14px;
+            border-radius: var(--sf-radius-sm);
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+
+        .flash.success,
+        .flash.info {
+            background: var(--sf-success-soft);
+            color: var(--sf-success);
+            border: 1px solid rgba(74, 222, 128, .3);
+        }
+
+        .flash.danger,
+        .flash.error {
+            background: var(--sf-danger-soft);
+            color: var(--sf-danger);
+            border: 1px solid rgba(248, 113, 113, .3);
+        }
+
+        .flash.warning {
+            background: var(--sf-accent-soft);
+            color: var(--sf-accent);
+            border: 1px solid rgba(255, 122, 46, .3);
+        }
+
+        /* ===== generic cards / buttons (override your legacy ones) ===== */
+        .card,
+        .sf-card {
+            background: var(--sf-surface);
+            border: 1px solid var(--sf-border);
+            border-radius: var(--sf-radius);
+            padding: 18px;
+            margin-bottom: 16px;
+        }
+
+        .card-header,
+        .sf-card-header {
+            font-family: var(--sf-display);
+            font-weight: 600;
+            font-size: 16px;
+            color: var(--sf-ink);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin: 0 0 12px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 12px;
+            border-radius: var(--sf-radius-sm);
+            font-family: var(--sf-ui);
+            font-size: 13px;
+            font-weight: 600;
+            border: 1px solid transparent;
+            cursor: pointer;
+            background: var(--sf-surface-2);
+            color: var(--sf-ink);
+            text-decoration: none;
+            transition: background .15s, transform .05s;
+        }
+
+        .btn:hover {
+            background: var(--sf-border-strong);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn-primary {
+            background: var(--sf-accent);
+            color: var(--sf-bg);
+            font-weight: 700;
+        }
+
+        .btn-primary:hover {
+            background: var(--sf-accent-glow);
+        }
+
+        .btn-secondary {
+            background: var(--sf-surface-2);
+            color: var(--sf-ink);
+            border-color: var(--sf-border-strong);
+        }
+
+        .btn-danger {
+            background: var(--sf-danger-soft);
+            color: var(--sf-danger);
+            border-color: rgba(248, 113, 113, .3);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--sf-ink-muted);
+        }
+
+        .btn-ghost:hover {
+            color: var(--sf-ink);
+            background: var(--sf-surface);
+        }
+
+        /* form controls */
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        input[type="time"],
+        input[type="date"],
+        input[type="datetime-local"],
+        input[type="number"],
+        select,
+        textarea {
+            background: var(--sf-surface-3);
+            color: var(--sf-ink);
+            border: 1px solid var(--sf-border-strong);
+            border-radius: var(--sf-radius-sm);
+            padding: 6px 10px;
+            font-family: var(--sf-ui);
+            font-size: 13px;
+            outline: none;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: var(--sf-accent);
+            box-shadow: 0 0 0 3px var(--sf-accent-soft);
+        }
+
+        input[type="checkbox"] {
+            accent-color: var(--sf-accent);
+            width: 16px;
+            height: 16px;
+        }
+
+        label {
+            font-size: 12px;
+            color: var(--sf-ink-muted);
+        }
+
+        /* tables */
+        .table-modern {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .table-modern th {
+            text-align: left;
+            padding: 8px 12px;
+            font-size: 10px;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--sf-ink-dim);
+            font-weight: 600;
+            background: var(--sf-surface-3);
+            border-bottom: 1px solid var(--sf-border);
+        }
+
+        .table-modern td {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--sf-border);
+        }
+
+        .table-modern tr:last-child td {
+            border-bottom: 0;
+        }
+
+        /* note / hint pill */
+        .note {
+            font-size: 12px;
+            color: var(--sf-ink-muted);
+            background: var(--sf-surface-3);
+            border: 1px solid var(--sf-border);
+            border-radius: var(--sf-radius-sm);
+            padding: 8px 12px;
+        }
+
+        /* ===== rainbow progress bar (your favorite, refined) ===== */
+        .sf-rainbow {
+            display: grid;
+            gap: 3px;
+            height: 18px;
+            margin-top: 8px;
+            grid-template-columns: repeat(var(--sf-slot-count, 12), 1fr);
+        }
+
+        .sf-rainbow>i {
+            display: block;
+            border-radius: 3px;
+            background: var(--sf-seg-color, var(--sf-border));
+            opacity: var(--sf-seg-opacity, .18);
+            box-shadow: 0 0 var(--sf-seg-glow, 0px) var(--sf-seg-color, transparent);
+        }
+
+        .sf-rainbow>i[data-state="done"] {
+            opacity: 1;
+            box-shadow: 0 0 10px var(--sf-seg-color);
+        }
+
+        .sf-rainbow>i[data-state="current"] {
+            opacity: .35;
+            border: 1.5px solid var(--sf-seg-color);
+            animation: sfPulse 2.2s ease-in-out infinite;
+        }
+
+        @keyframes sfPulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 var(--sf-accent-soft);
+            }
+
+            50% {
+                box-shadow: 0 0 0 6px transparent;
+            }
+        }
+
+        .sf-rainbow-axis {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 4px;
+            font-family: var(--sf-mono);
+            font-size: 10px;
+            color: var(--sf-ink-dim);
+            letter-spacing: .1em;
+        }
+
+        /* tag pills */
+        .sf-tag {
+            display: inline-block;
+            font-size: 10px;
+            padding: 2px 7px;
+            border-radius: 999px;
+            font-weight: 700;
+            letter-spacing: .06em;
+        }
+
+        .sf-tag-math {
+            background: rgba(167, 139, 250, .15);
+            color: var(--sf-purple);
+        }
+
+        .sf-tag-piano {
+            background: var(--sf-accent-soft);
+            color: var(--sf-accent);
+        }
+
+        .sf-tag-books {
+            background: rgba(74, 222, 128, .15);
+            color: var(--sf-success);
+        }
+
+        .sf-tag-mandatory {
+            background: var(--sf-accent-soft);
+            color: var(--sf-accent);
+        }
+
+        .sf-tag-up-next {
+            background: var(--sf-success-soft);
+            color: var(--sf-success);
+        }
+
+        .sf-tag-admin {
+            background: var(--sf-accent-soft);
+            color: var(--sf-accent);
+        }
+
+        /* footer */
+        .sf-footer {
+            text-align: center;
+            font-size: 11px;
+            color: var(--sf-ink-dim);
+            padding: 24px 0 0;
+            font-family: var(--sf-mono);
+            letter-spacing: .08em;
+        }
+
+        /* ===== Hearth alternative — uncomment the :root below and comment the dark one to switch =====
+        :root {
+            --sf-bg:#FAF5EC; --sf-surface:#FFFFFF; --sf-surface-2:#FBF8EE; --sf-surface-3:#F4EAD3;
+            --sf-border:#EDE3CF; --sf-border-strong:#E0D2B0;
+            --sf-ink:#1F1B16; --sf-ink-muted:#6B6657; --sf-ink-dim:#9C8F76;
+            --sf-accent:#E0651D; --sf-accent-soft:#FFE4D1; --sf-accent-glow:#F2A65A;
+            --sf-success:#2E8540; --sf-success-soft:#DCFCE7;
+            --sf-info:#0E6B6B; --sf-purple:#6D28D9;
+            --sf-danger:#B91C1C; --sf-danger-soft:#FEE2E2;
+            --sf-display:'Bricolage Grotesque', serif;
+        }
+        */
+    </style>
     <script src="{{ url_for('static', filename='js/tab_title.js') }}"></script>
 </head>
 
 <body>
-    <div class="container">
-        <header class="site-header">
-            <div class="logo">ZZUSE™</div>
-            <nav class="main-nav">
-                <ul>
-                    {% if session.access_token %}
-                    <li><a href="{{ url_for('suspicious.view_suspicious') }}">MGMT</a></li>
-                    <li><a href="{{ url_for('todo.todo_page') }}">TODO</a></li>
-                    <li><a href="{{ url_for('goals.goals_page') }}">GOAL</a></li>
-                    <li><a href="{{ url_for('notes.notes_view') }}">NOTE</a></li>
-                    <li><a href="{{ url_for('notes.timeline') }}">TIMELINE</a></li>
-                    <li><a href="{{ url_for('index.ninja_nightmare') }}">GAME</a></li>
-                    <li><a href="{{ url_for('index.store_sum') }}">SHEET</a></li>
-                    <li><a href="{{ url_for('auth.session_logout') }}">Logout</a></li>
-                    {% else %}
-                    <li><a href="{{ url_for('auth.show_login_form') }}">Login</a></li>
-                    <li><a href="{{ url_for('auth.session_register') }}">Register</a></li>
-                    {% endif %}
-                </ul>
+    <div class="sf-shell">
+        <header class="sf-topbar">
+            <div class="sf-brand">
+                <div class="sf-brand-mark">S</div>
+                <div>SafeFamily<span class="sf-brand-tm">ZZUSE™</span></div>
+            </div>
+            <nav class="sf-nav">
+                {% if session.access_token %}
+                <a href="{{ url_for('todo.todo_page') }}"
+                    class="{% if request.endpoint == 'todo.todo_page' %}active{% endif %}">Today</a>
+                <a href="{{ url_for('goals.goals_page') }}"
+                    class="{% if request.endpoint == 'goals.goals_page' %}active{% endif %}">Goals</a>
+                <a href="{{ url_for('notes.notes_view') }}"
+                    class="{% if request.endpoint == 'notes.notes_view' %}active{% endif %}">Notes</a>
+                <a href="{{ url_for('notes.timeline') }}"
+                    class="{% if request.endpoint == 'notes.timeline' %}active{% endif %}">Timeline</a>
+                <a href="{{ url_for('suspicious.view_suspicious') }}"
+                    class="{% if request.endpoint == 'suspicious.view_suspicious' %}active{% endif %}">MGMT</a>
+                <a href="{{ url_for('index.ninja_nightmare') }}">Game</a>
+                <a href="{{ url_for('index.store_sum') }}">Sheet</a>
+                <a href="{{ url_for('auth.session_logout') }}">Logout</a>
+                {% else %}
+                <a href="{{ url_for('auth.show_login_form') }}">Login</a>
+                <a href="{{ url_for('auth.session_register') }}">Register</a>
+                {% endif %}
             </nav>
+            <div class="sf-user">
+                {% if session.access_token %}
+                {% if session.role == 'admin' %}<span class="sf-user-badge">GAME MASTER</span>{% endif %}
+                <span>{{ session.user_name or '' }}</span>
+                <div class="sf-avatar">{{ (session.user_name or '?')[:1]|upper }}</div>
+                {% endif %}
+            </div>
         </header>
+
         {% for category, message in get_flashed_messages(with_categories=True) %}
         <div class="flash {{ category }}">{{ message }}</div>
         {% endfor %}
 
         {% block content %}{% endblock %}
 
-        <div class="footer">
-            <p style="margin: 0; font-size: x-small">Copyright 2025-2026 All rights reserved | ❤️ by ZZUSE™</p>
+        <div class="sf-footer">
+            Copyright 2025–2026 · ❤️ by ZZUSE™
         </div>
     </div>
 </body>
