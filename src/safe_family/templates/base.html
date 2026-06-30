@@ -18,7 +18,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Space+Grotesk:wght@500;600;700&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap"
         rel="stylesheet">
 
     <style>
@@ -26,6 +26,7 @@
          * Swap to Hearth by replacing the :root block with the
          * commented one at the bottom of this style sheet.
          */
+        /* ===== Quest theme (dark) — uncomment to switch back =====*/
         :root {
             --sf-bg: #0A0E1A;
             --sf-surface: #131829;
@@ -48,10 +49,40 @@
 
             --sf-radius: 8px;
             --sf-radius-sm: 5px;
-            --sf-mono: 'JetBrains Mono', ui-monospace, monospace;
-            --sf-display: 'Space Grotesk', system-ui, sans-serif;
+            --sf-mono: 'Geist Mono', ui-monospace, monospace;
+            --sf-display: 'Bricolage Grotesque', serif;
             --sf-ui: 'Geist', system-ui, sans-serif;
         }
+
+        /*===== end Quest ===== */
+
+        /* ===== Hearth theme (light, default) ===== */
+        /* :root {
+            --sf-bg: #FAF5EC;
+            --sf-surface: #FFFFFF;
+            --sf-surface-2: #FBF8EE;
+            --sf-surface-3: #F4EAD3;
+            --sf-border: #EDE3CF;
+            --sf-border-strong: #E0D2B0;
+            --sf-ink: #1F1B16;
+            --sf-ink-muted: #6B6657;
+            --sf-ink-dim: #9C8F76;
+            --sf-accent: #E0651D;
+            --sf-accent-soft: rgba(224, 101, 29, .14);
+            --sf-accent-glow: #F2A65A;
+            --sf-success: #2E8540;
+            --sf-success-soft: #DCFCE7;
+            --sf-info: #0E6B6B;
+            --sf-purple: #6D28D9;
+            --sf-danger: #B91C1C;
+            --sf-danger-soft: #FEE2E2;
+
+            --sf-radius: 8px;
+            --sf-radius-sm: 5px;
+            --sf-mono: 'Geist Mono', ui-monospace, monospace;
+            --sf-display: 'Bricolage Grotesque', serif;
+            --sf-ui: 'Geist', system-ui, sans-serif;
+        } */
 
         * {
             box-sizing: border-box;
@@ -63,7 +94,26 @@
             padding: 0;
             background: var(--sf-bg);
             color: var(--sf-ink);
-            font-family: var(--sf-ui);
+            font-family: var(--sf-ui) !important;
+        }
+
+        /* guard against Tailwind preflight overriding our fonts */
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            font-family: var(--sf-display) !important;
+        }
+
+        code,
+        pre,
+        .sf-mono,
+        .time-slot-cell,
+        .sf-rainbow-axis,
+        .sf-eyebrow {
+            font-family: var(--sf-mono) !important;
         }
 
         a {
@@ -454,18 +504,8 @@
             letter-spacing: .08em;
         }
 
-        /* ===== Hearth alternative — uncomment the :root below and comment the dark one to switch =====
-        :root {
-            --sf-bg:#FAF5EC; --sf-surface:#FFFFFF; --sf-surface-2:#FBF8EE; --sf-surface-3:#F4EAD3;
-            --sf-border:#EDE3CF; --sf-border-strong:#E0D2B0;
-            --sf-ink:#1F1B16; --sf-ink-muted:#6B6657; --sf-ink-dim:#9C8F76;
-            --sf-accent:#E0651D; --sf-accent-soft:#FFE4D1; --sf-accent-glow:#F2A65A;
-            --sf-success:#2E8540; --sf-success-soft:#DCFCE7;
-            --sf-info:#0E6B6B; --sf-purple:#6D28D9;
-            --sf-danger:#B91C1C; --sf-danger-soft:#FEE2E2;
-            --sf-display:'Bricolage Grotesque', serif;
-        }
-        */
+        /* Hearth :root is now the active default above. */
+        /* To switch back to Quest, comment the Hearth :root and uncomment the Quest block. */
     </style>
     <script src="{{ url_for('static', filename='js/tab_title.js') }}"></script>
 </head>
