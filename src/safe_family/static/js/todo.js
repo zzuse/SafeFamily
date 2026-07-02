@@ -122,8 +122,8 @@ function parseSlotStartTime(timeSlot) {
 
 function updateSlotProgress() {
     const now = new Date();
-    document.querySelectorAll(".time-slot-cell").forEach(cell => {
-        const timeSlot = cell.dataset.timeSlot;
+    document.querySelectorAll(".todo-row").forEach(row => {
+        const timeSlot = row.dataset.timeSlot;
         const startTime = parseSlotStartTime(timeSlot);
         const endTime = parseSlotEndTime(timeSlot);
         if (!startTime || !endTime) return;
@@ -134,17 +134,14 @@ function updateSlotProgress() {
         let progress = (now - startTime) / total;
         if (progress < 0) progress = 0;
         if (progress > 1) progress = 1;
-        cell.style.setProperty("--slot-fill", `${Math.round(progress * 100)}%`);
-        cell.dataset.slotProgress = progress.toFixed(3);
+        row.dataset.slotProgress = progress.toFixed(3);
 
-        const row = cell.closest(".todo-row");
-        if (!row) return;
         const checkbox = row.querySelector(".complete-checkbox");
         const status = (row.dataset.status || "").trim();
         const completed = row.dataset.completed === "true";
         const taskInput = row.querySelector(`input[name="task_${row.dataset.todoId}"]`);
         const isActive = now >= startTime && now < endTime && !completed;
-        cell.classList.toggle("is-active", isActive);
+        row.classList.toggle("is-active", isActive);
         if (now >= endTime) {
             if (checkbox) {
                 checkbox.checked = true;
@@ -848,5 +845,44 @@ function setupSplitSlotButtons() {
     });
 }
 
+function setupPlanDrawer() {
+    const toggle = document.getElementById("sf-plan-drawer-toggle");
+    const drawer = document.getElementById("sf-plan-drawer");
+    const overlay = document.getElementById("sf-plan-drawer-overlay");
+    const closeBtn = document.getElementById("sf-plan-drawer-close");
+    if (!toggle || !drawer || !overlay) return;
+
+    const DRAWER_OPEN_KEY = "sfPlanDrawerOpen";
+
+    function openDrawer() {
+        drawer.classList.add("open");
+        overlay.classList.add("open");
+        drawer.setAttribute("aria-hidden", "false");
+        sessionStorage.setItem(DRAWER_OPEN_KEY, "1");
+    }
+
+    function closeDrawer() {
+        drawer.classList.remove("open");
+        overlay.classList.remove("open");
+        drawer.setAttribute("aria-hidden", "true");
+        sessionStorage.removeItem(DRAWER_OPEN_KEY);
+    }
+
+    toggle.addEventListener("click", openDrawer);
+    overlay.addEventListener("click", closeDrawer);
+    if (closeBtn) closeBtn.addEventListener("click", closeDrawer);
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closeDrawer();
+    });
+
+    // The config selects submit the form (full page reload) on every change,
+    // so re-open the drawer automatically after that reload instead of
+    // making the user pull it out again for each field.
+    if (sessionStorage.getItem(DRAWER_OPEN_KEY) === "1") {
+        openDrawer();
+    }
+}
+
 setupSplitSlotButtons();
 setupCurrentSubtaskInputs();
+setupPlanDrawer();

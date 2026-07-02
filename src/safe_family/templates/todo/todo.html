@@ -142,24 +142,11 @@
         text-transform: uppercase;
     }
 
-    /* layout grid */
-    .sf-todo-grid {
-        display: grid;
-        grid-template-columns: 1.05fr 1fr;
-        gap: 16px;
-    }
-
-    @media (max-width: 1100px) {
-        .sf-todo-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-
-    /* missions table */
+    /* missions card */
     .sf-missions {
         background: var(--sf-surface);
         border: 1px solid var(--sf-border);
-        border-radius: var(--sf-radius);
+        border-radius: 6px;
         overflow: hidden;
     }
 
@@ -169,92 +156,112 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: 10px;
     }
 
-    .sf-missions table.table-modern td {
-        border-bottom: 1px solid var(--sf-border);
-        padding: 9px 12px;
+    .sf-missions-head-actions {
+        display: flex;
+        gap: 8px;
     }
 
-    /* keep your JS hooks working: .todo-row, .time-slot-cell, .task-cell, .complete-checkbox,
-       .admin-status-select, .task-status, .split-slot-btn, .notify-current-task-btn */
-    .time-slot-cell {
-        font-family: var(--sf-mono);
-        font-size: 12px;
-        color: var(--sf-ink-muted);
+    /* mission card grid — kid-view style, replaces the old table */
+    .sf-missions-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        padding: 16px;
+    }
+
+    @media (max-width: 720px) {
+        .sf-missions-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .sf-mission-card {
         position: relative;
-        white-space: nowrap;
-    }
-
-    .time-slot-cell::before {
-        content: '';
-        display: inline-block;
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: var(--sf-slot-color, var(--sf-accent));
-        margin-right: 6px;
-        vertical-align: middle;
-    }
-
-    /* rainbow color per slot via --slot-progress (0..1) provided by your existing template inline style */
-    .time-slot-cell {
-        --slot-color: hsl(calc(360 - var(--slot-progress, 0) * 280), 75%, 55%);
-    }
-
-    .time-slot-cell::before {
-        background: var(--slot-color);
-    }
-
-    .task-cell {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 10px;
+        background: var(--sf-surface-3);
+        border: 1px solid var(--sf-border);
+        border-left: 3px solid var(--card-color, var(--sf-border-strong));
+        border-radius: 6px;
+        padding: 10px 34px 10px 12px;
+        --card-color: hsl(calc(var(--card-hue, 0) * 260), 70%, 55%);
     }
 
-    .task-cell input[type="text"] {
+    .sf-mission-card.sf-mission-done {
+        opacity: .7;
+    }
+
+    .sf-mission-card.sf-mission-current {
+        grid-column: 1 / -1;
+        background: linear-gradient(135deg, var(--sf-surface-2), var(--sf-surface-3));
+        border: 1px solid rgba(255, 122, 46, .45);
+        border-left: 3px solid var(--sf-accent);
+        box-shadow: 0 0 0 1px rgba(255, 122, 46, .15), 0 0 30px rgba(255, 122, 46, .12);
+        padding: 14px 40px 14px 16px;
+    }
+
+    .sf-mission-check {
+        display: inline-flex;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    .sf-mission-body {
         flex: 1;
         min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .sf-mission-meta {
+        font-family: var(--sf-mono);
+        font-size: 10px;
+        color: var(--sf-ink-dim);
+        letter-spacing: .06em;
+    }
+
+    .sf-mission-title {
         background: transparent;
         border: 1px dashed var(--sf-border);
         color: var(--sf-ink);
-        padding: 4px 8px;
+        padding: 3px 6px;
         border-radius: var(--sf-radius-sm);
+        font-size: 13px;
+        width: 100%;
         transition: border-color .15s, background .15s;
     }
 
-    .task-cell input[type="text"]:hover {
+    .sf-mission-title:hover {
         border-color: var(--sf-accent);
-        background: var(--sf-surface-3);
+        background: var(--sf-surface-2);
     }
 
-    .task-cell input[type="text"]:focus {
+    .sf-mission-title:focus {
         border-style: solid;
     }
 
-    .task-cell input[type="text"].done {
+    .sf-mission-title.done {
         color: var(--sf-ink-dim);
         text-decoration: line-through;
         border-color: transparent;
     }
 
-    .task-cell input[type="text"][placeholder]:placeholder-shown {
+    .sf-mission-title[placeholder]:placeholder-shown {
         border-color: var(--sf-accent);
         color: var(--sf-accent);
         font-style: italic;
     }
 
-    .task-cell::after {
-        content: '✎';
-        color: var(--sf-ink-dim);
-        font-size: 11px;
-        opacity: .5;
-        pointer-events: none;
-    }
-
-    .task-cell:hover::after {
-        opacity: 1;
-        color: var(--sf-accent);
+    .sf-mission-side {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
     }
 
     /* ongoing mission — big icon + 3-line display */
@@ -317,14 +324,18 @@
     }
 
     .split-slot-btn {
-        background: var(--sf-surface-3);
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        background: var(--sf-surface-2);
         color: var(--sf-ink-muted);
         border: 1px solid var(--sf-border);
         border-radius: 4px;
         padding: 1px 7px;
         font-size: 11px;
-        margin-left: 4px;
+        line-height: 1.4;
         cursor: pointer;
+        z-index: 1;
     }
 
     .split-slot-btn:hover {
@@ -333,7 +344,8 @@
     }
 
     .task-status {
-        font-size: 11px;
+        font-size: 10px;
+        font-weight: 700;
         padding: 2px 8px;
         border-radius: 999px;
         display: inline-block;
@@ -372,29 +384,31 @@
         padding: 2px 6px;
     }
 
+    .todo-row[data-current="1"] .admin-status-select {
+        border-color: var(--sf-accent);
+        color: var(--sf-accent);
+    }
+
     .notify-current-task-btn {
         background: var(--sf-accent-soft);
         color: var(--sf-accent);
         border: 0;
-        padding: 3px 8px;
+        padding: 4px 8px;
         border-radius: 5px;
         font-size: 11px;
         font-weight: 600;
         cursor: pointer;
     }
 
-    /* row that is current / next up */
-    .todo-row[data-current="1"] {
-        background: rgba(255, 122, 46, .05);
-    }
-
-    .todo-row[data-current="1"] .time-slot-cell {
-        color: var(--sf-accent);
-        font-weight: 700;
-    }
-
-    .todo-row[data-current="1"] .task-cell input {
+    .sf-drawer-toggle-btn {
+        background: var(--sf-surface-2);
+        color: var(--sf-ink);
+        border: 1px solid var(--sf-border-strong);
+        padding: 4px 8px;
+        border-radius: 5px;
+        font-size: 11px;
         font-weight: 600;
+        cursor: pointer;
     }
 
     .sf-btn-row {
@@ -404,6 +418,20 @@
         padding: 12px 16px;
         border-top: 1px solid var(--sf-border);
         background: var(--sf-surface-3);
+    }
+
+    /* bottom strip: this-week + activity heatmap side by side, like the kid-view design */
+    .sf-bottom-strip {
+        display: grid;
+        grid-template-columns: 1fr 1.2fr;
+        gap: 14px;
+        margin-top: 16px;
+    }
+
+    @media (max-width: 900px) {
+        .sf-bottom-strip {
+            grid-template-columns: 1fr;
+        }
     }
 
     /* planner */
@@ -458,18 +486,53 @@
         display: none;
     }
 
-    /* mandatory chip strip */
-    .sf-mandatory-strip {
+    /* pull-out drawer for the planner + configuration forms */
+    .sf-drawer-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(10, 14, 26, .6);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .2s ease;
+        z-index: 60;
+    }
+
+    .sf-drawer-overlay.open {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .sf-drawer {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: min(440px, 92vw);
+        background: var(--sf-bg);
+        border-left: 1px solid var(--sf-border-strong);
+        box-shadow: -12px 0 40px rgba(0, 0, 0, .35);
+        transform: translateX(100%);
+        transition: transform .25s ease;
+        z-index: 61;
+        overflow-y: auto;
+        padding: 18px;
+    }
+
+    .sf-drawer.open {
+        transform: translateX(0);
+    }
+
+    .sf-drawer-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 12px;
-        background: var(--sf-surface-3);
-        border: 1px solid var(--sf-border);
-        border-radius: var(--sf-radius-sm);
-        padding: 8px 12px;
-        font-size: 12px;
-        color: var(--sf-ink-muted);
+        margin-bottom: 14px;
+    }
+
+    .sf-drawer-body {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
     }
 
     /* modals (keep IDs/classes for JS) */
@@ -723,7 +786,8 @@
     {% if role == 'admin' %}
     <div class="sf-player-picker">
         <label>Player</label>
-        <form method="get" action="/todo" style="flex: 1; display: flex; gap: 6px; align-items: center;">
+        <form method="get" action="/todo"
+            style="flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
             {% for u in users_list %}
             <button type="submit" name="view_user" value="{{ u }}"
                 class="btn {% if u == selected_user %}btn-primary{% endif %}" style="font-size: 12px;">
@@ -734,150 +798,178 @@
     </div>
     {% endif %}
 
-    <div class="sf-todo-grid">
-        {# ===== LEFT: TODAY'S MISSIONS ===== #}
-        <div>
-            {% if today_tasks %}
-            <div class="sf-missions">
-                <div class="sf-missions-head">
-                    <div class="sf-card-header" style="margin: 0;">
-                        {{ selected_user }} · Missions · Today
-                    </div>
-                    <button type="button" class="notify-current-task-btn" title="Send current task to Hammerspoon">📢
-                        Notify current</button>
-                </div>
-
-                <form method="POST" action="/update_todo/{{ selected_user }}" class="task-update-form">
-                    <table class="table-modern">
-                        <thead style="display: none;">
-                            <tr>
-                                <th>Slot</th>
-                                <th>Mission</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for todo_id, time_slot, task, completed, completion_status in today_tasks %}
-                            {% set is_current = (todo_id == ns.next_id) %}
-                            <tr class="todo-row" data-todo-id="{{ todo_id }}" data-time-slot="{{ time_slot }}"
-                                data-task="{{ task }}" data-completed="{{ 'true' if completed else 'false' }}"
-                                data-status="{{ completion_status }}" {% if is_current %}data-current="1" {% endif %}>
-                                <td class="time-slot-cell" data-time-slot="{{ time_slot }}"
-                                    style="--slot-progress: {{ (loop.index0 / (today_tasks|length - 1)) if today_tasks|length > 1 else 0 }}; --slot-fill: 0%;">
-                                    {{ time_slot }}
-                                </td>
-                                <td class="task-cell">
-                                    <input type="hidden" name="todo_id" value="{{ todo_id }}">
-                                    {% if is_current %}
-                                    {% set main_task = task.split('[')[0].strip() %}
-                                    {% set sub_task = task.split('[')[1].rsplit(']', 1)[0].strip() if '[' in task else
-                                    '' %}
-                                    {% set task_icons = {'math': '📐', 'science': '🔬', 'piano': '🎹', 'books': '📚',
-                                    'language': '🗣️', 'coding': '💻', 'chinese': '🈶', 'art': '🎨', 'leasure': '🎮'} %}
-                                    {% set is_mandatory = main_task|lower in ['math', 'piano', 'science'] %}
-                                    <input type="hidden" id="task-hidden-{{ todo_id }}" name="task_{{ todo_id }}"
-                                        value="{{ task }}">
-                                    <div class="task-current-icon">{{ task_icons.get(main_task|lower, '⭐') }}</div>
-                                    <div class="task-current-display">
-                                        <div class="task-current-line1">{{ time_slot[:5] }} · {{ main_task|upper }} ·
-                                            CURRENT</div>
-                                        <input type="text" class="task-current-line2 task-current-sub-input"
-                                            value="{{ sub_task }}" data-main="{{ main_task }}"
-                                            data-hidden-id="task-hidden-{{ todo_id }}" aria-label="Edit subtask">
-                                        <span
-                                            class="sf-tag {{ 'sf-tag-mandatory' if is_mandatory else 'sf-tag-voluntary' }} task-current-line3">
-                                            {{ 'Mandatory' if is_mandatory else 'Voluntary' }}
-                                        </span>
-                                    </div>
-                                    {% else %}
-                                    <input type="text" name="task_{{ todo_id }}" value="{{ task }}"
-                                        class="{% if completed %}done{% endif %}" />
-                                    {% endif %}
-                                    <button type="button" class="split-slot-btn" data-todo-id="{{ todo_id }}"
-                                        aria-label="Split this slot into 30 minute blocks">+</button>
-                                </td>
-                                <td>
-                                    <label style="display: inline-flex; align-items: center; gap: 6px;">
-                                        <input type="checkbox" class="complete-checkbox" name="completed_{{ todo_id }}"
-                                            data-task-id="{{ todo_id }}" {% if completed %}checked{% endif %} />
-                                    </label>
-                                    {% if role == 'admin' and selected_user != user_name %}
-                                    <select class="admin-status-select" data-todo-id="{{ todo_id }}">
-                                        <option value="" {% if completion_status=='' %}selected{% endif %}>—</option>
-                                        <option value="skipped" {% if completion_status=='skipped' %}selected{% endif
-                                            %}>Skipped</option>
-                                        <option value="partially done" {% if completion_status=='partially done'
-                                            %}selected{% endif %}>Partially</option>
-                                        <option value="half done" {% if completion_status=='half done' %}selected{%
-                                            endif %}>Half</option>
-                                        <option value="mostly done" {% if completion_status=='mostly done' %}selected{%
-                                            endif %}>Mostly</option>
-                                        <option value="done" {% if completion_status=='done' %}selected{% endif %}>Done
-                                        </option>
-                                    </select>
-                                    {% else %}
-                                    <span class="task-status" data-status="{{ completion_status }}">
-                                        {{ completion_status or '—' }}
-                                    </span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-
-                    {# ===== kid-friendly planning hint ===== #}
-                    <div class="sf-btn-row"
-                        style="display: flex; align-items: center; justify-content: space-between;
-                                gap: 12px; background: rgba(255, 122, 46, .06); border-top: 1px dashed var(--sf-accent);">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <div style="font-size: 18px;">✨</div>
-                            <div>
-                                <div
-                                    style="font-family: var(--sf-display); font-weight: 600; font-size: 13px; color: var(--sf-ink);">
-                                    Plan your own quest!
-                                </div>
-                                <div style="font-size: 11px; color: var(--sf-ink-muted);">
-                                    Tap any slot above to add or change a mission.
-                                </div>
-                            </div>
-                        </div>
-                        <button class="btn btn-primary" type="submit" title="Save changes to all tasks">
-                            Save my quest ->
-                        </button>
-                    </div>
-                </form>
+    {# ===== TODAY'S MISSIONS (kid-view card grid) ===== #}
+    <div class="sf-missions">
+        <div class="sf-missions-head">
+            <div class="sf-card-header" style="margin: 0;">
+                {{ selected_user }} · Missions · Today
             </div>
-
-            <div style="display: flex; gap: 10px; margin-top: 12px;">
-                <form action="/rules_toggle/disable_ai" method="POST" style="flex: 1;"
-                    onsubmit="return confirm('Are you sure you have made good plan today?');">
-                    <button class="btn btn-secondary" type="submit" style="width: 100%;" title="Open AI">
-                        🤖 Open AI
-                    </button>
-                </form>
-                {% if show_disable_button %}
-                <form action="/exec_rules/{{ selected_user_row_id }}" method="POST" style="flex: 1;"
-                    onsubmit="return confirm('Are you sure you brush toilet, take out the garbage, and wash the dishes?');">
-                    <button class="btn btn-danger" type="submit" style="width: 100%;"
-                        title="Disable all rules after mandatory cleanup">🛑 Disable All Rules</button>
-                </form>
-                {% else %}
-                <div class="note" style="flex: 1;">
-                    🔒 Override available between {{ show_disable_button_start }} and {{ show_disable_button_end }}
-                </div>
+            <div class="sf-missions-head-actions">
+                <button type="button" id="sf-plan-drawer-toggle" class="sf-drawer-toggle-btn">🗓️ Plan &amp;
+                    Configure</button>
+                {% if today_tasks %}
+                <button type="button" class="notify-current-task-btn" title="Send current task to Hammerspoon">📢
+                    Notify current</button>
                 {% endif %}
             </div>
-            {% else %}
-            <div class="sf-card">
-                <div class="sf-card-header">Today</div>
-                <div class="note">No tasks saved for today, results in no <b>AI</b> websites enabled.</div>
-            </div>
-            {% endif %}
         </div>
 
-        {# ===== RIGHT: PLANNER + CONFIG + WEEK ===== #}
-        <div>
+        {% if today_tasks %}
+        <form method="POST" action="/update_todo/{{ selected_user }}" class="task-update-form">
+            <div class="sf-missions-grid">
+                {% for todo_id, time_slot, task, completed, completion_status in today_tasks %}
+                {% set is_current = (todo_id == ns.next_id) %}
+                {% set main_task = task.split('[')[0].strip() if task else '' %}
+                {% set sub_task = task.split('[')[1].rsplit(']', 1)[0].strip() if '[' in task else '' %}
+                {% set task_icons = {'math': '📐', 'science': '🔬', 'piano': '🎹', 'books': '📚',
+                'language': '🗣️', 'coding': '💻', 'english': '🈶', 'art': '🎨', 'leasure': '🎮'} %}
+                {% set is_mandatory = main_task|lower in ['math', 'piano', 'science'] %}
+                <div class="sf-mission-card todo-row {% if is_current %}sf-mission-current{% endif %} {% if completed %}sf-mission-done{% endif %}"
+                    data-todo-id="{{ todo_id }}" data-time-slot="{{ time_slot }}" data-task="{{ task }}"
+                    data-completed="{{ 'true' if completed else 'false' }}" data-status="{{ completion_status }}" {% if
+                    is_current %}data-current="1" {% endif %}
+                    style="--card-hue: {{ (loop.index0 / (today_tasks|length - 1)) if today_tasks|length > 1 else 0 }};">
+                    <input type="hidden" name="todo_id" value="{{ todo_id }}">
+                    {% if is_current %}
+                    <input type="hidden" id="task-hidden-{{ todo_id }}" name="task_{{ todo_id }}" value="{{ task }}">
+                    <div class="task-current-icon">{{ task_icons.get(main_task|lower, '⭐') }}</div>
+                    <div class="task-current-display">
+                        <div class="task-current-line1">{{ time_slot[:5] }} · {{ main_task|upper }} · CURRENT</div>
+                        <input type="text" class="task-current-line2 task-current-sub-input" value="{{ sub_task }}"
+                            data-main="{{ main_task }}" data-hidden-id="task-hidden-{{ todo_id }}"
+                            aria-label="Edit subtask">
+                        <span
+                            class="sf-tag {{ 'sf-tag-mandatory' if is_mandatory else 'sf-tag-voluntary' }} task-current-line3">
+                            {{ 'Mandatory' if is_mandatory else 'Voluntary' }}
+                        </span>
+                    </div>
+                    {% else %}
+                    <div class="sf-mission-body">
+                        <div class="sf-mission-meta">{{ time_slot[:5] }} · {{ main_task|upper }}</div>
+                        <input type="text" name="task_{{ todo_id }}" value="{{ task }}"
+                            class="sf-mission-title {% if completed %}done{% endif %}"
+                            placeholder="MainTask[SubProblem]">
+                    </div>
+                    {% endif %}
+                    <div class="sf-mission-side">
+                        <label class="sf-mission-check">
+                            <input type="checkbox" class="complete-checkbox" name="completed_{{ todo_id }}"
+                                data-task-id="{{ todo_id }}" {% if completed %}checked{% endif %} />
+                        </label>
+                        {% if role == 'admin' and selected_user != user_name %}
+                        <select class="admin-status-select" data-todo-id="{{ todo_id }}">
+                            <option value="" {% if completion_status=='' %}selected{% endif %}>—</option>
+                            <option value="skipped" {% if completion_status=='skipped' %}selected{% endif %}>Skipped
+                            </option>
+                            <option value="partially done" {% if completion_status=='partially done' %}selected{% endif
+                                %}>Partially</option>
+                            <option value="half done" {% if completion_status=='half done' %}selected{% endif %}>Half
+                            </option>
+                            <option value="mostly done" {% if completion_status=='mostly done' %}selected{% endif %}>
+                                Mostly</option>
+                            <option value="done" {% if completion_status=='done' %}selected{% endif %}>Done
+                            </option>
+                        </select>
+                        {% else %}
+                        <span class="task-status" data-status="{{ completion_status }}">
+                            {{ completion_status or '' }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <button type="button" class="split-slot-btn" data-todo-id="{{ todo_id }}"
+                        aria-label="Split this slot into 30 minute blocks">+</button>
+                </div>
+                {% endfor %}
+            </div>
+
+            {# ===== kid-friendly planning hint ===== #}
+            <div class="sf-btn-row" style="display: flex; align-items: center; justify-content: space-between;
+                        gap: 12px; background: rgba(255, 122, 46, .06); border-top: 1px dashed var(--sf-accent);">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="font-size: 18px;">✨</div>
+                    <div>
+                        <div
+                            style="font-family: var(--sf-display); font-weight: 600; font-size: 13px; color: var(--sf-ink);">
+                            Plan your own quest!
+                        </div>
+                        <div style="font-size: 11px; color: var(--sf-ink-muted);">
+                            Tap any slot above to add or change a mission.
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" type="submit" title="Save changes to all tasks">
+                    Save my quest ->
+                </button>
+            </div>
+        </form>
+        {% else %}
+        <div class="note" style="margin: 16px;">
+            No tasks saved for today, results in no <b>AI</b> websites enabled. Use <b>🗓️ Plan &amp; Configure</b>
+            above to add today's quest.
+        </div>
+        {% endif %}
+    </div>
+
+    {% if today_tasks %}
+    <div style="display: flex; gap: 10px; margin-top: 12px;">
+        <form action="/rules_toggle/disable_ai" method="POST" style="flex: 1;"
+            onsubmit="return confirm('Are you sure you have made good plan today?');">
+            <button class="btn btn-secondary" type="submit" style="width: 100%;" title="Open AI">
+                🤖 Open AI
+            </button>
+        </form>
+        {% if show_disable_button %}
+        <form action="/exec_rules/{{ selected_user_row_id }}" method="POST" style="flex: 1;"
+            onsubmit="return confirm('Are you sure you brush toilet, take out the garbage, and wash the dishes?');">
+            <button class="btn btn-danger" type="submit" style="width: 100%;"
+                title="Disable all rules after mandatory cleanup">🛑 Disable All Rules</button>
+        </form>
+        {% else %}
+        <div class="note" style="flex: 1;">
+            🔒 Override available between {{ show_disable_button_start }} and {{ show_disable_button_end }}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {# ===== BOTTOM STRIP: this week + activity heatmap ===== #}
+    <div class="sf-bottom-strip">
+        {# ===== this week strip — placeholder values; wire real ones when ready ===== #}
+        <div class="sf-card">
+            <div class="sf-card-header">This week</div>
+            <div class="sf-week-strip">
+                {% set days = ['M','T','W','T','F','S','S'] %}
+                {% for d in days %}
+                <div class="sf-week-day">
+                    <div class="d">{{ d }}</div>
+                    <div class="v">
+                        {% if loop.index0 < 3 %} <div class="pct">—</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="note" style="margin-top: 8px;">
+            Daily completion percentages will appear here once weekly summary data is wired in.
+        </div>
+    </div>
+
+    {# ===== heatmap reservation — for the calendar heatmap you want to add later ===== #}
+    <div class="sf-heatmap-reserve">
+        <div class="pill">RESERVED · 12-week activity heatmap</div>
+        <h3>History at a glance</h3>
+        <p>Slot reserved for the kid-completion heatmap you'll add later.</p>
+    </div>
+    </div>
+
+    {# ===== PULL-OUT DRAWER: planner + configuration ===== #}
+    <div id="sf-plan-drawer-overlay" class="sf-drawer-overlay"></div>
+    <aside id="sf-plan-drawer" class="sf-drawer" aria-hidden="true">
+        <div class="sf-drawer-header">
+            <div class="sf-card-header" style="margin: 0;">Plan &amp; Configure</div>
+            <button type="button" id="sf-plan-drawer-close" class="btn btn-ghost" aria-label="Close drawer">✕</button>
+        </div>
+        <div class="sf-drawer-body">
             <div class="sf-card">
                 <div class="sf-card-header">
                     Plan new TODO for {{ selected_user }}
@@ -947,35 +1039,8 @@
                     </div>
                 </form>
             </div>
-
-            {# ===== this week strip — placeholder values; wire real ones when ready ===== #}
-            <div class="sf-card">
-                <div class="sf-card-header">This week</div>
-                <div class="sf-week-strip">
-                    {% set days = ['M','T','W','T','F','S','S'] %}
-                    {% for d in days %}
-                    <div class="sf-week-day">
-                        <div class="d">{{ d }}</div>
-                        <div class="v">
-                            {% if loop.index0 < 3 %} <div class="pct">—</div>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            <div class="note" style="margin-top: 8px;">
-                Daily completion percentages will appear here once weekly summary data is wired in.
-            </div>
         </div>
-
-        {# ===== heatmap reservation — for the calendar heatmap you want to add later ===== #}
-        <div class="sf-heatmap-reserve">
-            <div class="pill">RESERVED · 12-week activity heatmap</div>
-            <h3>History at a glance</h3>
-            <p>Slot reserved for the kid-completion heatmap you'll add later.</p>
-        </div>
-    </div>
-    </div>
+    </aside>
 
     {# ===== MODALS (DO NOT REMOVE — JS hooks rely on these IDs/classes) ===== #}
     {% if show_task_feedback %}

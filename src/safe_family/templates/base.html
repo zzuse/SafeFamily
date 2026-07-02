@@ -275,6 +275,7 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
+            width: auto;
             padding: 7px 12px;
             border-radius: var(--sf-radius-sm);
             font-family: var(--sf-ui);
@@ -346,6 +347,18 @@
             font-family: var(--sf-ui);
             font-size: 13px;
             outline: none;
+        }
+
+        /* Safari/macOS otherwise ignores our background/border and draws its own
+           native pop-up-button chrome on top of <select> */
+        select {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%238B95B0' stroke-width='1.5'%3E%3Cpath d='M5 7.5 10 12.5 15 7.5'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 14px;
+            padding-right: 26px;
         }
 
         input:focus,
