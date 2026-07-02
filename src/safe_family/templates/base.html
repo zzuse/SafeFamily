@@ -49,8 +49,8 @@
 
             --sf-radius: 8px;
             --sf-radius-sm: 5px;
-            --sf-mono: 'Geist Mono', ui-monospace, monospace;
-            --sf-display: 'Bricolage Grotesque', serif;
+            --sf-mono: 'JetBrains Mono', ui-monospace, monospace;
+            --sf-display: 'Space Grotesk', serif;
             --sf-ui: 'Geist', system-ui, sans-serif;
         }
 
@@ -541,7 +541,7 @@
                 {% if session.access_token %}
                 {% if session.role == 'admin' %}<span class="sf-user-badge">GAME MASTER</span>{% endif %}
                 <span>{{ session.user_name or '' }}</span>
-                <div class="sf-avatar">{{ (session.user_name or '?')[:1]|upper }}</div>
+                <div class="sf-avatar">{{ (session.user_name or 'M')[:1]|upper }}</div>
                 {% endif %}
             </div>
         </header>

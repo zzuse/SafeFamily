@@ -87,6 +87,41 @@
         margin-bottom: 18px;
     }
 
+    /* "now" marker on the rainbow bar — position is set from JS via Date.now() */
+    .sf-rainbow {
+        position: relative;
+    }
+
+    .sf-rainbow-now {
+        position: absolute;
+        top: -8px;
+        bottom: -8px;
+        width: 2px;
+        background: var(--sf-accent);
+        box-shadow: 0 0 8px var(--sf-accent);
+        border-radius: 3px;
+        z-index: 3;
+        pointer-events: none;
+    }
+
+    .sf-rainbow-now[hidden] {
+        display: none;
+    }
+
+    .sf-rainbow-now-label {
+        position: absolute;
+        top: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-family: var(--sf-mono);
+        font-size: 10px;
+        color: var(--sf-accent);
+        background: var(--sf-surface);
+        padding: 0 3px;
+        border-radius: 2px;
+        white-space: nowrap;
+    }
+
     /* admin user picker */
     .sf-player-picker {
         display: flex;
@@ -220,6 +255,65 @@
     .task-cell:hover::after {
         opacity: 1;
         color: var(--sf-accent);
+    }
+
+    /* ongoing mission — big icon + 3-line display */
+    .task-current-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--sf-accent), var(--sf-accent-glow));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        flex-shrink: 0;
+    }
+
+    .task-current-display {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .task-current-line1 {
+        font-family: var(--sf-mono);
+        font-size: 11px;
+        color: var(--sf-accent);
+        letter-spacing: .1em;
+        text-align: left;
+    }
+
+    input.task-current-line2 {
+        font-family: var(--sf-display);
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--sf-ink);
+        background: transparent;
+        border: 1px dashed var(--sf-border);
+        border-radius: var(--sf-radius-sm);
+        padding: 2px 6px;
+        width: 100%;
+    }
+
+    input.task-current-line2:hover {
+        border-color: var(--sf-accent);
+        background: var(--sf-surface-3);
+    }
+
+    input.task-current-line2:focus {
+        border-style: solid;
+    }
+
+    .task-current-line3 {
+        align-self: flex-start;
+    }
+
+    .sf-tag-voluntary {
+        background: var(--sf-surface-3);
+        color: var(--sf-ink-muted);
     }
 
     .split-slot-btn {
@@ -554,27 +648,38 @@
 
 <section>
     {# ===== HERO ===== #}
+    {% set done_count = today_tasks|selectattr('3')|list|length if today_tasks else 0 %}
+    {% set total_count = today_tasks|length if today_tasks else 0 %}
+    {% set pct = (done_count * 100 // total_count) if total_count else 0 %}
+    {% set ns = namespace(next_task=None, next_start=None, next_id=None) %}
+    {% for todo_id, time_slot, task, completed, completion_status in today_tasks %}
+    {% if not completed and ns.next_task is none %}
+    {% set ns.next_task = task.split('[')[0].strip() %}
+    {% set ns.next_start = time_slot[:5] %}
+    {% set ns.next_id = todo_id %}
+    {% endif %}
+    {% endfor %}
     <div class="sf-today-hero">
         <div>
             <div class="sf-eyebrow">
                 {% if today_tasks %}{{ today_tasks | length }} missions today{% else %}No quest planned yet{% endif %}
                 · {{ selected_user }}{% if role == 'admin' %} · GM view{% endif %}
             </div>
-            <h1>Hey {{ selected_user }}, ready for today?</h1>
+            <h1>Hey {{ selected_user }} -- your quest is ready.</h1>
             <div style="color: var(--sf-ink-muted); font-size: 14px;">
                 {% if today_tasks %}
-                Stay on track — <b style="color: var(--sf-purple);">MATH</b>,
-                <b style="color: var(--sf-accent);">PIANO</b>, and
-                <b style="color: var(--sf-success);">BOOKS</b> are mandatory every day.
+                {{ done_count }} / {{ total_count }} cleared
+                {% if ns.next_task %}
+                · next mission <b id="sf-next-mission" style="color: var(--sf-accent-glow);"
+                    data-start="{{ ns.next_start }}">{{ ns.next_task|upper }}</b>
+                <span id="sf-next-mission-eta"></span>
+                {% endif %}
                 {% else %}
                 Plan your day below to unlock AI sites.
                 {% endif %}
             </div>
         </div>
         <div class="sf-today-stats">
-            {% set done_count = today_tasks|selectattr('3')|list|length if today_tasks else 0 %}
-            {% set total_count = today_tasks|length if today_tasks else 0 %}
-            {% set pct = (done_count * 100 // total_count) if total_count else 0 %}
             <div class="sf-stat">
                 <div class="sf-stat-num sf-stat-pct">{{ pct }}%</div>
                 <div class="sf-stat-label">done</div>
@@ -598,9 +703,13 @@
         <div class="sf-rainbow" style="--sf-slot-count: {{ today_tasks|length }};">
             {% for todo_id, time_slot, task, completed, completion_status in today_tasks %}
             {% set hue = (loop.index0 * 280 // (today_tasks|length - 1 if today_tasks|length > 1 else 1)) %}
-            <i data-state="{% if completed %}done{% elif loop.first or (loop.previtem and loop.previtem[3] and not completed) %}current{% else %}pending{% endif %}"
+            <i data-state="{% if completed %}done{% elif todo_id == ns.next_id %}current{% else %}pending{% endif %}"
                 style="--sf-seg-color: hsl({{ 360 - hue }}, 75%, 55%);" title="{{ time_slot }} · {{ task }}"></i>
             {% endfor %}
+            <div id="sf-rainbow-now" class="sf-rainbow-now" data-range-start="{{ today_tasks[0][1][:5] }}"
+                data-range-end="{{ today_tasks[-1][1][-5:] }}" hidden>
+                <span class="sf-rainbow-now-label">now</span>
+            </div>
         </div>
         <div class="sf-rainbow-axis">
             <span>{{ today_tasks[0][1] if today_tasks else '' }}</span>
@@ -632,33 +741,15 @@
             <div class="sf-missions">
                 <div class="sf-missions-head">
                     <div class="sf-card-header" style="margin: 0;">
-                        {{ selected_user }}'s missions · today
+                        {{ selected_user }} · Missions · Today
                     </div>
                     <button type="button" class="notify-current-task-btn" title="Send current task to Hammerspoon">📢
                         Notify current</button>
                 </div>
 
-                {# ===== kid-friendly planning hint ===== #}
-                <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;
-                            padding: 10px 16px; background: rgba(255,122,46,.06);
-                            border-bottom: 1px dashed var(--sf-accent);">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <div style="font-size: 18px;">✨</div>
-                        <div>
-                            <div
-                                style="font-family: var(--sf-display); font-weight: 600; font-size: 13px; color: var(--sf-ink);">
-                                Plan your own day!
-                            </div>
-                            <div style="font-size: 11px; color: var(--sf-ink-muted);">
-                                Tap any task to type — then hit <b>Save all</b> at the bottom.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <form method="POST" action="/update_todo/{{ selected_user }}" class="task-update-form">
                     <table class="table-modern">
-                        <thead>
+                        <thead style="display: none;">
                             <tr>
                                 <th>Slot</th>
                                 <th>Mission</th>
@@ -667,8 +758,7 @@
                         </thead>
                         <tbody>
                             {% for todo_id, time_slot, task, completed, completion_status in today_tasks %}
-                            {% set is_current = (not completed) and (loop.first or (loop.previtem and loop.previtem[3]))
-                            %}
+                            {% set is_current = (todo_id == ns.next_id) %}
                             <tr class="todo-row" data-todo-id="{{ todo_id }}" data-time-slot="{{ time_slot }}"
                                 data-task="{{ task }}" data-completed="{{ 'true' if completed else 'false' }}"
                                 data-status="{{ completion_status }}" {% if is_current %}data-current="1" {% endif %}>
@@ -678,8 +768,31 @@
                                 </td>
                                 <td class="task-cell">
                                     <input type="hidden" name="todo_id" value="{{ todo_id }}">
+                                    {% if is_current %}
+                                    {% set main_task = task.split('[')[0].strip() %}
+                                    {% set sub_task = task.split('[')[1].rsplit(']', 1)[0].strip() if '[' in task else
+                                    '' %}
+                                    {% set task_icons = {'math': '📐', 'science': '🔬', 'piano': '🎹', 'books': '📚',
+                                    'language': '🗣️', 'coding': '💻', 'chinese': '🈶', 'art': '🎨', 'leasure': '🎮'} %}
+                                    {% set is_mandatory = main_task|lower in ['math', 'piano', 'science'] %}
+                                    <input type="hidden" id="task-hidden-{{ todo_id }}" name="task_{{ todo_id }}"
+                                        value="{{ task }}">
+                                    <div class="task-current-icon">{{ task_icons.get(main_task|lower, '⭐') }}</div>
+                                    <div class="task-current-display">
+                                        <div class="task-current-line1">{{ time_slot[:5] }} · {{ main_task|upper }} ·
+                                            CURRENT</div>
+                                        <input type="text" class="task-current-line2 task-current-sub-input"
+                                            value="{{ sub_task }}" data-main="{{ main_task }}"
+                                            data-hidden-id="task-hidden-{{ todo_id }}" aria-label="Edit subtask">
+                                        <span
+                                            class="sf-tag {{ 'sf-tag-mandatory' if is_mandatory else 'sf-tag-voluntary' }} task-current-line3">
+                                            {{ 'Mandatory' if is_mandatory else 'Voluntary' }}
+                                        </span>
+                                    </div>
+                                    {% else %}
                                     <input type="text" name="task_{{ todo_id }}" value="{{ task }}"
                                         class="{% if completed %}done{% endif %}" />
+                                    {% endif %}
                                     <button type="button" class="split-slot-btn" data-todo-id="{{ todo_id }}"
                                         aria-label="Split this slot into 30 minute blocks">+</button>
                                 </td>
@@ -713,15 +826,24 @@
                         </tbody>
                     </table>
 
-                    <div class="sf-btn-row">
-                        <div class="sf-mandatory-strip" style="flex: 1;">
-                            Mandatory today:
-                            <span><span class="sf-tag sf-tag-math">MATH</span>
-                                <span class="sf-tag sf-tag-piano">PIANO</span>
-                                <span class="sf-tag sf-tag-books">BOOKS</span></span>
+                    {# ===== kid-friendly planning hint ===== #}
+                    <div class="sf-btn-row"
+                        style="display: flex; align-items: center; justify-content: space-between;
+                                gap: 12px; background: rgba(255, 122, 46, .06); border-top: 1px dashed var(--sf-accent);">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="font-size: 18px;">✨</div>
+                            <div>
+                                <div
+                                    style="font-family: var(--sf-display); font-weight: 600; font-size: 13px; color: var(--sf-ink);">
+                                    Plan your own quest!
+                                </div>
+                                <div style="font-size: 11px; color: var(--sf-ink-muted);">
+                                    Tap any slot above to add or change a mission.
+                                </div>
+                            </div>
                         </div>
                         <button class="btn btn-primary" type="submit" title="Save changes to all tasks">
-                            ☯️ Save all
+                            Save my quest ->
                         </button>
                     </div>
                 </form>

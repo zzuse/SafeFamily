@@ -176,6 +176,38 @@ function updateSlotProgress() {
     });
 }
 
+function updateNowLine() {
+    const nowLine = document.getElementById("sf-rainbow-now");
+    if (!nowLine) return;
+
+    const rangeStart = nowLine.dataset.rangeStart;
+    const rangeEnd = nowLine.dataset.rangeEnd;
+    const startTime = parseSlotStartTime(`${rangeStart} - ${rangeEnd}`);
+    const endTime = parseSlotEndTime(`${rangeStart} - ${rangeEnd}`);
+    const now = new Date();
+
+    if (!startTime || !endTime || endTime <= startTime || now < startTime || now > endTime) {
+        nowLine.hidden = true;
+        return;
+    }
+
+    const pct = ((now - startTime) / (endTime - startTime)) * 100;
+    nowLine.style.left = `${pct}%`;
+    nowLine.hidden = false;
+}
+
+function updateNextMissionEta() {
+    const missionEl = document.getElementById("sf-next-mission");
+    const etaEl = document.getElementById("sf-next-mission-eta");
+    if (!missionEl || !etaEl) return;
+
+    const startTime = parseSlotStartTime(`${missionEl.dataset.start} - 00:00`);
+    if (!startTime) return;
+
+    const diffMin = Math.round((startTime - new Date()) / 60000);
+    etaEl.textContent = diffMin > 0 ? `in ${diffMin} min` : "now";
+}
+
 function normalizeStatusLabel(status) {
     if (!status) return "";
     return status.replace(/\b\w/g, c => c.toUpperCase());
@@ -647,6 +679,10 @@ setupScheduleConfig();
 setupTimeOptions();
 updateSlotProgress();
 setInterval(updateSlotProgress, 60000);
+updateNowLine();
+setInterval(updateNowLine, 60000);
+updateNextMissionEta();
+setInterval(updateNextMissionEta, 60000);
 
 function shouldRunUnknownMetadataFlow(now = new Date()) {
     if (selected_user_role !== "admin") return false;
@@ -764,6 +800,16 @@ function setupTimeOptions() {
     });
 }
 
+function setupCurrentSubtaskInputs() {
+    document.querySelectorAll(".task-current-sub-input").forEach(input => {
+        const hidden = document.getElementById(input.dataset.hiddenId);
+        if (!hidden) return;
+        input.addEventListener("input", () => {
+            hidden.value = `${input.dataset.main}[${input.value}]`;
+        });
+    });
+}
+
 function setupSplitSlotButtons() {
     document.querySelectorAll(".split-slot-btn").forEach(btn => {
         const row = btn.closest(".todo-row");
@@ -803,3 +849,4 @@ function setupSplitSlotButtons() {
 }
 
 setupSplitSlotButtons();
+setupCurrentSubtaskInputs();
