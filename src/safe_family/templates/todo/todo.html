@@ -637,7 +637,44 @@
         white-space: pre-wrap;
     }
 
-    /* this-week strip + heatmap reserve */
+    /* shared orange shade scale — used by the week strip fill and heatmap cells */
+    .sf-lvl[data-level="none"] {
+        background: var(--sf-surface-3);
+        border: 1px solid var(--sf-border);
+    }
+
+    .sf-lvl[data-level="0"] {
+        background: var(--sf-danger-soft);
+    }
+
+    .sf-lvl[data-level="1"] {
+        background: color-mix(in srgb, var(--sf-accent) 25%, var(--sf-surface-3));
+    }
+
+    .sf-lvl[data-level="2"] {
+        background: color-mix(in srgb, var(--sf-accent) 50%, var(--sf-surface-3));
+    }
+
+    .sf-lvl[data-level="3"] {
+        background: color-mix(in srgb, var(--sf-accent) 80%, var(--sf-surface-3));
+    }
+
+    .sf-lvl[data-level="4"] {
+        background: linear-gradient(135deg, var(--sf-accent), var(--sf-accent-glow));
+    }
+
+    /* above 100% — extra mandatory work beyond a "plain" full day */
+    .sf-lvl[data-level="5"] {
+        background: linear-gradient(135deg, var(--sf-accent), var(--sf-accent-glow));
+        box-shadow: 0 0 6px var(--sf-accent-soft);
+    }
+
+    .sf-lvl[data-level="6"] {
+        background: linear-gradient(135deg, var(--sf-accent-glow), var(--sf-accent), var(--sf-accent-glow));
+        box-shadow: 0 0 8px var(--sf-accent-glow);
+    }
+
+    /* this-week strip */
     .sf-week-strip {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
@@ -662,6 +699,14 @@
         background: var(--sf-surface-3);
         border: 1px solid var(--sf-border);
         position: relative;
+        overflow: hidden;
+    }
+
+    .sf-week-day .v .fill {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
     }
 
     .sf-week-day .v .pct {
@@ -675,37 +720,136 @@
         color: var(--sf-ink);
     }
 
-    .sf-heatmap-reserve {
-        background: var(--sf-surface);
-        border: 1px dashed var(--sf-border-strong);
-        border-radius: var(--sf-radius);
-        padding: 24px;
-        text-align: center;
+    .sf-week-today .v {
+        border-color: var(--sf-accent);
+        box-shadow: 0 0 8px var(--sf-accent-soft);
     }
 
-    .sf-heatmap-reserve .pill {
-        display: inline-block;
+    .sf-week-future .v {
+        opacity: .45;
+    }
+
+    /* activity heatmap — cell size lives in --hm-cell; column count comes
+       from the template so it always matches HEATMAP_WEEKS */
+    .sf-heatmap-scroll {
+        --hm-cell: 16px;
+        --hm-gap: 4px;
+        overflow-x: auto;
+        padding: 4px 0;
+    }
+
+    .sf-heatmap-months {
+        display: grid;
+        gap: var(--hm-gap);
+        margin-left: calc(var(--hm-cell) + 5px);
         font-family: var(--sf-mono);
-        font-size: 10px;
-        color: var(--sf-accent);
-        background: var(--sf-accent-soft);
-        padding: 2px 8px;
+        font-size: 9px;
+        color: var(--sf-ink-dim);
+        margin-bottom: 3px;
+    }
+
+    .sf-heatmap-months span {
+        grid-row: 1;
+        white-space: nowrap;
+    }
+
+    .sf-heatmap-body {
+        display: flex;
+        gap: 5px;
+    }
+
+    .sf-heatmap-days {
+        display: grid;
+        grid-template-rows: repeat(7, var(--hm-cell));
+        gap: var(--hm-gap);
+        font-family: var(--sf-mono);
+        font-size: 9px;
+        color: var(--sf-ink-dim);
+        width: var(--hm-cell);
+        text-align: right;
+        line-height: var(--hm-cell);
+    }
+
+    .sf-heatmap-grid {
+        display: grid;
+        grid-template-rows: repeat(7, var(--hm-cell));
+        grid-auto-flow: column;
+        grid-auto-columns: var(--hm-cell);
+        gap: var(--hm-gap);
+    }
+
+    .sf-heatmap-cell {
+        width: var(--hm-cell);
+        height: var(--hm-cell);
         border-radius: 4px;
-        letter-spacing: .14em;
-        margin-bottom: 8px;
     }
 
-    .sf-heatmap-reserve h3 {
-        margin: 0 0 4px;
-        font-family: var(--sf-display);
+    .sf-heatmap-cell.future {
+        visibility: hidden;
+    }
+
+    /* custom hover card (replaces the native title tooltip).
+       position: fixed lets it escape the scroll wrapper's overflow clipping —
+       which is also why the hovered cell must never get a transform/filter
+       (either would re-anchor the fixed tooltip inside the clipped area). */
+    .sf-heatmap-cell:hover {
+        outline: 2px solid var(--sf-accent);
+        outline-offset: 1px;
+    }
+
+    .sf-heatmap-cell:hover::after {
+        content: attr(data-tooltip);
+        position: fixed;
+        transform: translate(calc(-50% + 8px), calc(-100% - 12px));
+        z-index: 40;
+        pointer-events: none;
+        min-width: 170px;
+        max-width: 280px;
+        padding: 10px 14px;
+        white-space: pre-line;
+        text-align: left;
+        font-family: var(--sf-mono);
+        font-size: 11px;
+        line-height: 2;
+        letter-spacing: .02em;
         color: var(--sf-ink);
-        font-size: 16px;
+        background:
+            linear-gradient(var(--sf-surface), var(--sf-surface)) padding-box,
+            linear-gradient(135deg, var(--sf-accent), var(--sf-accent-glow), var(--sf-border-strong)) border-box;
+        border: 1px solid transparent;
+        border-radius: 10px;
+        box-shadow:
+            0 14px 30px rgba(0, 0, 0, .35),
+            0 0 14px var(--sf-accent-soft);
+        animation: sf-tip-in .16s ease-out;
     }
 
-    .sf-heatmap-reserve p {
-        margin: 0;
-        font-size: 12px;
-        color: var(--sf-ink-muted);
+    @keyframes sf-tip-in {
+        from {
+            opacity: 0;
+            margin-top: 5px;
+        }
+
+        to {
+            opacity: 1;
+            margin-top: 0;
+        }
+    }
+
+    .sf-heatmap-legend {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-family: var(--sf-mono);
+        font-size: 9px;
+        color: var(--sf-ink-dim);
+        letter-spacing: .08em;
+    }
+
+    .sf-heatmap-legend .sf-lvl {
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
     }
 </style>
 
@@ -823,7 +967,7 @@
                 {% set sub_task = task.split('[')[1].rsplit(']', 1)[0].strip() if '[' in task else '' %}
                 {% set task_icons = {'math': '📐', 'science': '🔬', 'piano': '🎹', 'books': '📚',
                 'language': '🗣️', 'coding': '💻', 'english': '🈶', 'art': '🎨', 'leasure': '🎮'} %}
-                {% set is_mandatory = main_task|lower in ['math', 'piano', 'science'] %}
+                {% set is_mandatory = main_task|lower in ['math', 'piano', 'science', 'language'] %}
                 <div class="sf-mission-card todo-row {% if is_current %}sf-mission-current{% endif %} {% if completed %}sf-mission-done{% endif %}"
                     data-todo-id="{{ todo_id }}" data-time-slot="{{ time_slot }}" data-task="{{ task }}"
                     data-completed="{{ 'true' if completed else 'false' }}" data-status="{{ completion_status }}" {% if
@@ -933,33 +1077,76 @@
     {% endif %}
 
     {# ===== BOTTOM STRIP: this week + activity heatmap ===== #}
+    {# level buckets for the shared orange shade scale, 0-200 (see docs/todo-week-heatmap-design.md) #}
+    {% macro pct_level(pct) -%}
+    {%- if pct is none -%}none{%- elif pct == 0 -%}0{%- elif pct < 35 -%}1{%- elif pct < 65 -%}2{%- elif pct < 90
+    -%}3{%- elif pct <= 100 -%}4{%- elif pct <= 150 -%}5{%- else -%}6{%- endif -%}
+    {%- endmacro %}
     <div class="sf-bottom-strip">
-        {# ===== this week strip — placeholder values; wire real ones when ready ===== #}
+        {# ===== this week strip — subject-weighted daily completion ===== #}
         <div class="sf-card">
             <div class="sf-card-header">This week</div>
             <div class="sf-week-strip">
-                {% set days = ['M','T','W','T','F','S','S'] %}
-                {% for d in days %}
-                <div class="sf-week-day">
-                    <div class="d">{{ d }}</div>
-                    <div class="v">
-                        {% if loop.index0 < 3 %} <div class="pct">—</div>
-                    {% endif %}
+                {% for day in week_strip %}
+                <div
+                    class="sf-week-day{% if day.is_today %} sf-week-today{% endif %}{% if day.is_future %} sf-week-future{% endif %}">
+                    <div class="d">{{ day.label }}</div>
+                    <div class="v" title="{{ day.tooltip }}">
+                        {% if not day.is_future %}
+                        {% if day.pct is not none %}
+                        <div class="fill sf-lvl" data-level="{{ pct_level(day.pct) }}"
+                            style="height: {{ [[day.pct, 100]|min, 8]|max }}%;"></div>
+                        <div class="pct">{{ day.pct }}%</div>
+                        {% else %}
+                        <div class="pct">—</div>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        {# ===== activity heatmap ===== #}
+        <div class="sf-card">
+            <div class="sf-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>History · last {{ heatmap.weeks|length }} weeks</span>
+                <span class="sf-heatmap-legend">
+                    less
+                    <i class="sf-lvl" data-level="none"></i>
+                    <i class="sf-lvl" data-level="1"></i>
+                    <i class="sf-lvl" data-level="2"></i>
+                    <i class="sf-lvl" data-level="3"></i>
+                    <i class="sf-lvl" data-level="4"></i>
+                    <i class="sf-lvl" data-level="5"></i>
+                    <i class="sf-lvl" data-level="6"></i>
+                    more
+                </span>
+            </div>
+            <div class="sf-heatmap-scroll">
+                <div class="sf-heatmap-months"
+                    style="grid-template-columns: repeat({{ heatmap.weeks|length }}, var(--hm-cell));">
+                    {% for m in heatmap.month_labels %}
+                    <span style="grid-column: {{ m.col + 1 }};">{{ m.text }}</span>
+                    {% endfor %}
+                </div>
+                <div class="sf-heatmap-body">
+                    <div class="sf-heatmap-days">
+                        <span style="grid-row: 1;">M</span>
+                        <span style="grid-row: 3;">W</span>
+                        <span style="grid-row: 5;">F</span>
+                    </div>
+                    <div class="sf-heatmap-grid">
+                        {% for week in heatmap.weeks %}
+                        {% for cell in week %}
+                        <i class="sf-heatmap-cell sf-lvl{% if cell.is_future %} future{% endif %}"
+                            data-level="{{ pct_level(cell.pct) }}" data-tooltip="{{ cell.tooltip }}"></i>
+                        {% endfor %}
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
-            {% endfor %}
         </div>
-        <div class="note" style="margin-top: 8px;">
-            Daily completion percentages will appear here once weekly summary data is wired in.
-        </div>
-    </div>
-
-    {# ===== heatmap reservation — for the calendar heatmap you want to add later ===== #}
-    <div class="sf-heatmap-reserve">
-        <div class="pill">RESERVED · 12-week activity heatmap</div>
-        <h3>History at a glance</h3>
-        <p>Slot reserved for the kid-completion heatmap you'll add later.</p>
-    </div>
     </div>
 
     {# ===== PULL-OUT DRAWER: planner + configuration ===== #}

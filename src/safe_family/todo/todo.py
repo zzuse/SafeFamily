@@ -3,7 +3,7 @@
 import logging
 import threading
 import time as time_module
-from datetime import UTC, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 
@@ -30,6 +30,17 @@ todo_bp = Blueprint("todo", __name__)
 RULE_EXEC_LOCK = threading.Lock()
 RULE_EXEC_COOLDOWN_SECONDS = 30.0
 RULE_EXEC_STATE = {"last_run": 0.0}
+
+# Core subjects — the only ones that count toward the daily percentage.
+# Must stay in sync with the is_mandatory badge in templates/todo/todo.html.
+MANDATORY_SUBJECTS = {"math", "science", "language", "piano", "french"}
+# 100% = this many minutes actually spent on mandatory subjects in a day.
+# The scale caps at 200% (double the target).
+DAILY_TARGET_MINUTES = 120.0
+MAX_DAY_PCT = 200
+# Assumed when a time_slot string can't be parsed into minutes.
+DEFAULT_SLOT_MINUTES = 60.0
+HEATMAP_WEEKS = 26
 
 
 def generate_time_slots(
@@ -94,6 +105,132 @@ def generate_time_slots(
             slots.append(f"{current.strftime('%H:%M')} - {end.strftime('%H:%M')}")
         current = next_slot
     return slots
+
+
+def _is_mandatory(task: str | None) -> bool:
+    return (task or "").split("[")[0].strip().lower() in MANDATORY_SUBJECTS
+
+
+def daily_completion_map(
+    cur,
+    username: str,
+    start_date: date,
+    end_date: date,
+) -> dict[date, dict]:
+    """Per-day completion percentage plus task details, from one query.
+
+    Returns {day: {"pct": int | None, "tasks": ["task · status", ...]}} for
+    every day in range; pct is None (and tasks empty) for days with no plan.
+
+    The percentage measures absolute time spent on mandatory subjects, not
+    the share of the day's own plan — a light day can't score high without
+    real work:
+
+    day_pct = min(200, 100 * sum(slot_minutes * status_w
+                                 for mandatory tasks)
+                       / DAILY_TARGET_MINUTES)
+
+    Non-mandatory tasks still appear in the hover details but earn nothing.
+    A day with rows but no mandatory time scores 0; a day with no rows at
+    all is None ("no plan").
+    """
+    cur.execute(
+        """
+        SELECT date, time_slot, task, completed, COALESCE(completion_status, '')
+        FROM todo_list
+        WHERE username = %s AND date BETWEEN %s AND %s
+        ORDER BY date, time_slot
+        """,
+        (username, start_date, end_date),
+    )
+    earned_minutes: dict[date, float] = {}
+    tasks: dict[date, list[str]] = {}
+    for task_date, time_slot, task, completed, status in cur.fetchall():
+        status_w = weekly_metrics.STATUS_WEIGHTS.get(
+            (status or "").strip().lower(),
+            1.0 if completed else 0.0,
+        )
+        earned_minutes.setdefault(task_date, 0.0)
+        if _is_mandatory(task):
+            minutes = (
+                weekly_metrics._parse_time_slot_minutes(time_slot)
+                or DEFAULT_SLOT_MINUTES
+            )
+            earned_minutes[task_date] += minutes * status_w
+        status_label = (status or "").strip() or ("done" if completed else "not done")
+        tasks.setdefault(task_date, []).append(f"{task} · {status_label}")
+
+    result: dict[date, dict] = {}
+    day = start_date
+    while day <= end_date:
+        earned = earned_minutes.get(day)
+        result[day] = {
+            "pct": min(MAX_DAY_PCT, round(earned * 100 / DAILY_TARGET_MINUTES))
+            if earned is not None
+            else None,
+            "tasks": tasks.get(day, []),
+        }
+        day += timedelta(days=1)
+    return result
+
+
+def build_week_strip_and_heatmap(
+    cur,
+    username: str,
+    today_date: date,
+) -> tuple[list[dict], dict]:
+    """Compute the this-week strip and 12-week heatmap from todo_list history."""
+    week_monday = today_date - timedelta(days=today_date.weekday())
+    heatmap_start = week_monday - timedelta(weeks=HEATMAP_WEEKS - 1)
+    heatmap_end = week_monday + timedelta(days=6)
+    history = daily_completion_map(cur, username, heatmap_start, heatmap_end)
+
+    def day_tooltip(day: date) -> str:
+        """Kid-facing hover text: weekday + date header, then task lines. No percentage."""
+        label = day.strftime("%a ") + day.isoformat()
+        day_tasks = history[day]["tasks"]
+        if not day_tasks:
+            return f"{label} · no plan"
+        return "\n".join([label, *day_tasks])
+
+    week_strip = []
+    for i, label in enumerate("MTWTFSS"):
+        day = week_monday + timedelta(days=i)
+        week_strip.append(
+            {
+                "label": label,
+                "date": day.isoformat(),
+                "pct": history[day]["pct"],
+                "tooltip": day_tooltip(day),
+                "is_today": day == today_date,
+                "is_future": day > today_date,
+            },
+        )
+
+    weeks = []
+    month_labels = []
+    for w in range(HEATMAP_WEEKS):
+        monday = heatmap_start + timedelta(weeks=w)
+        weeks.append(
+            [
+                {
+                    "date": (monday + timedelta(days=d)).isoformat(),
+                    "pct": history[monday + timedelta(days=d)]["pct"],
+                    "tooltip": day_tooltip(monday + timedelta(days=d)),
+                    "is_future": monday + timedelta(days=d) > today_date,
+                }
+                for d in range(7)
+            ],
+        )
+        if w == 0 or monday.month != (monday - timedelta(weeks=1)).month:
+            month_labels.append({"col": w, "text": monday.strftime("%b")})
+
+    heatmap = {
+        "start": heatmap_start.isoformat(),
+        "weeks": weeks,
+        "month_labels": month_labels,
+    }
+    return week_strip, heatmap
 
 
 @todo_bp.route("/todo", methods=["GET", "POST"])
@@ -194,6 +331,7 @@ def todo_page():
                 for r in today_tasks
             ],
         )
+    week_strip, heatmap = build_week_strip_and_heatmap(cur, selected_user, today_date)
     cur.close()
     conn.close()
 
@@ -230,6 +368,8 @@ def todo_page():
         show_disable_button_end=config_end,
         selected_user_row_id=selected_user_id,
         show_task_feedback=show_task_feedback,
+        week_strip=week_strip,
+        heatmap=heatmap,
     )
 
 
@@ -457,7 +597,9 @@ def mark_todo_status():
         allowed = {"skipped", "partially done", "half done", "mostly done", "done"}
         if status not in allowed:
             logger.warning(
-                "mark_status: invalid status id=%s status=%s", todo_id, status
+                "mark_status: invalid status id=%s status=%s",
+                todo_id,
+                status,
             )
             return jsonify({"success": False, "error": "invalid status"}), 400
 
@@ -488,7 +630,9 @@ def mark_todo_status():
         except (ValueError, AttributeError):
             conn.close()
             logger.warning(
-                "mark_status: invalid time slot id=%s time_slot=%s", todo_id, time_slot
+                "mark_status: invalid time slot id=%s time_slot=%s",
+                todo_id,
+                time_slot,
             )
             return jsonify({"success": False, "error": "invalid time slot"}), 402
 
@@ -500,7 +644,10 @@ def mark_todo_status():
         if now < end_dt and not is_admin:
             conn.close()
             logger.warning(
-                "mark_status: too early id=%s now=%s end=%s", todo_id, now, end_dt
+                "mark_status: too early id=%s now=%s end=%s",
+                todo_id,
+                now,
+                end_dt,
             )
             return jsonify({"success": False, "error": "too early"}), 403
 
