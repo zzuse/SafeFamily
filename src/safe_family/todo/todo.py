@@ -32,8 +32,16 @@ RULE_EXEC_COOLDOWN_SECONDS = 30.0
 RULE_EXEC_STATE = {"last_run": 0.0}
 
 # Core subjects — the only ones that count toward the daily percentage.
-# Must stay in sync with the is_mandatory badge in templates/todo/todo.html.
-MANDATORY_SUBJECTS = {"math", "science", "language", "piano", "french"}
+# Also passed to templates/todo/todo.html for the Mandatory/Voluntary badge,
+# so this set is the single source of truth.
+MANDATORY_SUBJECTS = {
+    "math",
+    "science",
+    "physics",
+    "chemistry",
+    "piano",
+    "biology",
+}
 # 100% = this many minutes actually spent on mandatory subjects in a day.
 # The scale caps at 200% (double the target).
 DAILY_TARGET_MINUTES = 120.0
@@ -370,6 +378,7 @@ def todo_page():
         show_task_feedback=show_task_feedback,
         week_strip=week_strip,
         heatmap=heatmap,
+        mandatory_subjects=MANDATORY_SUBJECTS,
     )
 
 

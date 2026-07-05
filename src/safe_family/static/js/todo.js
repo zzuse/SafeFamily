@@ -883,6 +883,31 @@ function setupPlanDrawer() {
     }
 }
 
+function setupHeatmapTooltips() {
+    // The hover cards are position:fixed ::after boxes, so they need real
+    // viewport coordinates: the browser's static-position fallback is
+    // document-based and lands below the viewport once the page is scrolled.
+    const cells = document.querySelectorAll(
+        ".sf-heatmap-cell[data-tooltip], .sf-week-day .v[data-tooltip]"
+    );
+    cells.forEach((cell) => {
+        cell.addEventListener("mouseenter", () => {
+            const rect = cell.getBoundingClientRect();
+            // Card is up to 280px wide and centered on --sf-tip-x; keep the
+            // center far enough from the edges that it stays on screen.
+            const centerX = rect.left + rect.width / 2;
+            const x = Math.min(Math.max(centerX, 148), window.innerWidth - 148);
+            // Card height varies with the day's task count, so show it on
+            // whichever side of the cell has more room.
+            const below = rect.top < window.innerHeight - rect.bottom;
+            cell.style.setProperty("--sf-tip-x", `${x}px`);
+            cell.style.setProperty("--sf-tip-y", `${below ? rect.bottom + 12 : rect.top - 12}px`);
+            cell.toggleAttribute("data-tip-below", below);
+        });
+    });
+}
+
 setupSplitSlotButtons();
 setupCurrentSubtaskInputs();
 setupPlanDrawer();
+setupHeatmapTooltips();

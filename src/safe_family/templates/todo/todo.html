@@ -791,16 +791,25 @@
     /* custom hover card (replaces the native title tooltip).
        position: fixed lets it escape the scroll wrapper's overflow clipping —
        which is also why the hovered cell must never get a transform/filter
-       (either would re-anchor the fixed tooltip inside the clipped area). */
-    .sf-heatmap-cell:hover {
+       (either would re-anchor the fixed tooltip inside the clipped area).
+       --sf-tip-x/--sf-tip-y are viewport coords set on mouseenter in todo.js;
+       without them the browser's static-position fallback drifts off-screen
+       once the page is scrolled. data-tip-below flips the card under the cell
+       when there is more room below than above.
+       Shared with the this-week strip (.sf-week-day .v) so both hovers match. */
+    .sf-heatmap-cell:hover,
+    .sf-week-day .v:hover {
         outline: 2px solid var(--sf-accent);
         outline-offset: 1px;
     }
 
-    .sf-heatmap-cell:hover::after {
+    .sf-heatmap-cell:hover::after,
+    .sf-week-day .v:hover::after {
         content: attr(data-tooltip);
         position: fixed;
-        transform: translate(calc(-50% + 8px), calc(-100% - 12px));
+        left: var(--sf-tip-x, 50vw);
+        top: var(--sf-tip-y, 16px);
+        transform: translate(-50%, -100%);
         z-index: 40;
         pointer-events: none;
         min-width: 170px;
@@ -822,6 +831,11 @@
             0 14px 30px rgba(0, 0, 0, .35),
             0 0 14px var(--sf-accent-soft);
         animation: sf-tip-in .16s ease-out;
+    }
+
+    .sf-heatmap-cell[data-tip-below]:hover::after,
+    .sf-week-day .v[data-tip-below]:hover::after {
+        transform: translate(-50%, 0);
     }
 
     @keyframes sf-tip-in {
@@ -966,8 +980,11 @@
                 {% set main_task = task.split('[')[0].strip() if task else '' %}
                 {% set sub_task = task.split('[')[1].rsplit(']', 1)[0].strip() if '[' in task else '' %}
                 {% set task_icons = {'math': '📐', 'science': '🔬', 'piano': '🎹', 'books': '📚',
-                'language': '🗣️', 'coding': '💻', 'english': '🈶', 'art': '🎨', 'leasure': '🎮'} %}
-                {% set is_mandatory = main_task|lower in ['math', 'piano', 'science', 'language'] %}
+                'language': '🗣️', 'coding': '💻', 'english': '🈶', 'art': '🎨', 'leasure': '🎮',
+                'gym': '🏋️', 'physics': '🧲', 'sleep': '😴', 'scratch': '🐱', 'french': '🥐',
+                'spanish': '💃', 'social': '🤝', 'biology': '🧬', 'game': '🕹️',
+                'chemistry': '🧪'} %}
+                {% set is_mandatory = main_task|lower in mandatory_subjects %}
                 <div class="sf-mission-card todo-row {% if is_current %}sf-mission-current{% endif %} {% if completed %}sf-mission-done{% endif %}"
                     data-todo-id="{{ todo_id }}" data-time-slot="{{ time_slot }}" data-task="{{ task }}"
                     data-completed="{{ 'true' if completed else 'false' }}" data-status="{{ completion_status }}" {% if
@@ -1080,23 +1097,23 @@
     {# level buckets for the shared orange shade scale, 0-200 (see docs/todo-week-heatmap-design.md) #}
     {% macro pct_level(pct) -%}
     {%- if pct is none -%}none{%- elif pct == 0 -%}0{%- elif pct < 35 -%}1{%- elif pct < 65 -%}2{%- elif pct < 90
-    -%}3{%- elif pct <= 100 -%}4{%- elif pct <= 150 -%}5{%- else -%}6{%- endif -%}
-    {%- endmacro %}
-    <div class="sf-bottom-strip">
+        -%}3{%- elif pct <=100 -%}4{%- elif pct <=150 -%}5{%- else -%}6{%- endif -%} {%- endmacro %} <div
+        class="sf-bottom-strip">
         {# ===== this week strip — subject-weighted daily completion ===== #}
         <div class="sf-card">
             <div class="sf-card-header">This week</div>
             <div class="sf-week-strip">
                 {% for day in week_strip %}
+                {% set day_pct = ([day.pct, 100]|min) if day.pct is not none else none %}
                 <div
                     class="sf-week-day{% if day.is_today %} sf-week-today{% endif %}{% if day.is_future %} sf-week-future{% endif %}">
                     <div class="d">{{ day.label }}</div>
-                    <div class="v" title="{{ day.tooltip }}">
+                    <div class="v" data-tooltip="{{ day.tooltip }}">
                         {% if not day.is_future %}
-                        {% if day.pct is not none %}
-                        <div class="fill sf-lvl" data-level="{{ pct_level(day.pct) }}"
-                            style="height: {{ [[day.pct, 100]|min, 8]|max }}%;"></div>
-                        <div class="pct">{{ day.pct }}%</div>
+                        {% if day_pct is not none %}
+                        <div class="fill sf-lvl" data-level="{{ pct_level(day_pct) }}"
+                            style="height: {{ [day_pct, 8]|max }}%;"></div>
+                        <div class="pct">{{ day_pct }}%</div>
                         {% else %}
                         <div class="pct">—</div>
                         {% endif %}
@@ -1147,161 +1164,163 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    {# ===== PULL-OUT DRAWER: planner + configuration ===== #}
-    <div id="sf-plan-drawer-overlay" class="sf-drawer-overlay"></div>
-    <aside id="sf-plan-drawer" class="sf-drawer" aria-hidden="true">
-        <div class="sf-drawer-header">
-            <div class="sf-card-header" style="margin: 0;">Plan &amp; Configure</div>
-            <button type="button" id="sf-plan-drawer-close" class="btn btn-ghost" aria-label="Close drawer">✕</button>
         </div>
-        <div class="sf-drawer-body">
-            <div class="sf-card">
-                <div class="sf-card-header">
-                    Plan new TODO for {{ selected_user }}
-                    <span style="font-family: var(--sf-mono); font-size: 10px; color: var(--sf-ink-dim);
+
+        {# ===== PULL-OUT DRAWER: planner + configuration ===== #}
+        <div id="sf-plan-drawer-overlay" class="sf-drawer-overlay"></div>
+        <aside id="sf-plan-drawer" class="sf-drawer" aria-hidden="true">
+            <div class="sf-drawer-header">
+                <div class="sf-card-header" style="margin: 0;">Plan &amp; Configure</div>
+                <button type="button" id="sf-plan-drawer-close" class="btn btn-ghost"
+                    aria-label="Close drawer">✕</button>
+            </div>
+            <div class="sf-drawer-body">
+                <div class="sf-card">
+                    <div class="sf-card-header">
+                        Plan new TODO for {{ selected_user }}
+                        <span style="font-family: var(--sf-mono); font-size: 10px; color: var(--sf-ink-dim);
                                  letter-spacing: .1em;">⚠️ overwrites previous</span>
-                </div>
-                <form method="POST" id="todoForm" class="planner-form">
-                    <input type="hidden" name="slot_type" value="{{ slot_type }}">
-                    <input type="hidden" name="schedule_mode" value="{{ schedule_mode }}">
-                    <input type="hidden" name="custom_start" value="{{ custom_start }}">
-                    <input type="hidden" name="custom_end" value="{{ custom_end }}">
+                    </div>
+                    <form method="POST" id="todoForm" class="planner-form">
+                        <input type="hidden" name="slot_type" value="{{ slot_type }}">
+                        <input type="hidden" name="schedule_mode" value="{{ schedule_mode }}">
+                        <input type="hidden" name="custom_start" value="{{ custom_start }}">
+                        <input type="hidden" name="custom_end" value="{{ custom_end }}">
 
-                    <div class="sf-planner-grid">
-                        {% for slot in slots %}
-                        <div class="sf-planner-row">
-                            <span>{{ slot }}</span>
-                            <input type="text" name="{{ slot }}" class="task-input" placeholder="MainTask[SubProblem]"
-                                required>
-                            <span style="text-align: center; color: var(--sf-ink-dim);">·</span>
+                        <div class="sf-planner-grid">
+                            {% for slot in slots %}
+                            <div class="sf-planner-row">
+                                <span>{{ slot }}</span>
+                                <input type="text" name="{{ slot }}" class="task-input"
+                                    placeholder="MainTask[SubProblem]" required>
+                                <span style="text-align: center; color: var(--sf-ink-dim);">·</span>
+                            </div>
+                            {% endfor %}
                         </div>
-                        {% endfor %}
-                    </div>
 
-                    <div style="text-align: right; margin-top: 12px;">
-                        <button class="btn btn-primary" type="submit" name="save_todo">
-                            🏄 Save new TODO
-                        </button>
-                    </div>
-                </form>
+                        <div style="text-align: right; margin-top: 12px;">
+                            <button class="btn btn-primary" type="submit" name="save_todo">
+                                🏄 Save new TODO
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="sf-card">
+                    <div class="sf-card-header">Configuration</div>
+                    <form method="POST" class="config-form" id="schedule-config">
+                        <div class="config-row">
+                            <label class="config-field" for="slot_type">
+                                <span>Slot length</span>
+                                <select name="slot_type" id="slot_type" onchange="this.form.submit()">
+                                    <option value="30" {% if slot_type=='30' %}selected{% endif %}>30 minutes</option>
+                                    <option value="60" {% if slot_type=='60' %}selected{% endif %}>1 hour</option>
+                                </select>
+                            </label>
+                            <label class="config-field" for="schedule_mode">
+                                <span>Mode</span>
+                                <select name="schedule_mode" id="schedule_mode" onchange="this.form.submit()">
+                                    <option value="weekday" {% if schedule_mode=='weekday' %}selected{% endif %}>Weekday
+                                    </option>
+                                    <option value="holiday" {% if schedule_mode=='holiday' %}selected{% endif %}>Holiday
+                                    </option>
+                                    <option value="custom" {% if schedule_mode=='custom' %}selected{% endif %}>Custom
+                                    </option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="config-row config-custom-row{% if schedule_mode != 'custom' %} config-hidden{% endif %}"
+                            data-custom="{{ schedule_mode }}">
+                            <label class="config-field" for="custom_start">
+                                <span>Custom start</span>
+                                <select id="custom_start" name="custom_start" class="config-time-select"
+                                    data-current="{{ custom_start }}" onchange="this.form.submit()"></select>
+                            </label>
+                            <label class="config-field" for="custom_end">
+                                <span>Custom end</span>
+                                <select id="custom_end" name="custom_end" class="config-time-select"
+                                    data-current="{{ custom_end }}" onchange="this.form.submit()"></select>
+                            </label>
+                        </div>
+                    </form>
+                </div>
             </div>
+        </aside>
 
-            <div class="sf-card">
-                <div class="sf-card-header">Configuration</div>
-                <form method="POST" class="config-form" id="schedule-config">
-                    <div class="config-row">
-                        <label class="config-field" for="slot_type">
-                            <span>Slot length</span>
-                            <select name="slot_type" id="slot_type" onchange="this.form.submit()">
-                                <option value="30" {% if slot_type=='30' %}selected{% endif %}>30 minutes</option>
-                                <option value="60" {% if slot_type=='60' %}selected{% endif %}>1 hour</option>
-                            </select>
-                        </label>
-                        <label class="config-field" for="schedule_mode">
-                            <span>Mode</span>
-                            <select name="schedule_mode" id="schedule_mode" onchange="this.form.submit()">
-                                <option value="weekday" {% if schedule_mode=='weekday' %}selected{% endif %}>Weekday
-                                </option>
-                                <option value="holiday" {% if schedule_mode=='holiday' %}selected{% endif %}>Holiday
-                                </option>
-                                <option value="custom" {% if schedule_mode=='custom' %}selected{% endif %}>Custom
-                                </option>
-                            </select>
-                        </label>
-                    </div>
-                    <div class="config-row config-custom-row{% if schedule_mode != 'custom' %} config-hidden{% endif %}"
-                        data-custom="{{ schedule_mode }}">
-                        <label class="config-field" for="custom_start">
-                            <span>Custom start</span>
-                            <select id="custom_start" name="custom_start" class="config-time-select"
-                                data-current="{{ custom_start }}" onchange="this.form.submit()"></select>
-                        </label>
-                        <label class="config-field" for="custom_end">
-                            <span>Custom end</span>
-                            <select id="custom_end" name="custom_end" class="config-time-select"
-                                data-current="{{ custom_end }}" onchange="this.form.submit()"></select>
-                        </label>
-                    </div>
-                </form>
+        {# ===== MODALS (DO NOT REMOVE — JS hooks rely on these IDs/classes) ===== #}
+        {% if show_task_feedback %}
+        <div id="task-feedback-modal" class="task-feedback-modal" aria-hidden="true">
+            <div class="task-feedback-panel">
+                <div class="task-feedback-title">How did this mission go?</div>
+                <div class="task-feedback-meta">
+                    <span class="task-feedback-time"></span>
+                    <span class="task-feedback-name"></span>
+                </div>
+                <div class="task-feedback-actions">
+                    <button type="button" class="feedback-option" data-status="skipped">Skipped</button>
+                    <button type="button" class="feedback-option" data-status="partially done">Partially Done</button>
+                    <button type="button" class="feedback-option" data-status="half done">Half Done</button>
+                    <button type="button" class="feedback-option" data-status="mostly done">Mostly Done</button>
+                    <button type="button" class="feedback-option" data-status="done">Done</button>
+                </div>
+                <button type="button" class="feedback-later" data-action="later">➡️ Plan something else, check
+                    later</button>
             </div>
         </div>
-    </aside>
+        {% endif %}
 
-    {# ===== MODALS (DO NOT REMOVE — JS hooks rely on these IDs/classes) ===== #}
-    {% if show_task_feedback %}
-    <div id="task-feedback-modal" class="task-feedback-modal" aria-hidden="true">
-        <div class="task-feedback-panel">
-            <div class="task-feedback-title">How did this mission go?</div>
-            <div class="task-feedback-meta">
-                <span class="task-feedback-time"></span>
-                <span class="task-feedback-name"></span>
-            </div>
-            <div class="task-feedback-actions">
-                <button type="button" class="feedback-option" data-status="skipped">Skipped</button>
-                <button type="button" class="feedback-option" data-status="partially done">Partially Done</button>
-                <button type="button" class="feedback-option" data-status="half done">Half Done</button>
-                <button type="button" class="feedback-option" data-status="mostly done">Mostly Done</button>
-                <button type="button" class="feedback-option" data-status="done">Done</button>
-            </div>
-            <button type="button" class="feedback-later" data-action="later">➡️ Plan something else, check
-                later</button>
-        </div>
-    </div>
-    {% endif %}
-
-    <div id="weekly-summary-modal" class="weekly-summary-modal" aria-hidden="true">
-        <div class="weekly-summary-panel">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div class="weekly-summary-title">Weekly summary</div>
-                <button type="button" class="weekly-summary-close" aria-label="Close weekly summary">✕</button>
-            </div>
-            <div class="weekly-summary-subtitle" style="color: var(--sf-ink-muted); font-size: 12px;">Loading summary…
-            </div>
-            <pre class="weekly-summary-content"></pre>
-            <button type="button" class="weekly-summary-close-btn">Close</button>
-        </div>
-    </div>
-
-    <div id="unknown-tags-modal" class="unknown-tags-modal" aria-hidden="true">
-        <div class="unknown-tags-panel">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div class="unknown-tags-title">Update unknown tags</div>
-                <button type="button" class="unknown-tags-close" aria-label="Close tag update">✕</button>
-            </div>
-            <div class="unknown-tags-subtitle" style="color: var(--sf-ink-muted); font-size: 12px;">
-                Fill in tags before planning today.
-            </div>
-            <div class="unknown-tags-list"></div>
-            <div class="unknown-tags-actions">
-                <button type="button" class="unknown-tags-skip">Skip</button>
-                <button type="button" class="unknown-tags-save btn-primary">Save &amp; continue</button>
+        <div id="weekly-summary-modal" class="weekly-summary-modal" aria-hidden="true">
+            <div class="weekly-summary-panel">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="weekly-summary-title">Weekly summary</div>
+                    <button type="button" class="weekly-summary-close" aria-label="Close weekly summary">✕</button>
+                </div>
+                <div class="weekly-summary-subtitle" style="color: var(--sf-ink-muted); font-size: 12px;">Loading
+                    summary…
+                </div>
+                <pre class="weekly-summary-content"></pre>
+                <button type="button" class="weekly-summary-close-btn">Close</button>
             </div>
         </div>
-    </div>
 
-    <div id="unknown-status-modal" class="unknown-status-modal" aria-hidden="true">
-        <div class="unknown-status-panel">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div class="unknown-status-title">Update completion status</div>
-                <button type="button" class="unknown-status-close" aria-label="Close status update">✕</button>
-            </div>
-            <div class="unknown-status-subtitle" style="color: var(--sf-ink-muted); font-size: 12px;">
-                Update unfinished status entries.
-            </div>
-            <div class="unknown-status-list"></div>
-            <div class="unknown-status-actions">
-                <button type="button" class="unknown-status-skip">Skip</button>
-                <button type="button" class="unknown-status-save btn-primary">Save</button>
+        <div id="unknown-tags-modal" class="unknown-tags-modal" aria-hidden="true">
+            <div class="unknown-tags-panel">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="unknown-tags-title">Update unknown tags</div>
+                    <button type="button" class="unknown-tags-close" aria-label="Close tag update">✕</button>
+                </div>
+                <div class="unknown-tags-subtitle" style="color: var(--sf-ink-muted); font-size: 12px;">
+                    Fill in tags before planning today.
+                </div>
+                <div class="unknown-tags-list"></div>
+                <div class="unknown-tags-actions">
+                    <button type="button" class="unknown-tags-skip">Skip</button>
+                    <button type="button" class="unknown-tags-save btn-primary">Save &amp; continue</button>
+                </div>
             </div>
         </div>
-    </div>
 
-    {# bridge element — kept for JS #}
-    <div id="bridge-element" data-value="{{ selected_user_row_id }}" data-user="{{ selected_user }}"
-        data-role="{{ role }}"></div>
+        <div id="unknown-status-modal" class="unknown-status-modal" aria-hidden="true">
+            <div class="unknown-status-panel">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="unknown-status-title">Update completion status</div>
+                    <button type="button" class="unknown-status-close" aria-label="Close status update">✕</button>
+                </div>
+                <div class="unknown-status-subtitle" style="color: var(--sf-ink-muted); font-size: 12px;">
+                    Update unfinished status entries.
+                </div>
+                <div class="unknown-status-list"></div>
+                <div class="unknown-status-actions">
+                    <button type="button" class="unknown-status-skip">Skip</button>
+                    <button type="button" class="unknown-status-save btn-primary">Save</button>
+                </div>
+            </div>
+        </div>
 
-    <script src="{{ url_for('static', filename='js/todo.js') }}"></script>
+        {# bridge element — kept for JS #}
+        <div id="bridge-element" data-value="{{ selected_user_row_id }}" data-user="{{ selected_user }}"
+            data-role="{{ role }}"></div>
+
+        <script src="{{ url_for('static', filename='js/todo.js') }}"></script>
 </section>
 {% endblock %}
