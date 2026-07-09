@@ -104,7 +104,8 @@ def test_update_todo_sends_notifications(client, monkeypatch):
 def test_done_todo_updates_status(client, monkeypatch):
     from .conftest import FakeConnection
 
-    conn = FakeConnection(rows=[("09:00 - 10:00",)])
+    # Slot ends at 23:59 so "now" is before the end and no default status applies.
+    conn = FakeConnection(rows=[("00:00 - 23:59", "Task", "")])
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
     monkeypatch.setattr(todo, "flash", lambda *a, **k: None)
     _login_session(client, monkeypatch)
@@ -116,6 +117,78 @@ def test_done_todo_updates_status(client, monkeypatch):
         "UPDATE todo_list" in sql and params == (True, 5)
         for sql, params in conn.cursor_obj.queries
     )
+
+
+def test_done_todo_auto_complete_true_gets_default_status(client, monkeypatch):
+    from .conftest import FakeConnection
+
+    conn = FakeConnection(rows=[("00:00 - 00:00", "Math homework", "")])
+    monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(todo, "flash", lambda *a, **k: None)
+    _login_session(client, monkeypatch)
+
+    resp = client.post("/todo/mark_done", json={"id": 9, "completed": True})
+
+    assert resp.status_code == 200
+    assert any(
+        "completion_status" in sql and params == (True, "mostly done", 9)
+        for sql, params in conn.cursor_obj.queries
+    )
+
+
+def test_done_todo_defaults_to_mostly_done_after_slot_end(client, monkeypatch):
+    from .conftest import FakeConnection
+
+    conn = FakeConnection(rows=[("00:00 - 00:00", "Math homework", "")])
+    monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(todo, "flash", lambda *a, **k: None)
+    _login_session(client, monkeypatch)
+
+    resp = client.post("/todo/mark_done", json={"id": 6, "completed": False})
+
+    assert resp.status_code == 200
+    assert any(
+        "completion_status" in sql and params == (True, "mostly done", 6)
+        for sql, params in conn.cursor_obj.queries
+    )
+
+
+def test_done_todo_defaults_to_skipped_for_sleep_task(client, monkeypatch):
+    from .conftest import FakeConnection
+
+    conn = FakeConnection(rows=[("00:00 - 00:00", "Sleep early", "")])
+    monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(todo, "flash", lambda *a, **k: None)
+    _login_session(client, monkeypatch)
+
+    resp = client.post("/todo/mark_done", json={"id": 7, "completed": False})
+
+    assert resp.status_code == 200
+    assert any(
+        "completion_status" in sql and params == (True, "skipped", 7)
+        for sql, params in conn.cursor_obj.queries
+    )
+
+
+def test_done_todo_keeps_existing_status_on_auto_complete(client, monkeypatch):
+    from .conftest import FakeConnection
+
+    conn = FakeConnection(rows=[("00:00 - 00:00", "Math homework", "done")])
+    monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(todo, "flash", lambda *a, **k: None)
+    _login_session(client, monkeypatch)
+
+    resp = client.post("/todo/mark_done", json={"id": 8, "completed": False})
+
+    assert resp.status_code == 200
+    update_queries = [
+        (sql, params)
+        for sql, params in conn.cursor_obj.queries
+        if "UPDATE todo_list" in sql
+    ]
+    assert update_queries == [
+        ("UPDATE todo_list SET completed = %s WHERE id = %s", (True, 8)),
+    ]
 
 
 def test_todo_page_uses_parameterized_date(client, monkeypatch):

@@ -116,7 +116,7 @@ def test_done_todo_not_found(client, monkeypatch):
 
 
 def test_done_todo_invalid_time_slot(client, monkeypatch):
-    cursor = SeqCursor(fetchone_values=[("badslot",)])
+    cursor = SeqCursor(fetchone_values=[("badslot", "Task", "")])
     conn = SeqConnection(cursor)
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
     _login_session(client, monkeypatch)

@@ -455,7 +455,7 @@ def done_todo():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
-            "SELECT time_slot FROM todo_list WHERE id = %s",
+            "SELECT time_slot, task, COALESCE(completion_status, '') FROM todo_list WHERE id = %s",
             (todo_id,),
         )
         row = cur.fetchone()
@@ -463,7 +463,7 @@ def done_todo():
             conn.close()
             return jsonify({"success": False, "error": "not found"}), 404
 
-        time_slot = row[0]
+        time_slot, task, existing_status = row
         try:
             _, end_str = [t.strip() for t in time_slot.split("-")]
             end_time = datetime.strptime(end_str, "%H:%M").time()
@@ -478,13 +478,25 @@ def done_todo():
             second=0,
             microsecond=0,
         )
-        if now >= end_dt and completed is False:
-            completed = True
+        default_status = None
+        if now >= end_dt:
+            if completed is False:
+                completed = True
+            if completed and not existing_status:
+                default_status = (
+                    "skipped" if "sleep" in (task or "").lower() else "mostly done"
+                )
 
-        cur.execute(
-            "UPDATE todo_list SET completed = %s WHERE id = %s",
-            (completed, todo_id),
-        )
+        if default_status:
+            cur.execute(
+                "UPDATE todo_list SET completed = %s, completion_status = %s WHERE id = %s",
+                (completed, default_status, todo_id),
+            )
+        else:
+            cur.execute(
+                "UPDATE todo_list SET completed = %s WHERE id = %s",
+                (completed, todo_id),
+            )
         conn.commit()
         conn.close()
 
