@@ -36,20 +36,12 @@ def test_send_discord_notification_posts(monkeypatch, patch_requests):
     assert patch_requests[0].args[0] == "http://example.com"
 
 
-def test_send_discord_summary_posts(monkeypatch, patch_requests):
-    monkeypatch.setattr(
-        notifier.settings,
-        "DISCORD_WEBHOOK_URL",
-        "http://example.com",
-    )
-    notifier.send_discord_summary("alice", "summary", "2025-W01", "2024-W52")
-    assert patch_requests
-    assert patch_requests[0].args[0] == "http://example.com"
-
-
-def test_send_discord_summary_skips_when_disabled(monkeypatch, patch_requests):
+def test_send_discord_notification_skips_when_disabled(monkeypatch, patch_requests):
     monkeypatch.setattr(notifier.settings, "DISCORD_WEBHOOK_URL", "")
-    notifier.send_discord_summary("alice", "summary", "2025-W01", "2024-W52")
+    notifier.send_discord_notification(
+        "bob",
+        [{"time_slot": "09:00 - 10:00", "task": "Study"}],
+    )
     assert patch_requests == []
 
 
@@ -61,12 +53,28 @@ def test_send_hammerspoon_alert_posts(monkeypatch, patch_requests):
     assert patch_requests[0].args[0] == "http://localhost:9181/alert"
 
 
-def test_send_hammerspoon_task_posts(monkeypatch, patch_requests):
-    monkeypatch.setattr(notifier.settings, "HAMMERSPOON_TASK_URL", "http://localhost:9181/task")
+def test_send_hammerspoon_alert_skips_without_url(monkeypatch, patch_requests):
+    monkeypatch.setattr(notifier.settings, "HAMMERSPOON_ALERT_URL", "")
+    notifier.send_hammerspoon_alert("hello")
+    assert patch_requests == []
+
+
+def test_send_hammerspoon_alert_skips_when_unavailable(monkeypatch, patch_requests):
+    monkeypatch.setattr(notifier.settings, "HAMMERSPOON_ALERT_URL", "http://localhost:9181/alert")
+    monkeypatch.setattr(notifier, "_is_hammerspoon_available", lambda url: False)
+    notifier.send_hammerspoon_alert("hello")
+    assert patch_requests == []
+
+
+def test_send_hammerspoon_alert_swallows_request_error(monkeypatch):
+    monkeypatch.setattr(notifier.settings, "HAMMERSPOON_ALERT_URL", "http://localhost:9181/alert")
     monkeypatch.setattr(notifier, "_is_hammerspoon_available", lambda url: True)
-    notifier.send_hammerspoon_task("alice", "Read", "09:00 - 10:00")
-    assert patch_requests
-    assert patch_requests[0].args[0] == "http://localhost:9181/task"
+
+    def _raise(*args, **kwargs):
+        raise notifier.requests.RequestException("boom")
+
+    monkeypatch.setattr(notifier.requests, "post", _raise)
+    notifier.send_hammerspoon_alert("hello")
 
 
 def test_is_hammerspoon_available_missing_host():

@@ -8,7 +8,7 @@ import threading
 import time
 import uuid
 import zlib
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -352,16 +352,6 @@ def load_schedules():
 
         # Still prefer "cron" compare to ("interval", hours=24)
         scheduler.add_job(
-            _wrap_job("archive_completed_tasks", archive_completed_tasks),
-            "cron",
-            id="archive_completed_tasks",
-            name="archive_completed_tasks",
-            hour=2,
-            minute=10,
-            day_of_week="*",
-        )
-        active_job_ids.add("archive_completed_tasks")
-        scheduler.add_job(
             _wrap_job("analyze_logs", analyze_logs),
             "cron",
             id="analyze_logs",
@@ -610,62 +600,6 @@ def schedule_rules():
         scheduled_jobs=scheduled_jobs,
         agile_configs=agile_configs,
     )
-
-
-def archive_completed_tasks():
-    """Move completed tasks to history table."""
-    logger.info("Start archiving completed tasks...")
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur_his = conn.cursor()
-
-    three_days_ago = datetime.now(local_tz) - timedelta(days=3)
-
-    # 1. Select tasks completed 3+ days ago
-    cur.execute(
-        """
-        SELECT goal_id, user_id, task_text, priority, completed_at, time_spent
-        FROM long_term_goals
-        WHERE completed = TRUE AND completed_at < %s
-    """,
-        (three_days_ago,),
-    )
-    rows = cur.fetchall()
-
-    if not rows:
-        conn.close()
-        return
-
-    # 2. Insert them into history table
-    for row in rows:
-        try:
-            goal_id, user_id, task_text, priority, completed_at, time_spent = row
-            cur_his.execute(
-                """
-                INSERT INTO long_term_goals_his (goal_id, user_id, task_text, priority, completed_at, time_spent)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """,
-                (
-                    goal_id,
-                    user_id,
-                    task_text,
-                    priority,
-                    completed_at.strftime("%Y-%m-%d %H:%M:%S"),
-                    time_spent,
-                ),
-            )
-            logger.info("Archived task: %s", str(row))
-            # 3. Remove from active table
-            cur.execute(
-                "DELETE FROM long_term_goals WHERE goal_id = %s",
-                (goal_id,),
-            )
-            logger.info("Move goal_id %d to history", goal_id)
-            conn.commit()
-        except Exception as e:
-            logger.info("move to history not success: %s", str(e))
-
-    conn.close()
 
 
 def analyze_logs():

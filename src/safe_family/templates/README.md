@@ -21,7 +21,7 @@ templates_redesign/
    `src/safe_family/templates/`.
 3. No Python changes needed — every Flask `url_for()` endpoint, form action, hidden
    input, and class/ID your JS depends on is preserved (`complete-checkbox`,
-   `admin-status-select`, `time-slot-cell` with `--slot-progress`, `bridge-element`,
+   `admin-status-select`, `bridge-element`,
    all the `*-modal` IDs, etc.).
 4. Tailwind: your existing `styles.css` is still loaded, so anything else that
    uses utility classes keeps working unchanged. You do **not** need to rerun

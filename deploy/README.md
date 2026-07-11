@@ -16,10 +16,8 @@ The dump.sql file created most of the tables, but it missed the following table 
    - auth_codes
    - token_blocklist
 
-  Todo & Goals Tables:
+  Todo Tables:
    - todo_list
-   - long_term_goals
-   - long_term_goals_his
 
   Rules & Scheduling Tables:
    - schedule_rules

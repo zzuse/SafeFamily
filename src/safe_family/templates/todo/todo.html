@@ -389,17 +389,6 @@
         color: var(--sf-accent);
     }
 
-    .notify-current-task-btn {
-        background: var(--sf-accent-soft);
-        color: var(--sf-accent);
-        border: 0;
-        padding: 4px 8px;
-        border-radius: 5px;
-        font-size: 11px;
-        font-weight: 600;
-        cursor: pointer;
-    }
-
     .sf-drawer-toggle-btn {
         background: var(--sf-surface-2);
         color: var(--sf-ink);
@@ -536,10 +525,7 @@
     }
 
     /* modals (keep IDs/classes for JS) */
-    .task-feedback-modal,
-    .weekly-summary-modal,
-    .unknown-tags-modal,
-    .unknown-status-modal {
+    .task-feedback-modal {
         position: fixed;
         inset: 0;
         background: rgba(10, 14, 26, .72);
@@ -549,17 +535,11 @@
         z-index: 50;
     }
 
-    .task-feedback-modal[aria-hidden="false"],
-    .weekly-summary-modal[aria-hidden="false"],
-    .unknown-tags-modal[aria-hidden="false"],
-    .unknown-status-modal[aria-hidden="false"] {
+    .task-feedback-modal[aria-hidden="false"] {
         display: flex;
     }
 
-    .task-feedback-panel,
-    .weekly-summary-panel,
-    .unknown-tags-panel,
-    .unknown-status-panel {
+    .task-feedback-panel {
         background: var(--sf-surface);
         border: 1px solid var(--sf-border-strong);
         border-radius: var(--sf-radius);
@@ -570,10 +550,7 @@
         overflow: auto;
     }
 
-    .task-feedback-title,
-    .weekly-summary-title,
-    .unknown-tags-title,
-    .unknown-status-title {
+    .task-feedback-title {
         font-family: var(--sf-display);
         font-weight: 600;
         font-size: 18px;
@@ -588,9 +565,7 @@
         gap: 12px;
     }
 
-    .task-feedback-actions,
-    .unknown-tags-actions,
-    .unknown-status-actions {
+    .task-feedback-actions {
         display: flex;
         gap: 6px;
         flex-wrap: wrap;
@@ -598,13 +573,7 @@
     }
 
     .feedback-option,
-    .feedback-later,
-    .unknown-tags-save,
-    .unknown-tags-skip,
-    .unknown-status-save,
-    .unknown-status-skip,
-    .weekly-summary-close,
-    .weekly-summary-close-btn {
+    .feedback-later {
         background: var(--sf-surface-2);
         color: var(--sf-ink);
         border: 1px solid var(--sf-border-strong);
@@ -625,16 +594,6 @@
         color: var(--sf-ink-muted);
         border: 0;
         margin-top: 8px;
-    }
-
-    .weekly-summary-content {
-        background: var(--sf-surface-3);
-        padding: 12px;
-        border-radius: var(--sf-radius-sm);
-        font-family: var(--sf-mono);
-        font-size: 12px;
-        color: var(--sf-ink);
-        white-space: pre-wrap;
     }
 
     /* shared orange shade scale — used by the week strip fill and heatmap cells */
@@ -965,10 +924,6 @@
             <div class="sf-missions-head-actions">
                 <button type="button" id="sf-plan-drawer-toggle" class="sf-drawer-toggle-btn">🗓️ Plan &amp;
                     Configure</button>
-                {% if today_tasks %}
-                <button type="button" class="notify-current-task-btn" title="Send current task to Hammerspoon">📢
-                    Notify current</button>
-                {% endif %}
             </div>
         </div>
 
@@ -1268,54 +1223,6 @@
             </div>
         </div>
         {% endif %}
-
-        <div id="weekly-summary-modal" class="weekly-summary-modal" aria-hidden="true">
-            <div class="weekly-summary-panel">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div class="weekly-summary-title">Weekly summary</div>
-                    <button type="button" class="weekly-summary-close" aria-label="Close weekly summary">✕</button>
-                </div>
-                <div class="weekly-summary-subtitle" style="color: var(--sf-ink-muted); font-size: 12px;">Loading
-                    summary…
-                </div>
-                <pre class="weekly-summary-content"></pre>
-                <button type="button" class="weekly-summary-close-btn">Close</button>
-            </div>
-        </div>
-
-        <div id="unknown-tags-modal" class="unknown-tags-modal" aria-hidden="true">
-            <div class="unknown-tags-panel">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div class="unknown-tags-title">Update unknown tags</div>
-                    <button type="button" class="unknown-tags-close" aria-label="Close tag update">✕</button>
-                </div>
-                <div class="unknown-tags-subtitle" style="color: var(--sf-ink-muted); font-size: 12px;">
-                    Fill in tags before planning today.
-                </div>
-                <div class="unknown-tags-list"></div>
-                <div class="unknown-tags-actions">
-                    <button type="button" class="unknown-tags-skip">Skip</button>
-                    <button type="button" class="unknown-tags-save btn-primary">Save &amp; continue</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="unknown-status-modal" class="unknown-status-modal" aria-hidden="true">
-            <div class="unknown-status-panel">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div class="unknown-status-title">Update completion status</div>
-                    <button type="button" class="unknown-status-close" aria-label="Close status update">✕</button>
-                </div>
-                <div class="unknown-status-subtitle" style="color: var(--sf-ink-muted); font-size: 12px;">
-                    Update unfinished status entries.
-                </div>
-                <div class="unknown-status-list"></div>
-                <div class="unknown-status-actions">
-                    <button type="button" class="unknown-status-skip">Skip</button>
-                    <button type="button" class="unknown-status-save btn-primary">Save</button>
-                </div>
-            </div>
-        </div>
 
         {# bridge element — kept for JS #}
         <div id="bridge-element" data-value="{{ selected_user_row_id }}" data-user="{{ selected_user }}"
