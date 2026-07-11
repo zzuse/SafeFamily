@@ -110,7 +110,6 @@
         code,
         pre,
         .sf-mono,
-        .time-slot-cell,
         .sf-rainbow-axis,
         .sf-eyebrow {
             font-family: var(--sf-mono) !important;
@@ -534,15 +533,12 @@
                 {% if session.access_token %}
                 <a href="{{ url_for('todo.todo_page') }}"
                     class="{% if request.endpoint == 'todo.todo_page' %}active{% endif %}">Today</a>
-                <a href="{{ url_for('goals.goals_page') }}"
-                    class="{% if request.endpoint == 'goals.goals_page' %}active{% endif %}">Goals</a>
                 <a href="{{ url_for('notes.notes_view') }}"
                     class="{% if request.endpoint == 'notes.notes_view' %}active{% endif %}">Notes</a>
                 <a href="{{ url_for('notes.timeline') }}"
                     class="{% if request.endpoint == 'notes.timeline' %}active{% endif %}">Timeline</a>
                 <a href="{{ url_for('suspicious.view_suspicious') }}"
                     class="{% if request.endpoint == 'suspicious.view_suspicious' %}active{% endif %}">MGMT</a>
-                <a href="{{ url_for('index.ninja_nightmare') }}">Game</a>
                 <a href="{{ url_for('index.store_sum') }}">Sheet</a>
                 <a href="{{ url_for('auth.session_logout') }}">Logout</a>
                 {% else %}

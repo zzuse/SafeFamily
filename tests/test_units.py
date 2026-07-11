@@ -4,7 +4,6 @@ from datetime import datetime
 
 import pytest
 
-from src.safe_family.cli.gentags import infer_tag
 from src.safe_family.todo.todo import generate_time_slots
 from src.safe_family.urls.analyzer import get_time_range
 
@@ -49,6 +48,30 @@ def test_generate_time_slots_custom_invalid_falls_back():
     assert slots
 
 
+def test_generate_time_slots_custom_bad_format_falls_back():
+    weekday = datetime(2025, 1, 6, 12, 0)  # Monday
+    slots = generate_time_slots(
+        slot_type="60",
+        schedule_mode="custom",
+        custom_start="08:00:00",
+        custom_end="09:00",
+        today=weekday,
+    )
+    assert slots[0] == "18:30 - 19:30"
+
+
+def test_generate_time_slots_custom_end_before_start_falls_back():
+    weekday = datetime(2025, 1, 6, 12, 0)  # Monday
+    slots = generate_time_slots(
+        slot_type="60",
+        schedule_mode="custom",
+        custom_start="10:00",
+        custom_end="09:00",
+        today=weekday,
+    )
+    assert slots[0] == "18:30 - 19:30"
+
+
 def test_generate_time_slots_custom_valid():
     weekday = datetime(2025, 1, 6, 12, 0)  # Monday
     slots = generate_time_slots(
@@ -80,8 +103,3 @@ def test_get_time_range_custom_valid():
 def test_get_time_range_invalid_raises():
     with pytest.raises(ValueError):
         get_time_range(custom=("2025-01-02T10:00:00", "2025-01-01T09:00:00"))
-
-
-def test_infer_tag_matches_keywords_and_unknown():
-    assert infer_tag("Finish calculus problems") == "math"
-    assert infer_tag("Unrelated task name") == "unknown"

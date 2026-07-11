@@ -72,10 +72,6 @@ class Settings:
         "HAMMERSPOON_ALERT_URL",
         "http://localhost:9181/alert",
     )
-    HAMMERSPOON_TASK_URL = os.environ.get(
-        "HAMMERSPOON_TASK_URL",
-        "http://localhost:9181/task",
-    )
 
     # Notesync settings
     NOTESYNC_API_KEY = os.environ.get("NOTESYNC_API_KEY", "")

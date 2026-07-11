@@ -15,7 +15,7 @@ integrations.
 - Rule toggles for AdGuard and router traffic control with cooldown safeguards.
 - Scheduler with APScheduler plus Postgres advisory locks for safe multi-process jobs.
 - Notesync API with LWW conflict handling, tags, and media attachments.
-- Todo planner with time slots, long-term goals, and weekly summaries.
+- Todo planner with time slots and a completion heatmap.
 - Notifications via email, Discord webhooks, and local Hammerspoon alerts.
 - Auto Git export/import for block list rules.
 
@@ -149,7 +149,7 @@ Integrations (optional, feature-specific):
 - Router: `ROUTER_IP`
 - Email: `MAIL_ACCOUNT`, `MAIL_PASSWORD`, `MAIL_PERSON_LIST`
 - Discord: `DISCORD_WEBHOOK_URL`
-- Hammerspoon: `HAMMERSPOON_ALERT_URL`, `HAMMERSPOON_TASK_URL`
+- Hammerspoon: `HAMMERSPOON_ALERT_URL`
 - OAuth: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GOOGLE_CLIENT_ID`,
   `GOOGLE_CLIENT_SECRET`, `GOOGLE_CLIENT_PROJECT_ID`, `GOOGLE_CALLBACK_ROUTE`
 

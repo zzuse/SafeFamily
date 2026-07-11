@@ -14,7 +14,6 @@ src/safe_family/rules/scheduler.py | 363 | 73% | Background jobs and advisory lo
 src/safe_family/urls/blocker.py | 129 | 61% | AdGuard and router rule toggles
 src/safe_family/urls/analyzer.py | 87 | 75% | Log parsing and analysis
 src/safe_family/api/routes.py | 106 | 77% | Notesync API + notes list
-src/safe_family/todo/goals.py | 115 | 92% | Separated long-term goals logic (New)
 src/safe_family/urls/notes.py | 68 | 86% | UI for notes viewer (pagination/media)
 
 Secondary modules close to 80 or above:
@@ -84,17 +83,11 @@ Suggested files to extend:
 - [x] done_todo updates status
 - [ ] done_todo auto-complete after end time
 - [x] mark_status invalid + success paths
-- [x] notify_feedback/notify_current_task routes
 - [x] split_slot success + forbidden paths
-- [x] long-term goal create/update/reorder/start/stop/delete/update due (in goals.py)
-- [x] update_tag success + forbidden paths
-- [x] unknown_metadata filtering
-- [x] goals page renders and admin user switching
 
 Suggested files to extend:
 - tests/test_todo.py
 - tests/test_units.py
-- tests/test_goals_route.py
 
 ### Scheduler and automation
 - [x] _ensure_scheduler_leader returns False when lock not acquired
@@ -137,7 +130,7 @@ Suggested files to extend:
 ### Notifications
 - [x] email notification formats and recipients
 - [x] Discord notification payloads and empty webhook behavior
-- [x] Hammerspoon alert/task only sends when server reachable
+- [x] Hammerspoon alert only sends when server reachable
 
 Suggested files to extend:
 - tests/test_notifier.py
@@ -152,12 +145,9 @@ Suggested files to extend:
 
 ### CLI tools and reports
 - [ ] analyze: invalid args, custom ranges
-- [x] weekly_diff output formatting
-- [x] weekly_diff missing files
 - [x] weekly_metrics no data vs data
 - [x] weekly_metrics output file/dir paths
 - [x] weekly_metrics DB query path
-- [ ] gentags: empty or malformed input
 
 Suggested files to extend:
 - tests/test_cli_analyze.py

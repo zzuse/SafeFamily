@@ -42,8 +42,12 @@ Files:
 - src/safe_family/core/schemas.py
 
 Scope:
-- SQLAlchemy models: User, TokenBlocklist, LongTermGoal
-- Raw SQL tables used by features: logs, logs_daily, suspicious, block_list, filter_rule, schedule_rules, user_rule_assignment, todo_list, long_term_goals_his, block_types
+- SQLAlchemy models: User, TokenBlocklist
+- Raw SQL tables used by features: logs, logs_daily, suspicious, block_list, filter_rule, schedule_rules, user_rule_assignment, todo_list, block_types
+
+Note: the long-term goals feature was removed. Its tables are not dropped
+automatically; the operator can remove them by hand with:
+`DROP TABLE long_term_goals; DROP TABLE long_term_goals_his;`
 
 Steps:
 1) Keep model methods aligned with DB behavior (save/delete helpers).
@@ -133,7 +137,7 @@ Files:
 Scope:
 - APScheduler jobs loaded from `schedule_rules`
 - Leader election and advisory locks
-- Daily jobs: archive completed tasks, analyze logs
+- Daily job: analyze logs
 - Realtime notifications: overdue task feedback
 
 Validation:
@@ -141,7 +145,7 @@ Validation:
 
 ---
 
-### Task 8: Todo system and long-term goals
+### Task 8: Todo system
 
 Files:
 - src/safe_family/todo/todo.py
@@ -151,8 +155,7 @@ Files:
 Scope:
 - Daily time slot planning (weekday/holiday/custom)
 - CRUD for tasks and completion status
-- Split slots, tag updates, weekly summary, unknown metadata
-- Long-term goals with tracking and reordering
+- Split slots
 
 Validation:
 - `pytest tests/test_todo.py`
@@ -168,7 +171,7 @@ Files:
 Scope:
 - Email via Flask-Mail
 - Discord webhook updates
-- Hammerspoon alerts and task notifications
+- Hammerspoon alerts
 
 Validation:
 - `pytest tests/test_notifier.py`

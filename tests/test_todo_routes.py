@@ -1,9 +1,7 @@
 """Additional tests for todo routes."""
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from types import SimpleNamespace
-
-import pandas as pd
 
 from src.safe_family.core import auth
 from src.safe_family.todo import todo
@@ -202,117 +200,6 @@ def test_mark_todo_status_success(client, monkeypatch):
     assert any("UPDATE todo_list" in sql for sql, _ in cursor.queries)
 
 
-def test_notify_current_task_success(client, monkeypatch):
-    fixed_now = todo.local_tz.localize(datetime(2025, 1, 1, 9, 5))
-
-    class FixedDateTime(datetime):
-        @classmethod
-        def now(cls, tz=None):
-            if tz is None:
-                return fixed_now.replace(tzinfo=None)
-            return fixed_now
-
-    monkeypatch.setattr(todo, "datetime", FixedDateTime)
-    time_slot = "09:00 - 09:10"
-    cursor = SeqCursor(fetchall_values=[[(time_slot, "Read")]])
-    conn = SeqConnection(cursor)
-    monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
-    monkeypatch.setattr(todo, "get_agile_config", lambda k, d="": d)
-    monkeypatch.setattr(
-        todo,
-        "get_current_username",
-        lambda: SimpleNamespace(username="alice", role="user"),
-    )
-    sent = {}
-    monkeypatch.setattr(
-        todo,
-        "send_hammerspoon_task",
-        lambda *a, **k: sent.__setitem__("task", a),
-    )
-    _login_session(client, monkeypatch)
-
-    resp = client.post("/todo/notify_current_task", json={})
-
-    assert resp.status_code == 200
-    assert resp.get_json()["success"] is True
-    assert "task" in sent
-
-
-def test_notify_current_task_requires_login(client, monkeypatch):
-    monkeypatch.setattr(todo, "get_current_username", lambda: None)
-    _login_session(client, monkeypatch)
-
-    resp = client.post("/todo/notify_current_task", json={})
-
-    assert resp.status_code == 401
-    assert resp.get_json()["error"] == "not logged in"
-
-
-def test_unknown_metadata_filters(client, monkeypatch):
-    yesterday = datetime.now(todo.local_tz).date() - timedelta(days=1)
-    cursor = SeqCursor(
-        fetchall_values=[
-            [
-                (1, "09:00 - 10:00", "Task", "", yesterday, ""),
-                (2, "09:00 - 10:00", "Task2", "unknown", yesterday, None),
-            ]
-        ],
-    )
-    conn = SeqConnection(cursor)
-    monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
-    monkeypatch.setattr(todo, "gentags", SimpleNamespace(main=lambda *_: None))
-    monkeypatch.setattr(
-        todo,
-        "get_current_username",
-        lambda: SimpleNamespace(username="alice", role="user"),
-    )
-    _login_session(client, monkeypatch)
-
-    resp = client.get("/todo/unknown_metadata")
-
-    assert resp.status_code == 200
-    data = resp.get_json()
-    assert len(data["unknown_tags"]) == 2
-    assert len(data["unknown_status"]) == 2
-
-
-def test_update_tag_forbidden(client, monkeypatch):
-    cursor = SeqCursor(fetchone_values=[("bob",)])
-    conn = SeqConnection(cursor)
-    monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
-    monkeypatch.setattr(todo, "get_agile_config", lambda k, d="": d)
-    monkeypatch.setattr(
-        todo,
-        "get_current_username",
-        lambda: SimpleNamespace(username="alice", role="user"),
-    )
-    _login_session(client, monkeypatch)
-
-    resp = client.post("/todo/update_tag", json={"id": 1, "tag": "math"})
-
-    assert resp.status_code == 403
-    assert resp.get_json()["error"] == "forbidden"
-
-
-def test_update_tag_success(client, monkeypatch):
-    cursor = SeqCursor(fetchone_values=[("alice",)])
-    conn = SeqConnection(cursor)
-    monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
-    monkeypatch.setattr(todo, "get_agile_config", lambda k, d="": d)
-    monkeypatch.setattr(
-        todo,
-        "get_current_username",
-        lambda: SimpleNamespace(username="alice", role="admin"),
-    )
-    _login_session(client, monkeypatch)
-
-    resp = client.post("/todo/update_tag", json={"id": 1, "tag": "math"})
-
-    assert resp.status_code == 200
-    assert resp.get_json()["success"] is True
-    assert conn.commits == 1
-
-
 def test_exec_rules_no_lock(client, monkeypatch):
     class DummyLock:
         def acquire(self, blocking=False):
@@ -382,45 +269,3 @@ def test_exec_rules_disable_all_triggers_schedule(client, monkeypatch):
     assert called["load"] == 1
     assert called["notify"] == 1
     assert any("UPDATE schedule_rules" in sql for sql, _ in cursor.queries)
-
-
-def test_notify_feedback_sends_alert(client, monkeypatch):
-    monkeypatch.setattr(todo, "send_hammerspoon_alert", lambda *a, **k: None)
-    _login_session(client, monkeypatch)
-
-    resp = client.post("/todo/notify_feedback", json={"time_slot": "09:00 - 10:00", "task": "Read"})
-
-    assert resp.status_code == 200
-    assert resp.get_json()["success"] is True
-
-
-def test_weekly_summary_returns_payload(client, monkeypatch):
-    today = datetime(2025, 1, 8)
-    monkeypatch.setattr(todo, "gentags", SimpleNamespace(main=lambda *_: None))
-    monkeypatch.setattr(
-        todo,
-        "get_current_username",
-        lambda: SimpleNamespace(username="alice", role="user"),
-    )
-    monkeypatch.setattr(todo.weekly_metrics, "_parse_iso_week", lambda week: (today.date(), today.date()))
-    monkeypatch.setattr(todo.weekly_metrics, "_fetch_week_df", lambda *a, **k: pd.DataFrame())
-    monkeypatch.setattr(
-        todo.weekly_metrics,
-        "_compute_metrics",
-        lambda *a, **k: SimpleNamespace(
-            completion_rate=0.5,
-            avg_tasks_per_day=1.0,
-            avg_planned_minutes=30.0,
-            by_category={},
-            by_category_minutes={},
-        ),
-    )
-    monkeypatch.setattr(todo.weekly_diff, "_format_output", lambda *a, **k: "summary")
-    monkeypatch.setattr(todo, "send_discord_summary", lambda *a, **k: None)
-    _login_session(client, monkeypatch)
-
-    resp = client.get("/todo/weekly_summary")
-
-    assert resp.status_code == 200
-    data = resp.get_json()
-    assert data["summary"] == "summary"

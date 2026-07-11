@@ -73,7 +73,7 @@ npx @tailwindcss/cli -i src/safe_family/static/css/input.css \
 
 The project uses **two DB access styles in parallel**:
 
-1. **SQLAlchemy ORM** (`src/safe_family/core/extensions.py` → `db`) — used for `users`, `token_blocklist`, `long_term_goals`, `notes`, `tags`, `media`, `note_sync_ops`, `auth_codes`, `agile_config`.
+1. **SQLAlchemy ORM** (`src/safe_family/core/extensions.py` → `db`) — used for `users`, `token_blocklist`, `notes`, `tags`, `media`, `note_sync_ops`, `auth_codes`, `agile_config`.
 2. **Raw psycopg2** (`get_db_connection()` in `extensions.py`) — used by logs, suspicious, block_list, filter_rule, schedule_rules, todo_list. These tables are not in SQLAlchemy models and must be created manually (see `scripts/notesync_schema.sql` and `docs/implementation.md`).
 
 Tests stub the raw connection with `FakeConnection`/`FakeCursor` (see `tests/conftest.py`). Notesync tests use a real SQLite DB via `notesync_app` fixture.
@@ -95,7 +95,6 @@ All blueprints are registered in `src/safe_family/app.py`:
 | `auth_bp` | `core/auth.py` | `/auth` |
 | `user_bp` | `users/users.py` | `/users` |
 | `todo_bp` | `todo/todo.py` | — |
-| `goals_bp` | `todo/goals.py` | — |
 | `api_bp` | `api/routes.py` | `/api` |
 
 ### Key subsystems
@@ -104,7 +103,7 @@ All blueprints are registered in `src/safe_family/app.py`:
 
 **URL blocking pipeline** — `urls/receiver.py` ingests AdGuard Home log events at `POST /logs`; `urls/analyzer.py` aggregates them into `logs_daily` and derives `suspicious` entries; `urls/blocker.py` toggles AdGuard rule lists and router gateway traffic via HTTP calls. Cooldown logic prevents rapid toggling.
 
-**Scheduler (`rules/scheduler.py`)** — APScheduler `BackgroundScheduler` loads cron rules from the `schedule_rules` table at startup. Uses Postgres advisory locks for leader election across multiple Gunicorn workers. Daily jobs archive tasks and run log analysis. Overdue tasks trigger Hammerspoon/email notifications.
+**Scheduler (`rules/scheduler.py`)** — APScheduler `BackgroundScheduler` loads cron rules from the `schedule_rules` table at startup. Uses Postgres advisory locks for leader election across multiple Gunicorn workers. A daily job runs log analysis. Overdue tasks trigger Hammerspoon/email notifications.
 
 **Auto Git (`auto_git/auto_git.py`)** — exports block list and filter rules to files and auto-commits/pushes to a rules repository. SSH keys are required (mounted from `~/.ssh` in Docker).
 
@@ -112,4 +111,4 @@ All blueprints are registered in `src/safe_family/app.py`:
 
 ### Raw SQL tables (not in ORM)
 
-`logs`, `logs_daily`, `suspicious`, `block_list`, `filter_rule`, `schedule_rules`, `user_rule_assignment`, `todo_list`, `long_term_goals_his`, `block_types` — see `docs/implementation.md` for column details. `scripts/migrate.py` is the migration hook.
+`logs`, `logs_daily`, `suspicious`, `block_list`, `filter_rule`, `schedule_rules`, `user_rule_assignment`, `todo_list`, `block_types` — see `docs/implementation.md` for column details. `scripts/migrate.py` is the migration hook.

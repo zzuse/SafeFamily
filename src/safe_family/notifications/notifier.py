@@ -59,32 +59,6 @@ def send_discord_notification(username, tasks):
         logger.exception("❌ Discord message failed:")
 
 
-def send_discord_summary(username: str, summary: str, week: str, previous_week: str):
-    """Send a Discord notification for weekly summary."""
-    if not settings.DISCORD_WEBHOOK_URL:
-        print("⚠️ Discord webhook URL not configured.")
-        return
-
-    title = f"📊 Weekly Summary for {username}"
-    content = summary or "No summary data available."
-    footer_text = f"{previous_week} → {week}" if previous_week and week else None
-    embed = {
-        "title": title,
-        "description": content,
-        "color": 3447003,
-    }
-    if footer_text:
-        embed["footer"] = {"text": footer_text}
-
-    data = {"embeds": [embed]}
-
-    try:
-        requests.post(settings.DISCORD_WEBHOOK_URL, json=data, timeout=5)
-        logger.info(data)
-    except NotificationError:
-        logger.exception("❌ Discord summary failed:")
-
-
 def send_hammerspoon_alert(message: str):
     """Send a local desktop alert via Hammerspoon HTTP server."""
     alert_url = settings.HAMMERSPOON_ALERT_URL
@@ -98,25 +72,6 @@ def send_hammerspoon_alert(message: str):
         requests.post(alert_url, json=payload, timeout=2)
     except requests.RequestException:
         logger.exception("❌ Hammerspoon alert failed:")
-
-
-def send_hammerspoon_task(doer: str, task_name: str, time_slot: str):
-    """Send a local desktop task notification via Hammerspoon HTTP server."""
-    task_url = settings.HAMMERSPOON_TASK_URL
-    if not task_url:
-        return
-    if not _is_hammerspoon_available(task_url):
-        return
-
-    payload = {
-        "doer": doer,
-        "task_name": task_name,
-        "time_slot": time_slot,
-    }
-    try:
-        requests.post(task_url, json=payload, timeout=2)
-    except requests.RequestException:
-        logger.exception("❌ Hammerspoon task notification failed:")
 
 
 def _is_hammerspoon_available(alert_url: str) -> bool:

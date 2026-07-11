@@ -7,9 +7,8 @@ reserved card** (`.sf-heatmap-reserve`).
 ## Key decision: no database schema change
 
 `todo_list` already retains full per-date history — the daily save in
-`todo_page()` only deletes/rewrites *today's* rows, and the nightly
-`archive_completed_tasks` job only touches `long_term_goals`, never
-`todo_list`. Every column needed already exists: `username`, `date`,
+`todo_page()` only deletes/rewrites *today's* rows, so historical
+`todo_list` rows are never touched. Every column needed already exists: `username`, `date`,
 `time_slot`, `completed`, `completion_status`.
 
 Only DB change (optional, recommended): an index in `scripts/migrate.py`:
