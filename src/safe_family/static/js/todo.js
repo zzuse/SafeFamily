@@ -2,6 +2,8 @@ const element = document.getElementById("bridge-element");
 const selected_user_row_id = element.dataset.value; // Access data-value
 const selected_user_name = element.dataset.user;
 const selected_user_role = element.dataset.role;
+// Must match DEFAULT_STATUS_GRACE_MINUTES in todo/todo.py.
+const DEFAULT_STATUS_GRACE_MS = 30 * 60 * 1000;
 
 const todoForm = document.getElementById("todoForm");
 if (todoForm) {
@@ -111,17 +113,31 @@ function updateSlotProgress() {
         row.dataset.slotProgress = progress.toFixed(3);
 
         const checkbox = row.querySelector(".complete-checkbox");
+        const select = row.querySelector(".status-select");
         const status = (row.dataset.status || "").trim();
         const completed = row.dataset.completed === "true";
         const taskInput = row.querySelector(`input[name="task_${row.dataset.todoId}"]`);
         const isActive = now >= startTime && now < endTime && !completed;
         row.classList.toggle("is-active", isActive);
+
+        const inGrace = now >= endTime && now - endTime < DEFAULT_STATUS_GRACE_MS;
+        if (select) {
+            if (selected_user_role === "admin") {
+                select.disabled = false;
+            } else {
+                select.disabled = !!(status || !inGrace);
+            }
+        }
+
         if (now >= endTime) {
             if (checkbox) {
                 checkbox.checked = true;
                 checkbox.disabled = true;
             }
-            if (!completed) {
+            // After the grace period the server applies the default status
+            // ("mostly done" / "skipped"), so keep pinging until one exists.
+            const graceOver = now - endTime >= DEFAULT_STATUS_GRACE_MS;
+            if (!completed || (!status && graceOver)) {
                 fetch("/todo/mark_done", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -133,6 +149,9 @@ function updateSlotProgress() {
                             row.dataset.completed = "true";
                             if (taskInput) {
                                 taskInput.classList.add("done");
+                            }
+                            if (data.completion_status) {
+                                updateRowStatusFromDropdown(row.dataset.todoId, data.completion_status);
                             }
                         }
                     })
@@ -179,159 +198,7 @@ function updateNextMissionEta() {
     etaEl.textContent = diffMin > 0 ? `in ${diffMin} min` : "now";
 }
 
-function normalizeStatusLabel(status) {
-    if (!status) return "";
-    return status.replace(/\b\w/g, c => c.toUpperCase());
-}
-
-function setupTaskFeedbackModal() {
-    const modal = document.getElementById("task-feedback-modal");
-    if (!modal) return;
-
-    const titleTime = modal.querySelector(".task-feedback-time");
-    const titleName = modal.querySelector(".task-feedback-name");
-    const statusButtons = modal.querySelectorAll(".feedback-option");
-    const laterButton = modal.querySelector(".feedback-later");
-    const queue = [];
-    const queuedIds = new Set();
-    let activeItem = null;
-
-    function collectOverdueTasks() {
-        const now = new Date();
-        document.querySelectorAll(".todo-row").forEach(row => {
-            const timeSlot = row.dataset.timeSlot;
-            const status = (row.dataset.status || "").trim();
-            if (!timeSlot || status) return;
-            const endTime = parseSlotEndTime(timeSlot);
-            if (!endTime) return;
-            if (now >= endTime && !queuedIds.has(row.dataset.todoId)) {
-                queue.push({
-                    id: row.dataset.todoId,
-                    timeSlot,
-                    task: row.dataset.task || "",
-                });
-                queuedIds.add(row.dataset.todoId);
-            }
-        });
-    }
-
-    function openModal(item) {
-        activeItem = item;
-        titleTime.textContent = item.timeSlot;
-        titleName.textContent = item.task ? `- ${item.task}` : "";
-        modal.classList.add("active");
-        modal.setAttribute("aria-hidden", "false");
-    }
-
-    function closeModal() {
-        modal.classList.remove("active");
-        modal.setAttribute("aria-hidden", "true");
-        activeItem = null;
-    }
-
-    function showNext() {
-        if (activeItem || queue.length === 0) return;
-        openModal(queue.shift());
-    }
-
-    function updateRowStatus(todoId, status) {
-        const row = document.querySelector(`.todo-row[data-todo-id="${todoId}"]`);
-        if (!row) return;
-        queuedIds.delete(todoId);
-        const statusEl = row.querySelector(".task-status");
-        if (statusEl) {
-            statusEl.dataset.status = status;
-            statusEl.textContent = normalizeStatusLabel(status);
-        }
-        row.dataset.status = status;
-        const taskInput = row.querySelector(`input[name="task_${todoId}"]`);
-        const checkbox = row.querySelector(".complete-checkbox");
-        if (checkbox) {
-            checkbox.checked = true;
-            checkbox.disabled = true;
-        }
-        if (taskInput) {
-            taskInput.classList.add("done");
-        }
-    }
-
-    statusButtons.forEach(btn => {
-        btn.addEventListener("click", () => {
-            if (!activeItem) return;
-            const status = btn.dataset.status;
-            fetch("/todo/mark_status", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    id: activeItem.id,
-                    status,
-                })
-            })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        updateRowStatus(activeItem.id, status);
-                        closeModal();
-                        showNext();
-                    } else {
-                        alert("Status update failed.");
-                    }
-                })
-                .catch(err => {
-                    console.error("Status update error:", err);
-                    alert("Error updating status.");
-                });
-        });
-    });
-
-    if (laterButton) {
-        laterButton.addEventListener("click", () => {
-            if (!activeItem) {
-                closeModal();
-                return;
-            }
-
-            const resumeItem = { ...activeItem };
-            const taskInput = document.querySelector(`input[name="task_${resumeItem.id}"]`);
-            closeModal();
-
-            if (!taskInput) {
-                openModal(resumeItem);
-                return;
-            }
-
-            taskInput.focus();
-            taskInput.select();
-
-            const reopenModal = () => {
-                taskInput.removeEventListener("blur", reopenModal);
-                taskInput.removeEventListener("keydown", handleKeydown);
-                openModal(resumeItem);
-            };
-
-            const handleKeydown = (event) => {
-                if (event.key === "Enter") {
-                    event.preventDefault();
-                    reopenModal();
-                }
-            };
-
-            taskInput.addEventListener("blur", reopenModal);
-            taskInput.addEventListener("keydown", handleKeydown);
-        });
-    }
-
-    collectOverdueTasks();
-    showNext();
-    setInterval(() => {
-        if (activeItem) return;
-        collectOverdueTasks();
-        showNext();
-    }, 60000);
-}
-
-setupTaskFeedbackModal();
-setupAdminStatusDropdowns();
+setupStatusDropdowns();
 setupScheduleConfig();
 setupTimeOptions();
 updateSlotProgress();
@@ -361,15 +228,15 @@ function updateRowStatusFromDropdown(todoId, status) {
     if (taskInput) {
         taskInput.classList.add("done");
     }
-    const statusEl = row.querySelector(".task-status");
-    if (statusEl) {
-        statusEl.dataset.status = status;
-        statusEl.textContent = normalizeStatusLabel(status);
+    const select = row.querySelector(".status-select");
+    if (select) {
+        select.value = status;
+        select.disabled = true;
     }
 }
 
-function setupAdminStatusDropdowns() {
-    const selects = document.querySelectorAll(".admin-status-select");
+function setupStatusDropdowns() {
+    const selects = document.querySelectorAll(".status-select");
     if (!selects.length) return;
 
     selects.forEach(select => {

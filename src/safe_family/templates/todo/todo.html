@@ -343,50 +343,22 @@
         border-color: var(--sf-accent);
     }
 
-    .task-status {
-        font-size: 10px;
-        font-weight: 700;
-        padding: 2px 8px;
-        border-radius: 999px;
-        display: inline-block;
-        background: var(--sf-surface-3);
-        color: var(--sf-ink-dim);
-    }
-
-    .task-status[data-status="done"] {
-        background: var(--sf-success-soft);
-        color: var(--sf-success);
-        font-weight: 700;
-    }
-
-    .task-status[data-status="mostly done"] {
-        background: rgba(255, 184, 118, .16);
-        color: var(--sf-accent-glow);
-    }
-
-    .task-status[data-status="half done"] {
-        background: rgba(234, 179, 8, .15);
-        color: #FACC15;
-    }
-
-    .task-status[data-status="partially done"] {
-        background: rgba(249, 115, 22, .15);
-        color: #FB923C;
-    }
-
-    .task-status[data-status="skipped"] {
-        background: var(--sf-danger-soft);
-        color: var(--sf-danger);
-    }
-
-    .admin-status-select {
+    .admin-status-select,
+    .status-select {
         font-size: 11px;
         padding: 2px 6px;
     }
 
-    .todo-row[data-current="1"] .admin-status-select {
+    .todo-row[data-current="1"] .admin-status-select,
+    .todo-row[data-current="1"] .status-select {
         border-color: var(--sf-accent);
         color: var(--sf-accent);
+    }
+
+    .status-select:disabled {
+        background: var(--sf-surface-3);
+        color: var(--sf-ink-dim);
+        opacity: 1;
     }
 
     .sf-drawer-toggle-btn {
@@ -522,78 +494,6 @@
         display: flex;
         flex-direction: column;
         gap: 14px;
-    }
-
-    /* modals (keep IDs/classes for JS) */
-    .task-feedback-modal {
-        position: fixed;
-        inset: 0;
-        background: rgba(10, 14, 26, .72);
-        display: none;
-        align-items: center;
-        justify-content: center;
-        z-index: 50;
-    }
-
-    .task-feedback-modal[aria-hidden="false"] {
-        display: flex;
-    }
-
-    .task-feedback-panel {
-        background: var(--sf-surface);
-        border: 1px solid var(--sf-border-strong);
-        border-radius: var(--sf-radius);
-        padding: 18px 20px;
-        min-width: 420px;
-        max-width: 90vw;
-        max-height: 80vh;
-        overflow: auto;
-    }
-
-    .task-feedback-title {
-        font-family: var(--sf-display);
-        font-weight: 600;
-        font-size: 18px;
-        margin-bottom: 6px;
-    }
-
-    .task-feedback-meta {
-        font-family: var(--sf-mono);
-        font-size: 11px;
-        color: var(--sf-ink-muted);
-        display: flex;
-        gap: 12px;
-    }
-
-    .task-feedback-actions {
-        display: flex;
-        gap: 6px;
-        flex-wrap: wrap;
-        margin-top: 14px;
-    }
-
-    .feedback-option,
-    .feedback-later {
-        background: var(--sf-surface-2);
-        color: var(--sf-ink);
-        border: 1px solid var(--sf-border-strong);
-        padding: 6px 12px;
-        border-radius: var(--sf-radius-sm);
-        font-size: 12px;
-        font-weight: 600;
-        cursor: pointer;
-    }
-
-    .feedback-option:hover {
-        background: var(--sf-accent);
-        color: var(--sf-bg);
-    }
-
-    .feedback-later {
-        background: transparent;
-        color: var(--sf-ink-muted);
-        border: 0;
-        margin-top: 8px;
     }
 
     /* shared orange shade scale — used by the week strip fill and heatmap cells */
@@ -972,8 +872,13 @@
                             <input type="checkbox" class="complete-checkbox" name="completed_{{ todo_id }}"
                                 data-task-id="{{ todo_id }}" {% if completed %}checked{% endif %} />
                         </label>
-                        {% if role == 'admin' and selected_user != user_name %}
-                        <select class="admin-status-select" data-todo-id="{{ todo_id }}">
+                        {% set end_str = time_slot.split('-')[1].strip() %}
+                        {% set end_minutes = end_str[:2]|int * 60 + end_str[3:]|int %}
+                        {% set now_minutes = now.hour * 60 + now.minute %}
+                        {% set in_grace = now_minutes >= end_minutes and now_minutes <= end_minutes + 30 %}
+                        {% set is_locked = False if role == 'admin' else (completion_status or not in_grace) %}
+                        <select class="status-select admin-status-select" data-todo-id="{{ todo_id }}"
+                            {% if is_locked %}disabled{% endif %}>
                             <option value="" {% if completion_status=='' %}selected{% endif %}>—</option>
                             <option value="skipped" {% if completion_status=='skipped' %}selected{% endif %}>Skipped
                             </option>
@@ -986,11 +891,6 @@
                             <option value="done" {% if completion_status=='done' %}selected{% endif %}>Done
                             </option>
                         </select>
-                        {% else %}
-                        <span class="task-status" data-status="{{ completion_status }}">
-                            {{ completion_status or '' }}
-                        </span>
-                        {% endif %}
                     </div>
                     <button type="button" class="split-slot-btn" data-todo-id="{{ todo_id }}"
                         aria-label="Split this slot into 30 minute blocks">+</button>
@@ -1201,28 +1101,6 @@
                 </div>
             </div>
         </aside>
-
-        {# ===== MODALS (DO NOT REMOVE — JS hooks rely on these IDs/classes) ===== #}
-        {% if show_task_feedback %}
-        <div id="task-feedback-modal" class="task-feedback-modal" aria-hidden="true">
-            <div class="task-feedback-panel">
-                <div class="task-feedback-title">How did this mission go?</div>
-                <div class="task-feedback-meta">
-                    <span class="task-feedback-time"></span>
-                    <span class="task-feedback-name"></span>
-                </div>
-                <div class="task-feedback-actions">
-                    <button type="button" class="feedback-option" data-status="skipped">Skipped</button>
-                    <button type="button" class="feedback-option" data-status="partially done">Partially Done</button>
-                    <button type="button" class="feedback-option" data-status="half done">Half Done</button>
-                    <button type="button" class="feedback-option" data-status="mostly done">Mostly Done</button>
-                    <button type="button" class="feedback-option" data-status="done">Done</button>
-                </div>
-                <button type="button" class="feedback-later" data-action="later">➡️ Plan something else, check
-                    later</button>
-            </div>
-        </div>
-        {% endif %}
 
         {# bridge element — kept for JS #}
         <div id="bridge-element" data-value="{{ selected_user_row_id }}" data-user="{{ selected_user }}"

@@ -46,6 +46,9 @@ MAX_DAY_PCT = 200
 # Assumed when a time_slot string can't be parsed into minutes.
 DEFAULT_SLOT_MINUTES = 60.0
 HEATMAP_WEEKS = 26
+# How long after a slot ends the user can still pick a completion status
+# before the automatic default ("mostly done" / "skipped") is applied.
+DEFAULT_STATUS_GRACE_MINUTES = 30
 
 
 def generate_time_slots(
@@ -340,7 +343,7 @@ def todo_page():
     cur.close()
     conn.close()
 
-    now = datetime.now(local_tz).time()
+    now = datetime.now(local_tz)
     config_start = get_agile_config("show_disable_button_start", "16:00")
     config_end = get_agile_config("show_disable_button_end", "18:00")
     try:
@@ -350,10 +353,9 @@ def todo_page():
         start_time = time(16, 0)
         end_time = time(18, 0)
 
-    show_disable_button = (today_tasks != [] and start_time <= now <= end_time) or (
-        role == "admin"
-    )
-    show_task_feedback = not (role == "admin" and selected_user != username)
+    show_disable_button = (
+        today_tasks != [] and start_time <= now.time() <= end_time
+    ) or (role == "admin")
 
     return render_template(
         "todo/todo.html",
@@ -372,7 +374,7 @@ def todo_page():
         show_disable_button_start=config_start,
         show_disable_button_end=config_end,
         selected_user_row_id=selected_user_id,
-        show_task_feedback=show_task_feedback,
+        now=now,
         week_strip=week_strip,
         heatmap=heatmap,
         mandatory_subjects=MANDATORY_SUBJECTS,
@@ -479,7 +481,10 @@ def done_todo():
         if now >= end_dt:
             if completed is False:
                 completed = True
-            if completed and not existing_status:
+            grace_over = now >= end_dt + timedelta(
+                minutes=DEFAULT_STATUS_GRACE_MINUTES,
+            )
+            if completed and not existing_status and grace_over:
                 default_status = (
                     "skipped" if "sleep" in (task or "").lower() else "mostly done"
                 )
@@ -498,7 +503,12 @@ def done_todo():
         conn.close()
 
         flash("update_status successfully!", "success")
-        return jsonify({"success": True})
+        return jsonify(
+            {
+                "success": True,
+                "completion_status": default_status or existing_status or None,
+            },
+        )
     except Exception as e:
         flash("Error update_status:", "error")
         return jsonify({"success": False, "error": str(e)}), 500

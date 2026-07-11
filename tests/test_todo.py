@@ -1,9 +1,23 @@
 """Tests for todo routes and helpers."""
 
+from datetime import datetime
 from types import SimpleNamespace
 
 from src.safe_family.core import auth
+from src.safe_family.core.extensions import local_tz
 from src.safe_family.todo import todo
+
+
+def _freeze_time(monkeypatch, hour, minute):
+    """Pin todo.datetime.now() to a fixed local time for deterministic tests."""
+    frozen = local_tz.localize(datetime(2026, 7, 11, hour, minute))
+
+    class FrozenDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return frozen
+
+    monkeypatch.setattr(todo, "datetime", FrozenDatetime)
 
 
 class SeqCursor:
@@ -104,8 +118,9 @@ def test_update_todo_sends_notifications(client, monkeypatch):
 def test_done_todo_updates_status(client, monkeypatch):
     from .conftest import FakeConnection
 
-    # Slot ends at 23:59 so "now" is before the end and no default status applies.
-    conn = FakeConnection(rows=[("00:00 - 23:59", "Task", "")])
+    # Now 12:15, slot ends 13:00: manual check before end, no default status.
+    _freeze_time(monkeypatch, 12, 15)
+    conn = FakeConnection(rows=[("12:00 - 13:00", "Task", "")])
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
     monkeypatch.setattr(todo, "flash", lambda *a, **k: None)
     _login_session(client, monkeypatch)
@@ -119,10 +134,37 @@ def test_done_todo_updates_status(client, monkeypatch):
     )
 
 
+def test_done_todo_no_default_status_within_grace(client, monkeypatch):
+    from .conftest import FakeConnection
+
+    # Now 12:15, slot ended 12:00: inside the 30-min grace window the task is
+    # auto-completed but the status stays empty so the user can still choose.
+    _freeze_time(monkeypatch, 12, 15)
+    conn = FakeConnection(rows=[("11:00 - 12:00", "Math homework", "")])
+    monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(todo, "flash", lambda *a, **k: None)
+    _login_session(client, monkeypatch)
+
+    resp = client.post("/todo/mark_done", json={"id": 4, "completed": False})
+
+    assert resp.status_code == 200
+    assert resp.get_json()["completion_status"] is None
+    update_queries = [
+        (sql, params)
+        for sql, params in conn.cursor_obj.queries
+        if "UPDATE todo_list" in sql
+    ]
+    assert update_queries == [
+        ("UPDATE todo_list SET completed = %s WHERE id = %s", (True, 4)),
+    ]
+
+
 def test_done_todo_auto_complete_true_gets_default_status(client, monkeypatch):
     from .conftest import FakeConnection
 
-    conn = FakeConnection(rows=[("00:00 - 00:00", "Math homework", "")])
+    # Now 12:15, slot ended 11:40: grace (ends 12:10) is over.
+    _freeze_time(monkeypatch, 12, 15)
+    conn = FakeConnection(rows=[("11:00 - 11:40", "Math homework", "")])
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
     monkeypatch.setattr(todo, "flash", lambda *a, **k: None)
     _login_session(client, monkeypatch)
@@ -130,16 +172,18 @@ def test_done_todo_auto_complete_true_gets_default_status(client, monkeypatch):
     resp = client.post("/todo/mark_done", json={"id": 9, "completed": True})
 
     assert resp.status_code == 200
+    assert resp.get_json()["completion_status"] == "mostly done"
     assert any(
         "completion_status" in sql and params == (True, "mostly done", 9)
         for sql, params in conn.cursor_obj.queries
     )
 
 
-def test_done_todo_defaults_to_mostly_done_after_slot_end(client, monkeypatch):
+def test_done_todo_defaults_to_mostly_done_after_grace(client, monkeypatch):
     from .conftest import FakeConnection
 
-    conn = FakeConnection(rows=[("00:00 - 00:00", "Math homework", "")])
+    _freeze_time(monkeypatch, 12, 15)
+    conn = FakeConnection(rows=[("11:00 - 11:40", "Math homework", "")])
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
     monkeypatch.setattr(todo, "flash", lambda *a, **k: None)
     _login_session(client, monkeypatch)
@@ -156,7 +200,8 @@ def test_done_todo_defaults_to_mostly_done_after_slot_end(client, monkeypatch):
 def test_done_todo_defaults_to_skipped_for_sleep_task(client, monkeypatch):
     from .conftest import FakeConnection
 
-    conn = FakeConnection(rows=[("00:00 - 00:00", "Sleep early", "")])
+    _freeze_time(monkeypatch, 12, 15)
+    conn = FakeConnection(rows=[("11:00 - 11:40", "Sleep early", "")])
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
     monkeypatch.setattr(todo, "flash", lambda *a, **k: None)
     _login_session(client, monkeypatch)
@@ -173,7 +218,9 @@ def test_done_todo_defaults_to_skipped_for_sleep_task(client, monkeypatch):
 def test_done_todo_keeps_existing_status_on_auto_complete(client, monkeypatch):
     from .conftest import FakeConnection
 
-    conn = FakeConnection(rows=[("00:00 - 00:00", "Math homework", "done")])
+    # Grace is over but the user already chose a status: never overwrite it.
+    _freeze_time(monkeypatch, 12, 15)
+    conn = FakeConnection(rows=[("11:00 - 11:40", "Math homework", "done")])
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
     monkeypatch.setattr(todo, "flash", lambda *a, **k: None)
     _login_session(client, monkeypatch)
@@ -181,6 +228,7 @@ def test_done_todo_keeps_existing_status_on_auto_complete(client, monkeypatch):
     resp = client.post("/todo/mark_done", json={"id": 8, "completed": False})
 
     assert resp.status_code == 200
+    assert resp.get_json()["completion_status"] == "done"
     update_queries = [
         (sql, params)
         for sql, params in conn.cursor_obj.queries
@@ -189,6 +237,100 @@ def test_done_todo_keeps_existing_status_on_auto_complete(client, monkeypatch):
     assert update_queries == [
         ("UPDATE todo_list SET completed = %s WHERE id = %s", (True, 8)),
     ]
+
+
+def test_mark_status_success_within_grace(client, monkeypatch):
+    from .conftest import FakeConnection
+
+    # Slot ended 12:00, now 12:15: inside the 30-min grace window.
+    _freeze_time(monkeypatch, 12, 15)
+    conn = FakeConnection(
+        rows=[("", "11:00 - 12:00", "kid", "Math", "2026-07-11 12:00:00")]
+    )
+    monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(todo, "send_discord_notification", lambda *a, **k: None)
+    monkeypatch.setattr(
+        todo,
+        "get_current_username",
+        lambda: SimpleNamespace(username="kid", role="user"),
+    )
+    _login_session(client, monkeypatch)
+
+    resp = client.post("/todo/mark_status", json={"id": 1, "status": "mostly done"})
+
+    assert resp.status_code == 200
+    assert resp.get_json()["success"] is True
+    assert any(
+        "completion_status = %s" in sql and params == ("mostly done", True, 1)
+        for sql, params in conn.cursor_obj.queries
+    )
+
+
+def test_mark_status_rejected_before_slot_end(client, monkeypatch):
+    from .conftest import FakeConnection
+
+    # Slot ends 13:00, now 12:15: too early for a non-admin.
+    _freeze_time(monkeypatch, 12, 15)
+    conn = FakeConnection(
+        rows=[("", "12:00 - 13:00", "kid", "Math", "2026-07-11 12:00:00")]
+    )
+    monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(
+        todo,
+        "get_current_username",
+        lambda: SimpleNamespace(username="kid", role="user"),
+    )
+    _login_session(client, monkeypatch)
+
+    resp = client.post("/todo/mark_status", json={"id": 2, "status": "mostly done"})
+
+    assert resp.status_code == 403
+    assert resp.get_json()["error"] == "too early"
+
+
+def test_mark_status_rejected_when_status_locked(client, monkeypatch):
+    from .conftest import FakeConnection
+
+    # Status already chosen, non-admin cannot overwrite.
+    _freeze_time(monkeypatch, 12, 15)
+    conn = FakeConnection(
+        rows=[("done", "11:00 - 12:00", "kid", "Math", "2026-07-11 12:00:00")]
+    )
+    monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(
+        todo,
+        "get_current_username",
+        lambda: SimpleNamespace(username="kid", role="user"),
+    )
+    _login_session(client, monkeypatch)
+
+    resp = client.post("/todo/mark_status", json={"id": 3, "status": "mostly done"})
+
+    assert resp.status_code == 401
+    assert resp.get_json()["error"] == "status locked"
+
+
+def test_mark_status_admin_can_override(client, monkeypatch):
+    from .conftest import FakeConnection
+
+    # Admin can set status even before the slot ends and overwrite an existing one.
+    _freeze_time(monkeypatch, 12, 15)
+    conn = FakeConnection(
+        rows=[("done", "12:00 - 13:00", "kid", "Math", "2026-07-11 12:00:00")]
+    )
+    monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(todo, "send_discord_notification", lambda *a, **k: None)
+    monkeypatch.setattr(
+        todo,
+        "get_current_username",
+        lambda: SimpleNamespace(username="admin", role="admin"),
+    )
+    _login_session(client, monkeypatch)
+
+    resp = client.post("/todo/mark_status", json={"id": 4, "status": "skipped"})
+
+    assert resp.status_code == 200
+    assert resp.get_json()["success"] is True
 
 
 def test_todo_page_uses_parameterized_date(client, monkeypatch):
