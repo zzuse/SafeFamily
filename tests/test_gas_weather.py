@@ -78,7 +78,7 @@ def test_take_gas_snapshot_uses_playwright(monkeypatch, tmp_path):
     assert out_file.suffix == ".png"
     page.goto.assert_called_once()
     assert page.goto.call_args.args[0] == gas_weather.GAS_URL
-    page.screenshot.assert_called_once_with(path=str(out_file), full_page=True)
+    page.screenshot.assert_called_once_with(path=str(out_file))
     browser.close.assert_called_once()
 
 
