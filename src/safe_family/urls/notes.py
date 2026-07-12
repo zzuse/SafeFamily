@@ -1,15 +1,25 @@
 """Notes URL routes for the Safe Family application."""
 
+import hashlib
 import io
+import uuid
 from datetime import UTC, datetime
 
-from flask import Blueprint, abort, flash, redirect, render_template, send_file, request, url_for
-from sqlalchemy import func
+from flask import (
+    Blueprint,
+    abort,
+    flash,
+    redirect,
+    render_template,
+    request,
+    send_file,
+    url_for,
+)
 from sqlalchemy.orm import selectinload
 
 from src.safe_family.core.auth import get_current_username, login_required
 from src.safe_family.core.extensions import db, local_tz
-from src.safe_family.core.models import Media, Note, Tag, User
+from src.safe_family.core.models import Media, Note, Tag
 
 notes_bp = Blueprint("notes", __name__)
 
@@ -32,8 +42,8 @@ def notes_view():
     if not user:
         flash("Please log in first.", "warning")
         return redirect("/auth/login-ui")
-    
-    page = request.args.get('page', 1, type=int)
+
+    page = request.args.get("page", 1, type=int)
     per_page = 5
 
     pagination = (
@@ -42,124 +52,85 @@ def notes_view():
         .order_by(Note.created_at.desc())
         .paginate(page=page, per_page=per_page, error_out=False)
     )
-    
+
     notes = pagination.items
     for note in notes:
         _attach_local_timestamp(note)
-        
+
     return render_template(
-        "notes/notes.html", 
-        notes=notes, 
+        "notes/notes.html",
+        notes=notes,
         pagination=pagination,
-        endpoint='notes.notes_view'
+        endpoint="notes.notes_view",
     )
 
 
-@notes_bp.get("/timeline")
+@notes_bp.post("/notes/upload")
 @login_required
-def timeline():
-    """Render the timeline (max 3 public notes per user)."""
-    page = request.args.get('page', 1, type=int)
-    per_page = 5
-
-    # Base query for public notes
-    base_query = Note.query.filter(
-        Note.deleted_at.is_(None),
-        Note.tags.any(Tag.name.ilike("public")),
-    )
-
-    # Note: The original timeline logic fetched 3 notes per user. 
-    # To properly paginate, we should probably paginate by users who have public notes,
-    # then fetch notes for those users.
-    
-    # Get distinct user_ids with public notes
-    user_ids_query = (
-        db.session.query(Note.user_id)
-        .filter(Note.deleted_at.is_(None), Note.tags.any(Tag.name.ilike("public")))
-        .distinct()
-    )
-    
-    pagination = user_ids_query.paginate(page=page, per_page=per_page, error_out=False)
-    target_user_ids = [r[0] for r in pagination.items]
-
-    if not target_user_ids:
-        return render_template("notes/timeline.html", entries=[], pagination=pagination, endpoint='notes.timeline')
-
-    note_rankings = (
-        Note.query.with_entities(
-            Note.id.label("note_id"),
-            Note.user_id.label("user_id"),
-            Note.created_at.label("created_at"),
-            func.row_number()
-            .over(partition_by=Note.user_id, order_by=Note.created_at.desc())
-            .label("rn"),
-        )
-        .filter(
-            Note.deleted_at.is_(None),
-            Note.tags.any(Tag.name.ilike("public")),
-            Note.user_id.in_(target_user_ids)
-        )
-        .subquery()
-    )
-
-    public_notes = (
-        Note.query.join(note_rankings, Note.id == note_rankings.c.note_id)
-        .filter(note_rankings.c.rn <= 3)
-        .options(
-            selectinload(Note.tags),
-            selectinload(Note.media).load_only(
-                Media.id,
-                Media.note_id,
-                Media.user_id,
-                Media.kind,
-                Media.filename,
-                Media.content_type,
-                Media.checksum,
-                Media.created_at,
-            ),
-        )
-        .order_by(note_rankings.c.user_id, note_rankings.c.created_at.desc())
-        .all()
-    )
-
-    notes_by_user: dict[str, list[Note]] = {}
-    for note in public_notes:
-        bucket = notes_by_user.setdefault(note.user_id, [])
-        _attach_local_timestamp(note)
-        bucket.append(note)
-
-    users = User.query.filter(User.id.in_(target_user_ids)).all()
-    user_map = {user.id: user.username for user in users}
-
-    entries = []
-    for user_id in target_user_ids:
-        notes = notes_by_user.get(user_id, [])
-        latest = notes[0].created_at if notes else None
-        entries.append(
-            {
-                "user_id": user_id,
-                "username": user_map.get(user_id, user_id),
-                "notes": notes,
-                "latest": latest,
-            },
-        )
-    
-    # Sort entries by the latest note within the set of users we fetched
-    entries.sort(
-        key=lambda entry: entry["latest"] or datetime.min,
-        reverse=True,
-    )
-
+def upload_note():
+    """Create a note (text and/or media files) from the web notes page."""
     user = get_current_username()
-    current_user_id = user.id if user else None
+    if not user:
+        flash("Please log in first.", "warning")
+        return redirect("/auth/login-ui")
 
-    return render_template(
-        "notes/timeline.html", 
-        entries=entries, 
-        current_user_id=current_user_id, 
-        pagination=pagination,
-        endpoint='notes.timeline'
+    text = (request.form.get("text") or "").strip()
+    files = [f for f in request.files.getlist("media") if f and f.filename]
+    if not text and not files:
+        flash("Nothing to upload: add some text or choose a file.", "warning")
+        return redirect(url_for("notes.notes_view"))
+
+    now = datetime.now(UTC).replace(tzinfo=None)
+    note = Note(
+        id=uuid.uuid4().hex,
+        user_id=user.id,
+        text=text,
+        is_pinned=False,
+        created_at=now,
+        updated_at=now,
+        deleted_at=None,
     )
+    db.session.add(note)
+
+    tag_names = {
+        name.strip().lower()
+        for name in (request.form.get("tags") or "").split(",")
+        if name.strip()
+    }
+    for name in sorted(tag_names):
+        tag = Tag.query.filter_by(user_id=user.id, name=name).first()
+        if tag is None:
+            tag = Tag(id=uuid.uuid4().hex, user_id=user.id, name=name)
+            db.session.add(tag)
+        note.tags.append(tag)
+
+    for upload in files:
+        data = upload.read()
+        if not data:
+            continue
+        content_type = upload.content_type or "application/octet-stream"
+        if content_type.startswith("image/"):
+            kind = "image"
+        elif content_type.startswith("audio/"):
+            kind = "audio"
+        else:
+            kind = "file"
+        media = Media(
+            id=uuid.uuid4().hex,
+            note_id=note.id,
+            user_id=user.id,
+            kind=kind,
+            filename=upload.filename,
+            content_type=content_type,
+            checksum=f"sha256:{hashlib.sha256(data).hexdigest()}",
+            data=data,
+            created_at=now,
+        )
+        db.session.add(media)
+
+    db.session.commit()
+    flash("Note uploaded successfully.", "success")
+    return redirect(url_for("notes.notes_view"))
 
 
 @notes_bp.post("/notes/delete/<note_id>")
@@ -179,29 +150,6 @@ def delete_note(note_id: str):
     db.session.commit()
     flash("Note deleted successfully.", "success")
     return redirect(url_for("notes.notes_view"))
-
-
-@notes_bp.post("/notes/unpublish/<note_id>")
-@login_required
-def unpublish_note(note_id: str):
-    """Remove the 'public' tag from a note so it no longer appears on the timeline."""
-    user = get_current_username()
-    if not user:
-        flash("Please log in first.", "warning")
-        return redirect("/auth/login-ui")
-
-    note = Note.query.filter_by(id=note_id, user_id=user.id).one_or_none()
-    if not note:
-        abort(404)
-
-    # Remove the 'public' tag
-    public_tags = [t for t in note.tags if t.name.lower() == "public"]
-    for t in public_tags:
-        note.tags.remove(t)
-
-    db.session.commit()
-    flash("Note removed from public timeline.", "success")
-    return redirect(url_for("notes.timeline"))
 
 
 @notes_bp.get("/notes/media/<media_id>")
@@ -228,7 +176,7 @@ def notes_media(media_id: str):
         )
         if not is_public:
             abort(404)
-    
+
     mimetype = media.content_type
     if media.filename.lower().endswith(".m4a"):
         mimetype = "audio/mp4"

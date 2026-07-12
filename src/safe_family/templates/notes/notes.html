@@ -3,6 +3,22 @@
 
 <section>
     <div class="card-header">Notes</div>
+
+    <form action="{{ url_for('notes.upload_note') }}" method="POST" enctype="multipart/form-data" class="card"
+        style="display: flex; flex-direction: column; gap: 10px; padding: 16px;">
+        <div class="note" style="padding: 0; background: transparent;">New note</div>
+        <textarea name="text" rows="3" placeholder="Write something…" style="width: 100%;"></textarea>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+            <input type="file" id="media-input" name="media" multiple accept="image/*,audio/*"
+                style="display: none;">
+            <label for="media-input" class="btn btn-secondary"
+                style="width: auto; padding: 8px 16px; margin: 0; cursor: pointer;">📎 Choose files</label>
+            <span id="media-chosen" class="note" style="padding: 4px 10px;">No files chosen</span>
+            <input type="text" name="tags" placeholder="tags, comma separated" style="flex: 1; min-width: 160px;">
+            <button type="submit" class="btn btn-primary" style="width: auto; padding: 8px 20px;">Upload</button>
+        </div>
+    </form>
+
     {% if notes %}
     <div class="note">Showing {{ notes | length }} notes (Total: {{ pagination.total }}) (newest created first; timestamps show last update).</div>
     <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 12px;">
@@ -110,5 +126,12 @@
 
 <script src="{{ url_for('static', filename='js/matrix_rain.js') }}"></script>
 <script src="{{ url_for('static', filename='js/image_rotate.js') }}"></script>
+<script>
+    document.getElementById("media-input").addEventListener("change", (e) => {
+        const names = Array.from(e.target.files).map((f) => f.name);
+        document.getElementById("media-chosen").textContent =
+            names.length ? names.join(", ") : "No files chosen";
+    });
+</script>
 
 {% endblock %}

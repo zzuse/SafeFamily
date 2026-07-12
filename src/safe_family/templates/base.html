@@ -535,8 +535,6 @@
                     class="{% if request.endpoint == 'todo.todo_page' %}active{% endif %}">Today</a>
                 <a href="{{ url_for('notes.notes_view') }}"
                     class="{% if request.endpoint == 'notes.notes_view' %}active{% endif %}">Notes</a>
-                <a href="{{ url_for('notes.timeline') }}"
-                    class="{% if request.endpoint == 'notes.timeline' %}active{% endif %}">Timeline</a>
                 <a href="{{ url_for('suspicious.view_suspicious') }}"
                     class="{% if request.endpoint == 'suspicious.view_suspicious' %}active{% endif %}">MGMT</a>
                 <a href="{{ url_for('index.store_sum') }}">Sheet</a>
