@@ -23,10 +23,9 @@ templates_redesign/
    input, and class/ID your JS depends on is preserved (`complete-checkbox`,
    `admin-status-select`, `bridge-element`,
    all the `*-modal` IDs, etc.).
-4. Tailwind: your existing `styles.css` is still loaded, so anything else that
-   uses utility classes keeps working unchanged. You do **not** need to rerun
-   the Tailwind CLI for the redesign — the new look ships as scoped CSS inside
-   the templates.
+4. CSS: `styles.css` is hand-maintained plain CSS (Tailwind has been removed;
+   the utility classes templates use are defined by hand in its `utilities`
+   layer). The redesigned look ships as scoped CSS inside the templates.
 
 ## Switching to the Hearth (light) palette
 

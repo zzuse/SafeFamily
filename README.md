@@ -26,7 +26,7 @@ integrations.
 ## Tech stack
 - Python 3.11, Flask, Flask-SQLAlchemy, Flask-JWT-Extended
 - APScheduler, pandas, psycopg2
-- Jinja2 templates, Tailwind CSS (build step), pytest
+- Jinja2 templates, hand-maintained plain CSS, pytest
 
 ## Project layout
 - `src/safe_family/app.py` app factory and blueprint registration
@@ -115,13 +115,8 @@ Run with coverage but disable the fail-under gate:
 pytest -q tests/test_misc_routes.py::test_notes_media_public_note_for_other_user --cov-fail-under=0
 ```
 
-### CSS build (only if you change styles)
-Edit `src/safe_family/static/css/input.css` and run:
-```bash
-npm install
-npx @tailwindcss/cli -i src/safe_family/static/css/input.css \
-  -o src/safe_family/static/css/styles.css --watch
-```
+### CSS
+`src/safe_family/static/css/styles.css` is hand-maintained plain CSS — edit it directly, no build step needed.
 
 ## Configuration
 SafeFamily reads environment variables (dotenv supported).

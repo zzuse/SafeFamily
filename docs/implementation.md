@@ -10,7 +10,7 @@ Tech Stack:
 - Python 3.11, Flask, Flask-SQLAlchemy, Flask-JWT-Extended, psycopg2
 - APScheduler, pandas
 - Flask-Mail, requests
-- Jinja2 templates, Tailwind CSS (build step), pytest
+- Jinja2 templates, hand-maintained plain CSS, pytest
 
 ---
 

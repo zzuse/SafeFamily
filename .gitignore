@@ -12,7 +12,6 @@ logs/
 venv/
 *.egg-info/
 .python-version
-node_modules/
 .coverage
 metrics/
 deploy/init_db/
