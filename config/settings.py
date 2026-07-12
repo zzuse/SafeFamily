@@ -66,6 +66,11 @@ class Settings:
     ADGUARD_RULE_PATH = os.environ.get("ADGUARD_RULE_PATH", "")
     ROUTER_IP = os.environ.get("ROUTER_IP", "")
 
+    # Telegram daily gas/weather report settings
+    TELEGRAM_BOT = os.environ.get("TELEGRAM_BOT", "")
+    TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
+    LONGTITUDE_LATITUDE = os.environ.get("LONGTITUDE_LATITUDE", "")
+
     # Other settings can be added here as needed
     DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
     HAMMERSPOON_ALERT_URL = os.environ.get(

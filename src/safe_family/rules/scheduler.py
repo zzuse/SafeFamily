@@ -17,12 +17,8 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from src.safe_family.auto_git.auto_git import rule_auto_commit
 from src.safe_family.core.auth import admin_required
 from src.safe_family.core.extensions import get_db_connection, local_tz
+from src.safe_family.notifications.gas_weather import send_gas_weather_report
 from src.safe_family.notifications.notifier import send_hammerspoon_alert
-from src.safe_family.utils.helpers import (
-    get_agile_config,
-    set_agile_config,
-    update_agile_config_by_timestamp,
-)
 from src.safe_family.urls.analyzer import (
     get_time_range,
     log_analysis,
@@ -37,6 +33,10 @@ from src.safe_family.urls.blocker import (
 )
 from src.safe_family.urls.receiver import run_adguard_pull
 from src.safe_family.utils.constants import DAYS_IN_WEEK
+from src.safe_family.utils.helpers import (
+    set_agile_config,
+    update_agile_config_by_timestamp,
+)
 
 logger = logging.getLogger(__name__)
 schedule_rules_bp = Blueprint("schedule_rules", __name__, template_folder="templates")
@@ -362,6 +362,16 @@ def load_schedules():
         )
         active_job_ids.add("analyze_logs")
         scheduler.add_job(
+            _wrap_job("gas_weather_report", send_gas_weather_report),
+            "cron",
+            id="gas_weather_report",
+            name="gas_weather_report",
+            hour=13,
+            minute=30,
+            day_of_week="*",
+        )
+        active_job_ids.add("gas_weather_report")
+        scheduler.add_job(
             _wrap_job("notify_overdue_task_feedback", notify_overdue_task_feedback),
             "interval",
             minutes=1,
@@ -561,8 +571,15 @@ def schedule_rules():
             timestamp_str = request.form.get("timestamp_input", "00:00")
             delay_minutes = float(request.form.get("delay_input", 0) or 0)
             eating_minutes = float(request.form.get("eating_input", 0) or 0)
-            if update_agile_config_by_timestamp(timestamp_str, delay_minutes, eating_minutes):
-                flash(f"Agile config calculated and updated for input: {timestamp_str}", "success")
+            if update_agile_config_by_timestamp(
+                timestamp_str,
+                delay_minutes,
+                eating_minutes,
+            ):
+                flash(
+                    f"Agile config calculated and updated for input: {timestamp_str}",
+                    "success",
+                )
             else:
                 flash("Failed to calculate agile config.", "error")
 

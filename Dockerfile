@@ -21,6 +21,10 @@ COPY requirements.txt .
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
+# Install Firefox (and its system libraries) for Playwright gas price snapshots.
+# Firefox, not Chromium: cbc.ca's CDN blocks headless Chromium (ERR_HTTP2_PROTOCOL_ERROR).
+RUN playwright install --with-deps firefox
+
 # Copy the project files
 COPY . .
 

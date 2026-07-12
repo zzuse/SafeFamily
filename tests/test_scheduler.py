@@ -71,6 +71,7 @@ def test_load_schedules_adds_jobs(monkeypatch):
     scheduler.load_schedules()
 
     assert fake_scheduler.removed
-    # One DB job + analyze_logs + notify_overdue_task_feedback + run_adguard_pull
-    assert len(fake_scheduler.jobs) == 4
+    # One DB job + analyze_logs + gas_weather_report + notify_overdue_task_feedback + run_adguard_pull
+    assert len(fake_scheduler.jobs) == 5
     assert fake_scheduler.jobs[0].id == "rule_1"
+    assert "gas_weather_report" in {job.id for job in fake_scheduler.jobs}
