@@ -1,191 +1,246 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="card">
-    <div class="card-header">Scheduled Jobs</div>
-    {% if scheduled_jobs %}
-    <table class="table-modern">
-        <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Trigger</th>
-            <th>Next Run Time</th>
-        </tr>
-        {% for job in scheduled_jobs %}
-        <tr>
-            <td>{{ job.id }}</td>
-            <td>{{ job.name }}</td>
-            <td>{{ job.trigger }}</td>
-            <td>{{ job.next_run_time }}</td>
-        </tr>
-        {% endfor %}
-    </table>
-    {% else %}
-    <div class="empty-state">No jobs scheduled.</div>
-    {% endif %}
-</div>
+{% set palette = ['#84CC16', '#06B6D4', '#FF7A2E', '#A78BFA', '#F87171', '#FACC15'] %}
+{% set day_letters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] %}
+{% set ns = namespace(active=0) %}
+{% for rule in rules %}{% if rule[5] %}{% set ns.active = ns.active + 1 %}{% endif %}{% endfor %}
+{% set next_fires = scheduled_jobs | map(attribute='next_run_time') | reject('equalto', '-') | sort | list %}
 
 <div class="card">
-    <div class="card-header">Schedule Management</div>
-    <table class="table-modern">
-        <tr>
-            <th>ID</th>
-            <th>Rule</th>
-            <th>Start Time</th>
-            <th>End Time (Reference)</th>
-            <th>Update</th>
-            <th>Enable/Disable</th>
-            <th>Delete</th>
-        </tr>
-        {% for rule in rules %}
-        <tr>
-            <td>{{ rule[0] }}</td>
-            <td>{{ rule[1] }}</td>
-            <td>{{ rule[2] }}</td>
-            <td>{{ rule[3] or "-" }}</td>
-
-            <td>
-                <form method="POST" class="input-group flex gap-2">
-                    <input type="hidden" name="action" value="update">
-                    <input type="hidden" name="rule_id" value="{{ rule[0] }}">
-                    <input type="time" name="start_time" value="{{ rule[2] }}">
-                    <input type="time" name="end_time" value="{{ rule[3] or '' }}">
-
-                    <div>
-                        {% set days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"] %}
-                        {% set selected_days = rule[4].split(",") if rule[4] else [] %}
-                        {% for i in range(7) %}
-                        <label>
-                            <input type="checkbox" name="day_of_week" value="{{ i }}" {% if i|string in selected_days or
-                                rule[4]=="*" %}checked{% endif %}>
-                            {{ days[i] }}
-                        </label>
-                        {% endfor %}
-                    </div>
-
-                    <button type="submit" class="btn btn-secondary">Save</button>
-                </form>
-            </td>
-
-            <td>
-                {% if rule[5] %}
-                <form method="post" action="/schedule_rules">
-                    <input type="hidden" name="action" value="disable">
-                    <input type="hidden" name="rule_id" value="{{ rule[0] }}">
-                    <button type="submit" class="btn btn-primary">Disable</button>
-                </form>
-                {% else %}
-                <form method="post" action="/schedule_rules">
-                    <input type="hidden" name="action" value="enable">
-                    <input type="hidden" name="rule_id" value="{{ rule[0] }}">
-                    <button type="submit" class="btn btn-secondary">Enable</button>
-                </form>
-                {% endif %}
-            </td>
-
-            <td>
-                <!-- Delete Form -->
-                <form method="POST" onsubmit="return confirm('Delete this rule?');">
-                    <input type="hidden" name="action" value="delete">
-                    <input type="hidden" name="rule_id" value="{{ rule[0] }}">
-                    <button type="submit" class="btn btn-danger">Delete</button>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
-
-    <div class="card-header">Add New Schedule Rule</div>
-    <form method="POST" class="input-group flex gap-2">
-        <input type="hidden" name="action" value="add">
-        <label for="rule_name">Rule Name:</label>
-        <select name="rule_name" id="rule_name">
-            {% for rule in available_rules %}
-            <option value="{{ rule }}">{{ rule }}</option>
-            {% endfor %}
-        </select>
-        <label for="start_time">Start Time:</label>
-        <input type="time" name="start_time" id="start_time" required>
-        <label for="end_time">End Time:</label>
-        <input type="time" name="end_time" id="end_time">
-        <button class="btn btn-primary" type="submit">Add Schedule Rule</button>
-    </form>
-</div>
-
-<div class="card">
-    <div class="card-header">Assign Rules to Users</div>
-    <form method="POST">
-        <input type="hidden" name="action" value="assign">
-        <table class="table-modern">
-            <tr>
-                <th>User</th>
-                <th>Assigned Rule</th>
-            </tr>
-            {% for user in assigned_rules %}
-            <tr>
-                <td class="text-center">{{ user[1] }}</td>
-                <td class="text-center">
-                    <select name="rule_{{ user[0] }}">
-                        {% for rule in available_rules %}
-                        <option value="{{ rule }}" {% if user[2]==rule %}selected{% endif %}>
-                            {{ rule }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </td>
-            </tr>
-            {% endfor %}
-        </table>
-        <button class="btn btn-danger" type="submit">Assignment Rule</button>
-    </form>
-</div>
-
-<div class="card">
-    <div class="card-header">Agile Configuration Management</div>
-    <form method="POST">
-        <input type="hidden" name="action" value="update_agile_config">
-        <table class="table-modern">
-            <tr>
-                <th>Configuration Key</th>
-                <th>Value</th>
-            </tr>
-            <tr>
-                <td>show_disable_button_start</td>
-                <td>
-                    <input type="time" name="config_show_disable_button_start"
-                        value="{{ agile_configs.get('show_disable_button_start', '16:00') }}">
-                </td>
-            </tr>
-            <tr>
-                <td>show_disable_button_end</td>
-                <td>
-                    <input type="time" name="config_show_disable_button_end"
-                        value="{{ agile_configs.get('show_disable_button_end', '18:00') }}">
-                </td>
-            </tr>
-        </table>
-        <button class="btn btn-primary" type="submit">Update Agile Config</button>
-    </form>
-
-    <div style="margin-top: 20px; padding: 15px; border-top: 1px solid #ddd;">
-        <h4 style="margin-top: 0;">Calculate from Timestamp</h4>
-        <form method="POST" style="display: flex; align-items: center; gap: 10px;">
-            <input type="hidden" name="action" value="calc_agile_config">
-            <label for="timestamp_input">Time (HH:MM):</label>
-            <input type="text" name="timestamp_input" id="timestamp_input" required
-                placeholder="09:30" pattern="(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]"
-                title="Enter time in 24-hour format (e.g. 09:30 or 14:15)"
-                class="bg-orange-500/10 text-[#ff6b00]" style="padding: 4px 8px; border: 1px solid #ff6b00; width: 80px; text-align: center;">
-            <label for="delay_input">Delay (min):</label>
-            <input type="number" name="delay_input" id="delay_input" min="0" step="any" value="0"
-                class="bg-orange-500/10 text-[#ff6b00]" style="padding: 4px 8px; border: 1px solid #ff6b00; width: 60px; text-align: center;">
-            <label for="eating_input">Eating (min):</label>
-            <input type="number" name="eating_input" id="eating_input" min="0" step="any" value="0"
-                class="bg-orange-500/10 text-[#ff6b00]" style="padding: 4px 8px; border: 1px solid #ff6b00; width: 60px; text-align: center;">
-            <button class="btn border bg-orange-500/10 text-[#ff6b00]" type="submit">Calculate & Update</button>
-        </form>
-        <div class="note">Formula: start = ((-3)*input+46)/4 + delay/60 + eating/60 + 12, end = start + 0.5h</div>
+    <div class="sched-head">
+        <div>
+            <div class="sched-title">Schedule rules</div>
+            <div class="sched-sub">
+                {{ scheduled_jobs|length }} scheduled jobs · {{ ns.active }} rules active
+                {% if next_fires %} · next fire <span class="sched-fire">{{ next_fires[0][11:16] }}</span>{% endif %}
+            </div>
+        </div>
+        <a class="btn btn-primary" href="#add-rule">+ New rule</a>
     </div>
 </div>
+
+<div class="card">
+    <div class="sched-glance-head">
+        <div class="sched-panel-head" style="margin-bottom: 0;">Today at a glance</div>
+        <div class="sched-glance-hours">00:00 — 24:00</div>
+    </div>
+    <div class="sched-timeline">
+        <div class="sched-timeline-grid">
+            {% for _ in range(24) %}<i></i>{% endfor %}
+        </div>
+        {% for rule in rules %}
+        {% if rule[5] and rule[2] %}
+        {% set color = palette[loop.index0 % palette|length] %}
+        {% set start_min = rule[2].hour * 60 + rule[2].minute %}
+        {% if rule[3] %}
+        {% set end_min = rule[3].hour * 60 + rule[3].minute %}
+        {% else %}
+        {% set end_min = start_min + 10 %}
+        {% endif %}
+        {% if end_min <= start_min %}{% set end_min = start_min + 10 %}{% endif %}
+        <span class="sched-bar"
+            style="left: {{ '%.2f'|format(start_min / 14.4) }}%; width: {{ '%.2f'|format((end_min - start_min) / 14.4) }}%; top: {{ 4 + (loop.index0 % 3) * 14 }}px; background: {{ color }}; box-shadow: 0 0 10px {{ color }};"
+            title="{{ rule[1] }}"></span>
+        {% endif %}
+        {% endfor %}
+        <span class="sched-now" id="sched-now" hidden></span>
+        <span class="sched-now-label" id="sched-now-label" hidden>now</span>
+    </div>
+    <div class="sched-legend">
+        {% for rule in rules %}
+        {% if rule[5] %}
+        <span><span class="sched-dot" style="background: {{ palette[loop.index0 % palette|length] }};"></span>{{ rule[1] }}</span>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+
+<div class="sched-cols">
+    <!-- left: rule table + add form -->
+    <div>
+        <div class="card">
+            <div class="sched-panel-head">
+                Schedule management
+                <span class="sched-count">{{ rules|length }} rules</span>
+            </div>
+            <table class="table-modern">
+                <tr>
+                    <th>Rule</th>
+                    <th>Window</th>
+                    <th>Days</th>
+                    <th>State</th>
+                    <th>Actions</th>
+                </tr>
+                {% for rule in rules %}
+                <tr>
+                    <td>
+                        <form method="POST" id="update-{{ rule[0] }}">
+                            <input type="hidden" name="action" value="update">
+                            <input type="hidden" name="rule_id" value="{{ rule[0] }}">
+                        </form>
+                        <span class="sched-dot" style="background: {{ palette[loop.index0 % palette|length] }};"></span>
+                        <span class="sched-rule-name">{{ rule[1] }}</span>
+                    </td>
+                    <td>
+                        <div class="sched-window">
+                            <input type="time" name="start_time" form="update-{{ rule[0] }}"
+                                value="{{ rule[2].strftime('%H:%M') if rule[2] else '' }}">
+                            –
+                            <input type="time" name="end_time" form="update-{{ rule[0] }}"
+                                value="{{ rule[3].strftime('%H:%M') if rule[3] else '' }}">
+                        </div>
+                    </td>
+                    <td>
+                        {% set selected_days = rule[4].split(",") if rule[4] else [] %}
+                        <span class="sched-days">
+                            {% for i in range(7) %}
+                            <label class="sched-day">
+                                <input type="checkbox" name="day_of_week" value="{{ i }}" form="update-{{ rule[0] }}"
+                                    {% if i|string in selected_days or rule[4] == "*" %}checked{% endif %}>
+                                <span>{{ day_letters[i] }}</span>
+                            </label>
+                            {% endfor %}
+                        </span>
+                    </td>
+                    <td>
+                        <form method="POST">
+                            <input type="hidden" name="action" value="{{ 'disable' if rule[5] else 'enable' }}">
+                            <input type="hidden" name="rule_id" value="{{ rule[0] }}">
+                            <button type="submit" class="sched-switch {{ 'on' if rule[5] else 'off' }}"
+                                title="{{ 'Disable' if rule[5] else 'Enable' }} this rule">
+                                <span class="sched-track"></span>{{ 'on' if rule[5] else 'off' }}
+                            </button>
+                        </form>
+                    </td>
+                    <td>
+                        <div class="sched-actions">
+                            <button type="submit" class="btn btn-secondary btn-sm" form="update-{{ rule[0] }}">Save</button>
+                            <form method="POST" onsubmit="return confirm('Delete this rule?');">
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="rule_id" value="{{ rule[0] }}">
+                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+
+        <div class="card" id="add-rule">
+            <div class="sched-panel-head">Add new schedule rule</div>
+            <form method="POST" class="sched-add-row">
+                <input type="hidden" name="action" value="add">
+                <label for="rule_name">Rule</label>
+                <select name="rule_name" id="rule_name">
+                    {% for rule in available_rules %}
+                    <option value="{{ rule }}">{{ rule }}</option>
+                    {% endfor %}
+                </select>
+                <label for="start_time">Start</label>
+                <input type="time" name="start_time" id="start_time" required>
+                <label for="end_time">End</label>
+                <input type="time" name="end_time" id="end_time">
+                <button class="btn btn-primary" type="submit">Add rule</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- right column -->
+    <div>
+        <div class="card">
+            <div class="sched-panel-head">Assign rules · per player</div>
+            <form method="POST">
+                <input type="hidden" name="action" value="assign">
+                {% for user in assigned_rules %}
+                <div class="sched-player">
+                    <span class="sched-player-name">
+                        {% set grads = ['linear-gradient(135deg, #FF7A2E, #FFB876)', 'linear-gradient(135deg, #06B6D4, #3B82F6)', 'linear-gradient(135deg, #A78BFA, #7C3AED)'] %}
+                        <span class="sched-player-avatar" style="background: {{ grads[loop.index0 % 3] }};">
+                            {{ (user[1] or '?')[:1]|upper }}</span>
+                        {{ user[1] }}
+                    </span>
+                    <select name="rule_{{ user[0] }}">
+                        {% for rule in available_rules %}
+                        <option value="{{ rule }}" {% if user[2] == rule %}selected{% endif %}>{{ rule }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endfor %}
+                <button class="btn btn-secondary btn-sm" type="submit" style="margin-top: 6px;">Save assignments</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <div class="sched-panel-head">Disable-button window</div>
+            <form method="POST">
+                <input type="hidden" name="action" value="update_agile_config">
+                <div class="sched-window-row">
+                    Show from
+                    <input type="time" name="config_show_disable_button_start"
+                        value="{{ agile_configs.get('show_disable_button_start', '16:00') }}">
+                    to
+                    <input type="time" name="config_show_disable_button_end"
+                        value="{{ agile_configs.get('show_disable_button_end', '18:00') }}">
+                    <button class="btn btn-secondary btn-sm" type="submit">Update</button>
+                </div>
+            </form>
+            <div class="sched-calc">
+                <div class="sched-calc-label">Calculate from timestamp</div>
+                <form method="POST" class="sched-calc-row">
+                    <input type="hidden" name="action" value="calc_agile_config">
+                    <span>start</span>
+                    <input type="text" name="timestamp_input" required placeholder="09:30"
+                        pattern="(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]"
+                        title="Enter time in 24-hour format (e.g. 09:30 or 14:15)" style="width: 60px;">
+                    <span>delay</span>
+                    <input type="number" name="delay_input" min="0" step="any" value="0" style="width: 58px;">
+                    <span>eat</span>
+                    <input type="number" name="eating_input" min="0" step="any" value="0" style="width: 58px;">
+                    <button class="btn btn-primary btn-sm" type="submit">Calc</button>
+                </form>
+                <div class="sched-formula">start = ((−3)·input+46)/4 + delay/60 + eat/60 + 12 · end = start + 0.5h</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="sched-panel-head">APScheduler jobs</div>
+            {% if scheduled_jobs %}
+            <div class="sched-jobs">
+                {% for job in scheduled_jobs %}
+                <div class="sched-job" title="{{ job.trigger }}">
+                    <span>{{ job.name }}</span>
+                    {% if job.next_run_time == '-' %}
+                    <span class="sched-job-next paused">— paused</span>
+                    {% else %}
+                    <span class="sched-job-next">{{ job.next_run_time[5:16] }}</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">No jobs scheduled.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const marker = document.getElementById("sched-now");
+        const label = document.getElementById("sched-now-label");
+        function position() {
+            const now = new Date();
+            const pct = (now.getHours() * 60 + now.getMinutes()) / 14.4;
+            marker.style.left = pct + "%";
+            label.style.left = "calc(" + pct + "% - 14px)";
+            marker.hidden = false;
+            label.hidden = false;
+        }
+        position();
+        setInterval(position, 60 * 1000);
+    })();
+</script>
 
 {% endblock %}

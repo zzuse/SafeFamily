@@ -1,6 +1,6 @@
 """Tests for scheduler lock helpers and routes."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from types import SimpleNamespace
 
 from src.safe_family.core import auth
@@ -178,6 +178,44 @@ def test_schedule_rules_get_renders(client, monkeypatch):
     resp = client.get("/schedule_rules")
 
     assert resp.status_code == 200
+
+
+def test_schedule_rules_get_renders_real_template(client, monkeypatch):
+    class RenderCursor(LockCursor):
+        def fetchall(self):
+            sql = self.executed[-1][0]
+            if "FROM users" in sql:
+                return [("u1", "alice", "Rule enable AI")]
+            if "FROM schedule_rules" in sql:
+                return [
+                    (1, "Rule enable AI", time(9, 0), time(11, 30), "0,1,2", True),
+                    (2, "Rule disable all", time(21, 0), None, "*", False),
+                ]
+            return [("show_disable_button_start", "16:00")]
+
+    cursor = RenderCursor()
+    conn = LockConn(cursor)
+    monkeypatch.setattr(scheduler, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(
+        scheduler,
+        "get_scheduled_job_details",
+        lambda: [
+            {"id": "analyze_logs", "name": "analyze_logs", "trigger": "cron", "next_run_time": "2026-07-13 00:20:00 CDT"},
+            {"id": "gas_weather_report", "name": "gas_weather_report", "trigger": "cron", "next_run_time": "-"},
+        ],
+    )
+    _login_admin(client, monkeypatch)
+
+    resp = client.get("/schedule_rules")
+
+    assert resp.status_code == 200
+    html = resp.get_data(as_text=True)
+    assert "Schedule rules" in html
+    assert "Rule enable AI" in html
+    assert "sched-timeline" in html
+    assert "1 rules active" in html
+    assert "00:20" in html
+    assert "— paused" in html
 
 
 def test_log_job_event_handles_exception():

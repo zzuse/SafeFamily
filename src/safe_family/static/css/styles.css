@@ -702,3 +702,374 @@ td form button {
 .cigar10-input {
     max-width: 3.5rem;
 }
+
+/* ===== Schedule rules page (Quest redesign) ===== */
+.sched-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.sched-title {
+    font-family: var(--sf-display);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--sf-ink);
+}
+
+.sched-sub {
+    font-size: 12px;
+    color: var(--sf-ink-muted);
+    margin-top: 2px;
+}
+
+.sched-fire {
+    color: var(--sf-accent);
+    font-family: var(--sf-mono);
+}
+
+.sched-glance-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sched-glance-hours {
+    font-size: 11px;
+    color: var(--sf-ink-dim);
+    font-family: var(--sf-mono);
+}
+
+.sched-timeline {
+    position: relative;
+    height: 46px;
+    background: var(--sf-surface-3);
+    border: 1px solid var(--sf-border);
+    border-radius: var(--sf-radius-sm);
+    margin-top: 20px;
+}
+
+.sched-timeline-grid {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: repeat(24, 1fr);
+}
+
+.sched-timeline-grid>i {
+    border-right: 1px dashed var(--sf-border);
+}
+
+.sched-timeline-grid>i:last-child {
+    border-right: 0;
+}
+
+.sched-bar {
+    position: absolute;
+    height: 12px;
+    border-radius: 3px;
+}
+
+.sched-now {
+    position: absolute;
+    top: -4px;
+    bottom: -4px;
+    width: 2px;
+    background: var(--sf-accent);
+    box-shadow: 0 0 8px var(--sf-accent);
+}
+
+.sched-now-label {
+    position: absolute;
+    top: -16px;
+    font-family: var(--sf-mono);
+    font-size: 10px;
+    color: var(--sf-accent);
+    background: var(--sf-surface);
+    padding: 0 4px;
+}
+
+.sched-legend {
+    display: flex;
+    gap: 14px;
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--sf-ink-muted);
+    flex-wrap: wrap;
+}
+
+.sched-legend span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.sched-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    display: inline-block;
+    flex: none;
+}
+
+.sched-cols {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 14px;
+    align-items: start;
+}
+
+@media (max-width: 1000px) {
+    .sched-cols {
+        grid-template-columns: 1fr;
+    }
+}
+
+.sched-panel-head {
+    font-family: var(--sf-display);
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--sf-ink);
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.sched-count {
+    font-size: 11px;
+    color: var(--sf-ink-dim);
+    font-family: var(--sf-mono);
+    font-weight: 400;
+}
+
+.sched-rule-name {
+    font-weight: 600;
+    color: var(--sf-ink);
+    white-space: nowrap;
+}
+
+.sched-window {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.sched-window input[type="time"] {
+    font-family: var(--sf-mono);
+    padding: 3px 6px;
+    font-size: 12px;
+}
+
+.sched-days {
+    display: inline-flex;
+    gap: 2px;
+}
+
+.sched-day input {
+    display: none;
+}
+
+.sched-day span {
+    display: inline-block;
+    width: 20px;
+    padding: 2px 0;
+    text-align: center;
+    background: var(--sf-surface-2);
+    color: var(--sf-ink-dim);
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 700;
+    cursor: pointer;
+    user-select: none;
+}
+
+.sched-day input:checked+span {
+    background: var(--sf-accent);
+    color: var(--sf-bg);
+}
+
+.sched-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--sf-ui);
+}
+
+.sched-switch .sched-track {
+    width: 28px;
+    height: 16px;
+    border-radius: 999px;
+    position: relative;
+    display: inline-block;
+    flex: none;
+}
+
+.sched-switch .sched-track::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.sched-switch.on {
+    color: var(--sf-success);
+}
+
+.sched-switch.on .sched-track {
+    background: var(--sf-success);
+}
+
+.sched-switch.on .sched-track::after {
+    right: 2px;
+    background: var(--sf-bg);
+}
+
+.sched-switch.off {
+    color: var(--sf-ink-dim);
+}
+
+.sched-switch.off .sched-track {
+    background: var(--sf-surface-2);
+}
+
+.sched-switch.off .sched-track::after {
+    left: 2px;
+    background: var(--sf-ink-dim);
+}
+
+.sched-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.btn-sm {
+    padding: 4px 8px;
+    font-size: 11px;
+}
+
+.sched-add-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.sched-player {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.sched-player-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--sf-ink);
+}
+
+.sched-player-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--sf-bg);
+    flex: none;
+}
+
+.sched-window-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 12px;
+    color: var(--sf-ink-muted);
+    flex-wrap: wrap;
+}
+
+.sched-calc {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--sf-border-strong);
+}
+
+.sched-calc-label {
+    font-size: 11px;
+    color: var(--sf-ink-dim);
+    font-family: var(--sf-mono);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.sched-calc-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    font-size: 11px;
+    color: var(--sf-ink-muted);
+    flex-wrap: wrap;
+}
+
+.sched-calc-row input {
+    background: var(--sf-accent-soft);
+    color: var(--sf-accent);
+    border: 1px solid var(--sf-accent);
+    border-radius: 4px;
+    padding: 3px 4px;
+    font-family: var(--sf-mono);
+    text-align: center;
+}
+
+.sched-calc-row input:focus {
+    border-color: var(--sf-accent);
+}
+
+.sched-formula {
+    font-size: 10px;
+    color: var(--sf-ink-dim);
+    margin-top: 8px;
+    font-family: var(--sf-mono);
+}
+
+.sched-jobs {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--sf-ink-muted);
+    font-family: var(--sf-mono);
+}
+
+.sched-job {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.sched-job-next {
+    color: var(--sf-success);
+    text-align: right;
+}
+
+.sched-job-next.paused {
+    color: var(--sf-ink-dim);
+}
