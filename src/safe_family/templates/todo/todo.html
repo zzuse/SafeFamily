@@ -731,14 +731,30 @@
     {% set done_count = today_tasks|selectattr('3')|list|length if today_tasks else 0 %}
     {% set total_count = today_tasks|length if today_tasks else 0 %}
     {% set pct = (done_count * 100 // total_count) if total_count else 0 %}
-    {% set ns = namespace(next_task=None, next_start=None, next_id=None) %}
+    {# Current mission = first incomplete task still ongoing or upcoming (slot end >= now);
+       fall back to the first incomplete one when every remaining task is already overdue. #}
+    {% set now_hm = now.strftime('%H:%M') %}
+    {% set ns = namespace(next_task=None, next_start=None, next_id=None,
+                          first_task=None, first_start=None, first_id=None) %}
     {% for todo_id, time_slot, task, completed, completion_status in today_tasks %}
-    {% if not completed and ns.next_task is none %}
+    {% if not completed %}
+    {% if ns.first_id is none %}
+    {% set ns.first_task = task.split('[')[0].strip() %}
+    {% set ns.first_start = time_slot[:5] %}
+    {% set ns.first_id = todo_id %}
+    {% endif %}
+    {% if ns.next_id is none and time_slot[-5:] >= now_hm %}
     {% set ns.next_task = task.split('[')[0].strip() %}
     {% set ns.next_start = time_slot[:5] %}
     {% set ns.next_id = todo_id %}
     {% endif %}
+    {% endif %}
     {% endfor %}
+    {% if ns.next_id is none %}
+    {% set ns.next_task = ns.first_task %}
+    {% set ns.next_start = ns.first_start %}
+    {% set ns.next_id = ns.first_id %}
+    {% endif %}
     <div class="sf-today-hero">
         <div>
             <div class="sf-eyebrow">

@@ -88,6 +88,48 @@ def test_todo_page_saves_tasks_and_notifies(client, monkeypatch):
     assert conn.commits == 1
 
 
+def test_todo_page_highlights_current_task_by_time(client, monkeypatch):
+    class FixedDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 7, 12, 12, 0, tzinfo=tz)
+
+    tasks = [
+        (1, "09:00 - 10:00", "Read", False, ""),
+        (2, "11:30 - 12:30", "Math", False, ""),
+        (3, "14:00 - 15:00", "Piano", False, ""),
+    ]
+    cursor = SeqCursor(
+        fetchone_values=[("alice", "u1")],
+        fetchall_values=[tasks],
+    )
+    conn = SeqConnection(cursor)
+    monkeypatch.setattr(todo, "datetime", FixedDatetime)
+    monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(todo, "get_agile_config", lambda k, d="": d)
+    monkeypatch.setattr(
+        todo,
+        "get_current_username",
+        lambda: SimpleNamespace(username="alice", role="user"),
+    )
+    monkeypatch.setattr(todo, "generate_time_slots", lambda *a, **k: ["09:00 - 10:00"])
+    monkeypatch.setattr(
+        todo,
+        "build_week_strip_and_heatmap",
+        lambda *a, **k: ([], {"start": "", "weeks": [], "month_labels": []}),
+    )
+    _login_session(client, monkeypatch)
+
+    resp = client.get("/todo")
+
+    assert resp.status_code == 200
+    html = resp.get_data(as_text=True)
+    # The 11:30-12:30 slot spans the fixed 12:00 clock, so Math is current,
+    # not the earlier overdue Read task.
+    assert "MATH · CURRENT" in html
+    assert "READ · CURRENT" not in html
+
+
 def test_delete_todo_executes_delete(client, monkeypatch):
     cursor = SeqCursor()
     conn = SeqConnection(cursor)
