@@ -26,6 +26,27 @@ def store_sum():
     return render_template("miscellaneous/store_calculator.html")
 
 
+@root_bp.route("/calc_guide")
+@login_required
+def calc_guide():
+    """Render the calculator guide page.
+
+    This route renders a landing page linking to the available calculators.
+    """
+    return render_template("miscellaneous/calc_guide.html")
+
+
+@root_bp.route("/yaw_calc")
+@login_required
+def yaw_calc():
+    """Render the yaw calculator.
+
+    This route renders a page where users can compute yaw from quaternion
+    z/w pairs or from raw radian readings.
+    """
+    return render_template("miscellaneous/yaw_calculator.html")
+
+
 @root_bp.route("/store_sum_static")
 @login_required
 def store_sum_static():

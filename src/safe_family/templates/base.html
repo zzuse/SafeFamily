@@ -539,7 +539,8 @@
                     class="{% if request.endpoint == 'suspicious.view_suspicious' %}active{% endif %}">MGMT</a>
                 <a href="{{ url_for('schedule_rules.schedule_rules') }}"
                     class="{% if request.endpoint == 'schedule_rules.schedule_rules' %}active{% endif %}">Schedule</a>
-                <a href="{{ url_for('index.store_sum') }}">Sheet</a>
+                <a href="{{ url_for('index.calc_guide') }}"
+                    class="{% if request.endpoint == 'index.calc_guide' %}active{% endif %}">Sheet</a>
                 <a href="{{ url_for('auth.session_logout') }}">Logout</a>
                 {% else %}
                 <a href="{{ url_for('auth.show_login_form') }}">Login</a>

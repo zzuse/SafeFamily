@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="calculator-container p-4 max-w-6xl mx-auto">
+    <h1 class="card-header">Yaw Calculator</h1>
+
+    <!-- METHOD 1: QUATERNION Z/W -->
+    <h2 class="text-2xl font-black text-black border-b-4 border-black pb-2 uppercase tracking-tighter mb-6">
+        Method 1 · Quaternion (z, w)</h2>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-12">
+        {% for dir in ['Clockwise', 'Counter-Clockwise'] %}
+        <section class="quat-section flex flex-col gap-6">
+            <div class="calc-card bg-white p-6 shadow-md rounded-lg border border-gray-300">
+                <h3 class="text-xl font-black text-black uppercase tracking-tighter mb-4">{{ dir }}</h3>
+                <table class="w-full text-lg">
+                    <thead>
+                        <tr class="border-b-2 border-black">
+                            <th class="py-3 text-left text-black font-bold uppercase tracking-wider">Sample</th>
+                            <th class="py-3 text-center text-black font-bold uppercase tracking-wider">z</th>
+                            <th class="py-3 text-center text-black font-bold uppercase tracking-wider">w</th>
+                            <th class="py-3 text-right text-blue-700 font-bold uppercase tracking-wider">
+                                2·atan2(z, w)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in [1, 2] %}
+                        <tr class="quat-row border-b last:border-0 border-gray-200">
+                            <td class="py-3 font-black text-black text-2xl">{{ s }}</td>
+                            <td class="py-3 text-center">
+                                <input type="number" step="any" value="0"
+                                    class="z-input text-center text-xl font-semibold border-2 border-gray-400 rounded focus:border-blue-600 focus:ring-0 focus:outline-none py-1">
+                            </td>
+                            <td class="py-3 text-center">
+                                <input type="number" step="any" value="1"
+                                    class="w-input text-center text-xl font-semibold border-2 border-gray-400 rounded focus:border-blue-600 focus:ring-0 focus:outline-none py-1">
+                            </td>
+                            <td class="quat-yaw text-right font-bold text-blue-700 text-xl">0.000000</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <p class="text-sm text-gray-600 mt-4">yaw = (yaw₂ − yaw₁) / 3</p>
+            </div>
+            <div class="p-6 bg-slate-900 text-white rounded-xl shadow-lg border-4 border-black text-center">
+                <div class="text-sm text-slate-300 uppercase font-black mb-1">{{ dir }} Yaw</div>
+                <div class="quat-result text-5xl font-black text-green-400">0.000000</div>
+                <div class="quat-result-deg text-lg text-slate-300 mt-1">0.0000°</div>
+            </div>
+        </section>
+        {% endfor %}
+    </div>
+
+    <!-- METHOD 2: RAW RADIANS -->
+    <h2 class="text-2xl font-black text-black border-b-4 border-black pb-2 uppercase tracking-tighter mb-6">
+        Method 2 · Radians</h2>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        {% for dir, labels in [('Clockwise', ['rad1', 'rad2']), ('Counter-Clockwise', ['rad3', 'rad4'])] %}
+        <section class="rad-section flex flex-col gap-6">
+            <div class="calc-card bg-white p-6 shadow-md rounded-lg border border-gray-300">
+                <h3 class="text-xl font-black text-black uppercase tracking-tighter mb-4">{{ dir }}</h3>
+                <table class="w-full text-lg">
+                    <thead>
+                        <tr class="border-b-2 border-black">
+                            <th class="py-3 text-left text-black font-bold uppercase tracking-wider">Reading</th>
+                            <th class="py-3 text-center text-black font-bold uppercase tracking-wider">Radians</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for label in labels %}
+                        <tr class="border-b last:border-0 border-gray-200">
+                            <td class="py-3 font-black text-black text-2xl">{{ label }}</td>
+                            <td class="py-3 text-center">
+                                <input type="number" step="any" value="0"
+                                    class="rad-input text-center text-xl font-semibold border-2 border-gray-400 rounded focus:border-purple-600 focus:ring-0 focus:outline-none py-1">
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <p class="text-sm text-gray-600 mt-4">yaw = ({{ labels[1] }} − {{ labels[0] }}) / 3</p>
+            </div>
+            <div class="p-6 bg-slate-900 text-white rounded-xl shadow-lg border-4 border-black text-center">
+                <div class="text-sm text-slate-300 uppercase font-black mb-1">{{ dir }} Yaw</div>
+                <div class="rad-result text-5xl font-black text-yellow-400">0.000000</div>
+                <div class="rad-result-deg text-lg text-slate-300 mt-1">0.0000°</div>
+            </div>
+        </section>
+        {% endfor %}
+    </div>
+
+    <!-- GLOBAL ACTIONS -->
+    <div class="mt-12 flex justify-center space-x-6">
+        <button id="reset-btn" class="btn border bg-orange-500/10 text-[#ff6b00] active:scale-95">Reset All
+            Fields</button>
+        <a href="{{ url_for('index.calc_guide') }}" class="btn btn-primary active:scale-95">Back to Guide</a>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const toDeg = rad => (rad * 180 / Math.PI).toFixed(4) + '°';
+
+        const calcQuat = () => {
+            document.querySelectorAll('.quat-section').forEach(section => {
+                const yaws = [];
+                section.querySelectorAll('.quat-row').forEach(row => {
+                    const z = parseFloat(row.querySelector('.z-input').value) || 0;
+                    const w = parseFloat(row.querySelector('.w-input').value) || 0;
+                    const yaw = 2 * Math.atan2(z, w);
+                    row.querySelector('.quat-yaw').textContent = yaw.toFixed(6);
+                    yaws.push(yaw);
+                });
+                const result = (yaws[1] - yaws[0]) / 3;
+                section.querySelector('.quat-result').textContent = result.toFixed(6);
+                section.querySelector('.quat-result-deg').textContent = toDeg(result);
+            });
+        };
+
+        const calcRad = () => {
+            document.querySelectorAll('.rad-section').forEach(section => {
+                const rads = Array.from(section.querySelectorAll('.rad-input'),
+                    i => parseFloat(i.value) || 0);
+                const result = (rads[1] - rads[0]) / 3;
+                section.querySelector('.rad-result').textContent = result.toFixed(6);
+                section.querySelector('.rad-result-deg').textContent = toDeg(result);
+            });
+        };
+
+        const updateAll = () => {
+            calcQuat();
+            calcRad();
+        };
+
+        document.querySelectorAll('input').forEach(i => {
+            i.addEventListener('input', updateAll);
+            i.addEventListener('focus', function () { this.select(); });
+        });
+
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            if (confirm('Reset all yaw inputs?')) {
+                document.querySelectorAll('.z-input, .rad-input').forEach(i => i.value = 0);
+                document.querySelectorAll('.w-input').forEach(i => i.value = 1);
+                updateAll();
+            }
+        });
+
+        // Initial run
+        updateAll();
+    });
+</script>
+{% endblock %}
