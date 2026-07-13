@@ -65,10 +65,10 @@ def test_notesync_rejects_invalid_base64(notesync_app, notesync_client):
                             "contentType": "image/jpeg",
                             "checksum": "sha256:bad",
                             "dataBase64": "not-base64",
-                        }
+                        },
                     ],
-                }
-            ]
+                },
+            ],
         },
         headers=headers,
     )

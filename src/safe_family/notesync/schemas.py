@@ -1,6 +1,6 @@
 """Pydantic schemas for notesync payloads."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_serializer
@@ -30,9 +30,9 @@ class NotePayload(BaseModel):
         if value is None:
             return None
         if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
+            value = value.replace(tzinfo=UTC)
         else:
-            value = value.astimezone(timezone.utc)
+            value = value.astimezone(UTC)
         return value.isoformat().replace("+00:00", "Z")
 
 

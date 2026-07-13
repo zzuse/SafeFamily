@@ -1,6 +1,5 @@
 """Pytest fixtures for SafeFamily tests."""
 
-import contextlib
 from types import SimpleNamespace
 
 import pytest

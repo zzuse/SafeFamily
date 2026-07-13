@@ -3,7 +3,6 @@
 import base64
 from datetime import datetime
 
-from src.safe_family.core.extensions import db
 from src.safe_family.core.models import Media, Note, Tag
 from src.safe_family.notesync.schemas import SyncRequest
 from src.safe_family.notesync.service import apply_sync_ops

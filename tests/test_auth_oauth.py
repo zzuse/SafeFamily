@@ -149,10 +149,10 @@ def test_github_callback_ios_redirects_to_app(client, monkeypatch):
     def fake_get(url, **_kwargs):
         if url.endswith("/user/emails"):
             return FakeResp(
-                200, [{"email": "user@example.com", "primary": True, "verified": True}]
+                200, [{"email": "user@example.com", "primary": True, "verified": True}],
             )
         return FakeResp(
-            200, {"id": 1, "email": "user@example.com", "name": "User", "login": "user"}
+            200, {"id": 1, "email": "user@example.com", "name": "User", "login": "user"},
         )
 
     fake_user = SimpleNamespace(id="1", username="user", email="user@example.com")
@@ -164,7 +164,7 @@ def test_github_callback_ios_redirects_to_app(client, monkeypatch):
     monkeypatch.setattr(auth, "_oauth_provider_available", lambda name: True)
     monkeypatch.setattr(auth, "_read_oauth_state", lambda state: {"client": "ios"})
     monkeypatch.setattr(
-        auth.requests, "post", lambda *a, **k: FakeResp(200, {"access_token": "token"})
+        auth.requests, "post", lambda *a, **k: FakeResp(200, {"access_token": "token"}),
     )
     monkeypatch.setattr(auth.requests, "get", fake_get)
     monkeypatch.setattr(auth.User, "query", FakeQuery(), raising=False)

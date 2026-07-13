@@ -1,6 +1,6 @@
 """Tests for scheduler lock helpers and routes."""
 
-from datetime import datetime, time, timedelta, timezone
+from datetime import UTC, datetime, time
 from types import SimpleNamespace
 
 from src.safe_family.core import auth
@@ -171,7 +171,7 @@ def test_schedule_rules_get_renders(client, monkeypatch):
     cursor = LockCursor(rows=[("u1", "alice", None), (1, "Rule enable all", "09:00", None, "*", True)])
     conn = LockConn(cursor)
     monkeypatch.setattr(scheduler, "get_db_connection", lambda: conn)
-    monkeypatch.setattr(scheduler, "get_scheduled_job_details", lambda: [])
+    monkeypatch.setattr(scheduler, "get_scheduled_job_details", list)
     monkeypatch.setattr(scheduler, "render_template", lambda *a, **k: ("ok", 200))
     _login_admin(client, monkeypatch)
 
@@ -229,7 +229,7 @@ def test_log_job_event_skips_job():
 
 
 def test_get_scheduled_job_details_formats_times(monkeypatch):
-    next_run = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
+    next_run = datetime(2025, 1, 1, 12, 0, tzinfo=UTC)
     job = SimpleNamespace(id="job-1", name="job", trigger="cron", next_run_time=next_run)
     monkeypatch.setattr(scheduler.scheduler, "get_jobs", lambda: [job])
 

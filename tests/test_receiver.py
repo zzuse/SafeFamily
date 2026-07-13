@@ -1,12 +1,15 @@
 """Tests for the log receiver route."""
 
 from unittest.mock import MagicMock
+
 from src.safe_family.urls import receiver
+
 from .conftest import FakeConnection, FakeCursor
 
 
 class MockCursor(FakeCursor):
     """Cursor that simulates rowcount."""
+
     def __init__(self, rows=None):
         super().__init__(rows)
         self.rowcount = 0
@@ -21,6 +24,7 @@ class MockCursor(FakeCursor):
 
 class MockConnection(FakeConnection):
     """Connection returning MockCursor."""
+
     def __init__(self, rows=None):
         super().__init__(rows)
         self.cursor_obj = MockCursor(rows)
@@ -48,7 +52,7 @@ def test_receive_log_success(client, monkeypatch):
                 "client": "1.2.3.4",
                 "reason": "FilteredBlackList",
             },
-        ]
+        ],
     }
     mock_resp.raise_for_status = MagicMock()
     monkeypatch.setattr("requests.get", lambda *args, **kwargs: mock_resp)
@@ -64,7 +68,7 @@ def test_receive_log_success(client, monkeypatch):
     # 1. SELECT MAX(timestamp)
     # 2. INSERT ... (bad.com) - oldest first
     # 3. INSERT ... (google.com) - newest last
-    
+
     selects = [q for q in queries if "SELECT MAX" in q[0]]
     inserts = [q for q in queries if "INSERT INTO logs" in q[0]]
 

@@ -245,7 +245,7 @@ def test_mark_status_success_within_grace(client, monkeypatch):
     # Slot ended 12:00, now 12:15: inside the 30-min grace window.
     _freeze_time(monkeypatch, 12, 15)
     conn = FakeConnection(
-        rows=[("", "11:00 - 12:00", "kid", "Math", "2026-07-11 12:00:00")]
+        rows=[("", "11:00 - 12:00", "kid", "Math", "2026-07-11 12:00:00")],
     )
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
     monkeypatch.setattr(todo, "send_discord_notification", lambda *a, **k: None)
@@ -272,7 +272,7 @@ def test_mark_status_rejected_before_slot_end(client, monkeypatch):
     # Slot ends 13:00, now 12:15: too early for a non-admin.
     _freeze_time(monkeypatch, 12, 15)
     conn = FakeConnection(
-        rows=[("", "12:00 - 13:00", "kid", "Math", "2026-07-11 12:00:00")]
+        rows=[("", "12:00 - 13:00", "kid", "Math", "2026-07-11 12:00:00")],
     )
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
     monkeypatch.setattr(
@@ -294,7 +294,7 @@ def test_mark_status_rejected_when_status_locked(client, monkeypatch):
     # Status already chosen, non-admin cannot overwrite.
     _freeze_time(monkeypatch, 12, 15)
     conn = FakeConnection(
-        rows=[("done", "11:00 - 12:00", "kid", "Math", "2026-07-11 12:00:00")]
+        rows=[("done", "11:00 - 12:00", "kid", "Math", "2026-07-11 12:00:00")],
     )
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
     monkeypatch.setattr(
@@ -316,7 +316,7 @@ def test_mark_status_admin_can_override(client, monkeypatch):
     # Admin can set status even before the slot ends and overwrite an existing one.
     _freeze_time(monkeypatch, 12, 15)
     conn = FakeConnection(
-        rows=[("done", "12:00 - 13:00", "kid", "Math", "2026-07-11 12:00:00")]
+        rows=[("done", "12:00 - 13:00", "kid", "Math", "2026-07-11 12:00:00")],
     )
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
     monkeypatch.setattr(todo, "send_discord_notification", lambda *a, **k: None)

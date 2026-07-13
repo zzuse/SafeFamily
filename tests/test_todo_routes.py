@@ -287,7 +287,7 @@ def test_exec_rules_disable_all_triggers_schedule(client, monkeypatch):
         "get_current_username",
         lambda: SimpleNamespace(username="user", role="user"),
     )
-    
+
     # Mock time to be within 16:00 - 18:00
     mock_now = datetime(2026, 4, 12, 17, 0, 0)
     class MockDatetime:

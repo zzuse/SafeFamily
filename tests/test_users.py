@@ -10,7 +10,6 @@ from src.safe_family.users import users
 @pytest.fixture(autouse=True)
 def patch_jwt(monkeypatch):
     """Bypass JWT verification for tests."""
-
     monkeypatch.setattr(
         "flask_jwt_extended.view_decorators.verify_jwt_in_request",
         lambda *a, **k: None,

@@ -4,8 +4,8 @@ from datetime import datetime
 
 import pandas as pd
 
-from src.safe_family.urls import analyzer
 from src.safe_family.core import auth
+from src.safe_family.urls import analyzer
 
 
 class AnalysisCursor:

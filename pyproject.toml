@@ -1,6 +1,23 @@
 [tool.ruff]
 lint.extend-select = ["ALL"]
-lint.per-file-ignores = {"tests/*" = ["S101", "ANN001", "ANN202"]}
+lint.per-file-ignores = { "tests/*" = [
+    "S101",    # asserts
+    "S106",    # fake tokens/passwords in fixtures
+    "ANN",     # no annotations required in tests
+    "ARG",     # stub lambdas/functions with unused args
+    "D",       # no docstring requirements in tests
+    "PLR2004", # magic values in asserts are fine
+    "SLF001",  # tests may poke module privates
+    "DTZ",     # naive datetimes in fixtures are fine
+    "PLC0415", # local imports inside tests
+    "EM",      # string literals in stub exceptions are fine
+    "TRY002",  # raising plain Exception in stubs is fine
+    "TRY003",  # long messages in stub exceptions are fine
+    "FBT",     # boolean positional args in fake helpers are fine
+], "scripts/*" = [
+    "INP001", # scripts/ is not a package
+    "S108",   # writes to /tmp are intentional here
+] }
 lint.ignore = [
     "T201",
     "E501",
