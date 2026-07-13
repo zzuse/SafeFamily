@@ -72,10 +72,13 @@ lint.per-file-ignores = { "tests/*" = [
 
 (Replaces the current `{"tests/*" = ["S101", "ANN001", "ANN202"]}`.)
 
-> **Status: ALL STEPS (1–4) applied on 2026-07-12 — `ruff check .` is
+> **Status: ALL STEPS (1–5) applied on 2026-07-12 — `ruff check .` is
 > clean (974 → 0)**; full pytest suite green (194 passed), helpers.py at
-> 100% coverage. Step 5 (pre-commit/CI lock-in, explicit rule list) is
-> the only remaining item.
+> 100% coverage. Locked in: `lint.select` is now an explicit frozen list
+> (no more `ALL`), a `lint` job runs `ruff check .` in CI
+> (`.github/workflows/ci.yml`), and `.pre-commit-config.yaml` provides a
+> local hook (`pip install pre-commit && pre-commit install` to enable).
+> Ruff is pinned to 0.15.20 in both places — bump them together.
 > Step 3 delivered: S113 timeout in log_poster, `utcnow()` →
 > `datetime.now(UTC).replace(tzinfo=None)` in auth.py + notesync/service.py
 > (kept naive-UTC storage semantics), tz-aware `now()` in weekly_metrics,

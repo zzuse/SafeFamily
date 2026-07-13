@@ -1,5 +1,66 @@
 [tool.ruff]
-lint.extend-select = ["ALL"]
+# Explicit linter list (was `ALL`, frozen 2026-07-12 at ruff 0.15.20 with a
+# clean `ruff check .`). New linters added by future ruff versions won't
+# auto-enable; add them here deliberately. Framework linters that don't apply
+# (AIR airflow, DJ django, FAST fastapi) and preview-only ones (CPY, DOC)
+# are intentionally left out.
+lint.select = [
+    "A",     # builtins shadowing
+    "ANN",   # annotations
+    "ARG",   # unused arguments
+    "ASYNC", # async pitfalls
+    "B",     # bugbear
+    "BLE",   # blind except (BLE001 ignored below)
+    "C4",    # comprehensions
+    "C90",   # mccabe complexity
+    "COM",   # commas
+    "D",     # docstrings
+    "DTZ",   # naive datetimes
+    "E",     # pycodestyle errors
+    "EM",    # exception messages
+    "ERA",   # commented-out code
+    "EXE",   # shebangs
+    "F",     # pyflakes
+    "FA",    # future annotations
+    "FBT",   # boolean traps
+    "FIX",   # FIXME/TODO markers
+    "FLY",   # f-string joins
+    "FURB",  # refurb
+    "G",     # logging format
+    "I",     # import sorting
+    "ICN",   # import conventions
+    "INP",   # implicit namespace packages
+    "INT",   # gettext
+    "ISC",   # implicit string concat
+    "LOG",   # logging pitfalls
+    "N",     # naming
+    "NPY",   # numpy
+    "PD",    # pandas
+    "PERF",  # performance
+    "PGH",   # pygrep hooks
+    "PIE",   # misc lints
+    "PL",    # pylint
+    "PT",    # pytest style
+    "PTH",   # pathlib
+    "PYI",   # stub files
+    "Q",     # quotes
+    "RET",   # return statements
+    "RSE",   # raise statements
+    "RUF",   # ruff-specific
+    "S",     # security (bandit)
+    "SIM",   # simplify
+    "SLF",   # private member access
+    "SLOT",  # __slots__
+    "T10",   # debugger calls
+    "T20",   # print statements (T201 ignored below)
+    "TC",    # type-checking blocks
+    "TD",    # TODO format
+    "TID",   # tidy imports
+    "TRY",   # exception handling style
+    "UP",    # pyupgrade
+    "W",     # pycodestyle warnings
+    "YTT",   # sys.version misuse
+]
 lint.per-file-ignores = { "tests/*" = [
     "S101",    # asserts
     "S106",    # fake tokens/passwords in fixtures
