@@ -8,9 +8,10 @@ import threading
 import time
 import uuid
 import zlib
+from collections.abc import Callable
 from datetime import datetime
 
-from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
+from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED, JobExecutionEvent
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
@@ -86,14 +87,13 @@ def _job_lock_key(job_id: str) -> int:
 
 def _ensure_scheduler_leader() -> bool:
     """Return True if this process is the scheduler leader."""
-    global _IS_SCHEDULER_LEADER, _SCHEDULER_LEADER_CONN
+    global _IS_SCHEDULER_LEADER, _SCHEDULER_LEADER_CONN  # noqa: PLW0603 - process-wide leader state
     with _SCHEDULER_LEADER_LOCK:
         if _IS_SCHEDULER_LEADER and _SCHEDULER_LEADER_CONN is not None:
             try:
                 cur = _SCHEDULER_LEADER_CONN.cursor()
                 cur.execute("SELECT 1")
                 cur.close()
-                return True
             except Exception:
                 logger.warning("Scheduler leader connection lost; re-electing.")
                 try:
@@ -102,6 +102,8 @@ def _ensure_scheduler_leader() -> bool:
                     logger.exception("Failed to close leader connection.")
                 _SCHEDULER_LEADER_CONN = None
                 _IS_SCHEDULER_LEADER = False
+            else:
+                return True
 
         conn = None
         try:
@@ -131,7 +133,7 @@ def _ensure_scheduler_leader() -> bool:
 
 def _release_scheduler_leader() -> None:
     """Close the scheduler leader connection."""
-    global _IS_SCHEDULER_LEADER, _SCHEDULER_LEADER_CONN
+    global _IS_SCHEDULER_LEADER, _SCHEDULER_LEADER_CONN  # noqa: PLW0603 - process-wide leader state
     with _SCHEDULER_LEADER_LOCK:
         if _SCHEDULER_LEADER_CONN is not None:
             try:
@@ -173,10 +175,10 @@ def _ensure_job_lock(job_id: str) -> bool:
     return True
 
 
-def _wrap_job(job_id: str, func):
+def _wrap_job(job_id: str, func: Callable) -> Callable:
     """Wrap a scheduled function with a per-job advisory lock."""
 
-    def _wrapped(*args, **kwargs):
+    def _wrapped(*args: object, **kwargs: object) -> object:
         if not _ensure_scheduler_leader():
             return _JOB_SKIPPED
         if not _ensure_job_lock(job_id):
@@ -240,7 +242,7 @@ def _start_schedule_listener() -> None:
     """Start a background listener for schedule change notifications."""
     if os.environ.get("PYTEST_CURRENT_TEST"):
         return
-    global _LISTENER_THREAD
+    global _LISTENER_THREAD  # noqa: PLW0603 - single listener thread per process
     with _LISTENER_LOCK:
         if _LISTENER_THREAD is not None:
             return
@@ -277,7 +279,7 @@ def notify_schedule_change() -> None:
         logger.exception("Failed to notify schedule change.")
 
 
-def _log_job_event(event) -> None:
+def _log_job_event(event: JobExecutionEvent) -> None:
     """Log a single line per job run to avoid APScheduler's duplicate INFO logs."""
     if event.exception:
         logger.error("Scheduler job %s failed: %s", event.job_id, event.exception)
@@ -418,7 +420,7 @@ def remove_job(rule_id: int):
 
 def notify_overdue_task_feedback():
     """Send a desktop alert when task feedback is overdue."""
-    global _NOTIFIED_DATE
+    global _NOTIFIED_DATE  # noqa: PLW0603 - per-day notification dedup state
     today = datetime.now(local_tz).date().isoformat()
     if today != _NOTIFIED_DATE:
         _NOTIFIED_DATE = today
@@ -470,7 +472,7 @@ def notify_overdue_task_feedback():
 
 @schedule_rules_bp.route("/schedule_rules", methods=["GET", "POST"])
 @admin_required
-def schedule_rules():
+def schedule_rules():  # noqa: C901, PLR0912, PLR0915 - refactor backlog: split per action
     """View and manage scheduled rules."""
     conn = get_db_connection()
     cur = conn.cursor()
@@ -623,7 +625,7 @@ def analyze_logs():
     """Analyze logs."""
     now = datetime.now(local_tz)
     start_time, end_time = get_time_range(
-        range="yesterday",
+        time_range="yesterday",
         custom=None,
         now=now,
     )

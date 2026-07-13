@@ -2,11 +2,11 @@
 
 import fnmatch
 import logging
-import os
 import shutil
 import subprocess
 from collections import defaultdict
 from datetime import datetime
+from pathlib import Path
 
 import psycopg2
 from flask import Blueprint, flash, redirect
@@ -37,8 +37,8 @@ def rule_auto_commit():
 
     # Write files
     for type_, qh_list in grouped.items():
-        file_path = f"{settings.ADGUARD_RULE_PATH}block_{type_}.txt"
-        with open(file_path, "w", encoding="utf-8") as f:
+        file_path = Path(f"{settings.ADGUARD_RULE_PATH}block_{type_}.txt")
+        with file_path.open("w", encoding="utf-8") as f:
             f.write(f"! Block List for type: {type_}\n")
             f.write("! Format: ||domain^ \n\n")
             for qh in qh_list:
@@ -46,8 +46,8 @@ def rule_auto_commit():
                 f.write(f"||{domain}^\n")
             f.write("\n! End of Block List\n")
 
-    filter_path = f"{settings.ADGUARD_RULE_PATH}filter.txt"
-    with open(filter_path, "w", encoding="utf-8") as ff:
+    filter_path = Path(f"{settings.ADGUARD_RULE_PATH}filter.txt")
+    with filter_path.open("w", encoding="utf-8") as ff:
         for qh in rows_filter:
             ff.write(f"{qh[0]}\n")
         ff.write("\n")
@@ -86,10 +86,11 @@ def auto_import():
     cur = conn.cursor()
 
     # Look for files matching pattern like block_*.txt
-    for file_name in os.listdir("."):
+    for file_path in Path().iterdir():
+        file_name = file_path.name
         if fnmatch.fnmatch(file_name, "block_*.txt"):
             type_ = file_name.replace("block_", "").replace(".txt", "")
-            with open(file_name, encoding="utf-8") as f:
+            with file_path.open(encoding="utf-8") as f:
                 for raw_line in f:
                     line = raw_line.strip()
                     if not line or line.startswith("!"):

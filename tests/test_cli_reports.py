@@ -9,7 +9,7 @@ from src.safe_family.cli import weekly_metrics
 
 
 def test_parse_iso_week_invalid():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="YYYY-Www format"):
         weekly_metrics._parse_iso_week("2025-13")
 
 
@@ -73,7 +73,7 @@ def test_fetch_week_df_returns_dataframe(monkeypatch):
         def close(self):
             return None
 
-    monkeypatch.setattr(weekly_metrics, "get_db_connection", lambda: FakeConn())
+    monkeypatch.setattr(weekly_metrics, "get_db_connection", FakeConn)
     df = weekly_metrics._fetch_week_df(
         pd.Timestamp("2025-01-01").date(),
         pd.Timestamp("2025-01-07").date(),
@@ -84,7 +84,7 @@ def test_fetch_week_df_returns_dataframe(monkeypatch):
 
 def test_weekly_metrics_main_rejects_conflicting_outputs(monkeypatch):
     monkeypatch.setattr(weekly_metrics, "_fetch_week_df", lambda *a, **k: pd.DataFrame())
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="only one of"):
         weekly_metrics.main(
             [
                 "--username",

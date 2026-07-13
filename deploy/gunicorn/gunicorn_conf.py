@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Gunicorn configuration file for safefamily."""
 
 # TODOdd: this file too complicated, used in a simple version instead now.

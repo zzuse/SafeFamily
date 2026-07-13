@@ -1,7 +1,10 @@
+"""Tail the AdGuard query log and POST new entries to the SafeFamily receiver."""
+
 import json
 import logging
 import time
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 import requests
 
@@ -16,17 +19,18 @@ logging.basicConfig(
     handlers=[log_handler],
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
+logger = logging.getLogger(__name__)
 
 
-def tail_log(file_path, url, checkpoint_file="checkpoint.txt"):
+def tail_log(file_path: str, url: str, checkpoint_file: str = "checkpoint.txt") -> None:
+    """Follow the query log and POST each new JSON line to the receiver."""
+    checkpoint_path = Path(checkpoint_file)
     try:
-        with open(checkpoint_file) as f:
-            f.seek(0)
-            last_position = int(f.read().strip())
+        last_position = int(checkpoint_path.read_text().strip())
     except (FileNotFoundError, ValueError):
         last_position = 0
 
-    with open(file_path) as f:
+    with Path(file_path).open() as f:
         f.seek(0, 2)  # Move to end of file
         file_size = f.tell()
         if last_position > file_size:
@@ -43,17 +47,19 @@ def tail_log(file_path, url, checkpoint_file="checkpoint.txt"):
             try:
                 log_entry = json.loads(line.strip())
                 response = requests.post(url, json=log_entry, timeout=10)
-                logging.info(
-                    f"Sent log: {json.dumps(log_entry)} | Response: {response.status_code} {response.text}",
+                logger.info(
+                    "Sent log: %s | Response: %s %s",
+                    json.dumps(log_entry),
+                    response.status_code,
+                    response.text,
                 )
             except json.JSONDecodeError:
-                logging.exception(f"Skipping invalid JSON: {line}")
-            except requests.RequestException as e:
-                logging.exception(f"Failed to send log: {e}")
+                logger.exception("Skipping invalid JSON: %s", line)
+            except requests.RequestException:
+                logger.exception("Failed to send log")
 
             last_position = f.tell()
-            with open(checkpoint_file, "w") as f_cp:
-                f_cp.write(str(last_position))
+            checkpoint_path.write_text(str(last_position))
 
 
 if __name__ == "__main__":

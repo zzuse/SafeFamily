@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 
 from src.safe_family.core.extensions import db
 from src.safe_family.core.models import Media, Note, NoteSyncOp, Tag
+from src.safe_family.notesync.schemas import NotePayload, OperationPayload
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,7 @@ def _max_timestamp(*values: datetime | None) -> datetime | None:
     return max(timestamps)
 
 
-def _apply_delete(existing: Note | None, payload, user_id: str) -> tuple[Note, str]:
+def _apply_delete(existing: Note | None, payload: NotePayload, user_id: str) -> tuple[Note, str]:
     incoming_ts = _max_timestamp(
         _naive(payload.updatedAt),
         _naive(payload.deletedAt),
@@ -83,7 +84,7 @@ def _apply_delete(existing: Note | None, payload, user_id: str) -> tuple[Note, s
     return existing, "applied"
 
 
-def _apply_upsert(existing: Note | None, payload, user_id: str) -> tuple[Note, str]:
+def _apply_upsert(existing: Note | None, payload: NotePayload, user_id: str) -> tuple[Note, str]:
     incoming_ts = _naive(payload.updatedAt)
     if not _should_apply(existing, incoming_ts):
         return existing, "skipped"
@@ -137,7 +138,8 @@ def _sync_media(note: Note, media_payloads: list) -> None:
                     validate=True,
                 )
             except (ValueError, TypeError, binascii.Error):
-                raise ValueError("invalid_base64") from None
+                msg = "invalid_base64"
+                raise ValueError(msg) from None
 
         if media is None:
             media = Media(
@@ -162,7 +164,7 @@ def _sync_media(note: Note, media_payloads: list) -> None:
                 media.data = data
 
 
-def apply_sync_ops(ops, user_id: str) -> list[tuple[Note | None, str, object]]:
+def apply_sync_ops(ops: list[OperationPayload], user_id: str) -> list[tuple[Note | None, str, object]]:
     """Apply sync ops and return (note, result, op_note_payload) tuples."""
     results: list[tuple[Note | None, str, object]] = []
     for op in ops:

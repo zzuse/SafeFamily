@@ -48,7 +48,7 @@ def create_app():
     mail.init_app(app)
 
     @app.context_processor
-    def inject_motto():
+    def inject_motto() -> dict:
         """Inject the app motto into all templates."""
         return {"motto": settings.APP_MOTTO}
 
@@ -67,26 +67,26 @@ def create_app():
     app.register_blueprint(todo_bp)
 
     @jwt.user_lookup_loader
-    def user_lookup_callback(_jwt_header, jwt_data):
+    def user_lookup_callback(_jwt_header: dict, jwt_data: dict) -> User | None:
         identity = jwt_data["sub"]
         return User.query.filter_by(id=identity).one_or_none()
 
     @jwt.additional_claims_loader
-    def add_claims_to_access_token(identity):
+    def add_claims_to_access_token(identity: str) -> dict:
         if identity == settings.ADMIN_IDENTITY:
             return {"is_admin": "admin"}
         return {"is_admin": "user"}
 
     @jwt.expired_token_loader
-    def my_expired_token_callback(jwt_header, jwt_payload):
+    def my_expired_token_callback(_jwt_header: dict, _jwt_payload: dict) -> tuple:
         return jsonify({"msg": "Token has expired", "error": "token_expired"}), 401
 
     @jwt.invalid_token_loader
-    def my_invalid_token_callback(error):
+    def my_invalid_token_callback(_error: str) -> tuple:
         return jsonify({"msg": "Invalid token", "error": "invalid_token"}), 401
 
     @jwt.unauthorized_loader
-    def my_unauthorized_callback(error):
+    def my_unauthorized_callback(_error: str) -> tuple:
         return jsonify({"msg": "Missing token", "error": "authorization_required"}), 401
 
     # The issue was added to the bug tracker: token_in_blocklist_loader or whitelist

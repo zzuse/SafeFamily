@@ -11,7 +11,7 @@ from src.safe_family.urls.analyzer import get_time_range, log_analysis
 logger = logging.getLogger(__name__)
 
 
-def main(args: list[str] = None) -> int:
+def main(args: list[str] | None = None) -> int:
     """Analize URL."""
     parser = argparse.ArgumentParser(
         description="Analyze URLs for safety and metadata",
@@ -42,7 +42,7 @@ def main(args: list[str] = None) -> int:
 
     # Get URLs from args or file
     start_time, end_time = get_time_range(
-        range=parsed_args.range,
+        time_range=parsed_args.range,
         custom=parsed_args.custom,
     )
     logger.debug("Analyzing URLs from %s to %s", start_time, end_time)

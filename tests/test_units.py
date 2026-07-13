@@ -87,7 +87,7 @@ def test_generate_time_slots_custom_valid():
 
 def test_get_time_range_last_hour_uses_midnight_start():
     now = datetime(2025, 1, 2, 15, 30)
-    start_time, end_time = get_time_range(range="last_hour", now=now)
+    start_time, end_time = get_time_range(time_range="last_hour", now=now)
     assert start_time.strftime("%Y-%m-%d %H:%M:%S") == "2025-01-02 00:00:00"
     assert end_time.strftime("%Y-%m-%d %H:%M:%S") == "2025-01-02 14:30:00"
 
@@ -101,5 +101,5 @@ def test_get_time_range_custom_valid():
 
 
 def test_get_time_range_invalid_raises():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="earlier than end_time"):
         get_time_range(custom=("2025-01-02T10:00:00", "2025-01-01T09:00:00"))

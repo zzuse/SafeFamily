@@ -72,8 +72,10 @@ lint.per-file-ignores = { "tests/*" = [
 
 (Replaces the current `{"tests/*" = ["S101", "ANN001", "ANN202"]}`.)
 
-> **Status: steps 1–3 applied on 2026-07-12.** `ruff check .` went from
-> 974 to **181 findings**; full pytest suite green (194 passed).
+> **Status: ALL STEPS (1–4) applied on 2026-07-12 — `ruff check .` is
+> clean (974 → 0)**; full pytest suite green (194 passed), helpers.py at
+> 100% coverage. Step 5 (pre-commit/CI lock-in, explicit rule list) is
+> the only remaining item.
 > Step 3 delivered: S113 timeout in log_poster, `utcnow()` →
 > `datetime.now(UTC).replace(tzinfo=None)` in auth.py + notesync/service.py
 > (kept naive-UTC storage semantics), tz-aware `now()` in weekly_metrics,

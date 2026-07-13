@@ -6,6 +6,7 @@ import time as time_module
 from datetime import UTC, date, datetime, time, timedelta
 
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from psycopg2 import extensions as pg
 
 from src.safe_family.cli import weekly_metrics
 from src.safe_family.core.auth import get_current_username, login_required
@@ -64,16 +65,13 @@ def generate_time_slots(
 
     if schedule_mode == "custom":
         try:
-            start_parts = [int(p) for p in custom_start.split(":")]
-            end_parts = [int(p) for p in custom_end.split(":")]
-            if len(start_parts) != 2 or len(end_parts) != 2:
-                raise ValueError("invalid time format")
-            start_hour, start_minute = start_parts
-            end_hour, end_minute = end_parts
+            start_hour, start_minute = (int(p) for p in custom_start.split(":"))
+            end_hour, end_minute = (int(p) for p in custom_end.split(":"))
             start_time = time(start_hour, start_minute)
             end_time = time(end_hour, end_minute)
             if end_time <= start_time:
-                raise ValueError("invalid time range")
+                msg = "invalid time range"
+                raise ValueError(msg)  # noqa: TRY301 - jumps to the fallback below
         except (TypeError, ValueError):
             logger.warning(
                 "Invalid custom time range: %s - %s; falling back to weekday hours",
@@ -120,7 +118,7 @@ def _is_mandatory(task: str | None) -> bool:
 
 
 def daily_completion_map(
-    cur,
+    cur: pg.cursor,
     username: str,
     start_date: date,
     end_date: date,
@@ -161,7 +159,7 @@ def daily_completion_map(
         earned_minutes.setdefault(task_date, 0.0)
         if _is_mandatory(task):
             minutes = (
-                weekly_metrics._parse_time_slot_minutes(time_slot)
+                weekly_metrics._parse_time_slot_minutes(time_slot)  # noqa: SLF001 - shared parser helper
                 or DEFAULT_SLOT_MINUTES
             )
             earned_minutes[task_date] += minutes * status_w
@@ -183,7 +181,7 @@ def daily_completion_map(
 
 
 def build_week_strip_and_heatmap(
-    cur,
+    cur: pg.cursor,
     username: str,
     today_date: date,
 ) -> tuple[list[dict], dict]:
@@ -243,7 +241,7 @@ def build_week_strip_and_heatmap(
 
 @todo_bp.route("/todo", methods=["GET", "POST"])
 @login_required
-def todo_page():
+def todo_page():  # noqa: C901, PLR0915 - refactor backlog: split save/view paths
     """Render and manage the To-Do list page."""
     user = get_current_username()
     if user is None:
@@ -422,7 +420,7 @@ def update_todo(selected_username: str):
     methods=["POST"],
 )
 @login_required
-def delete_todo(selected_username, todo_id):
+def delete_todo(selected_username: str, todo_id: int):
     """Delete a specific to-do item for the selected user."""
     flash(f"Deleting todo: {todo_id} for user: {selected_username}", "info")
     conn = get_db_connection()
@@ -516,7 +514,7 @@ def done_todo():
 
 @todo_bp.post("/todo/split_slot")
 @login_required
-def split_slot():
+def split_slot():  # noqa: PLR0911 - one early return per validation step
     """Split a one-hour slot into two 30-minute slots for today."""
     try:
         data = request.get_json()
@@ -604,7 +602,7 @@ def split_slot():
 
 @todo_bp.route("/todo/mark_status", methods=["POST"])
 @login_required
-def mark_todo_status():
+def mark_todo_status():  # noqa: PLR0911 - one early return per validation step
     """Store completion status feedback for a to-do item."""
     try:
         user = get_current_username()
@@ -701,7 +699,7 @@ def mark_todo_status():
 
 @todo_bp.route("/exec_rules/<string:selected_user_id>", methods=["POST"])
 @login_required
-def exec_rules(selected_user_id: str):
+def exec_rules(selected_user_id: str):  # noqa: C901, PLR0911, PLR0912, PLR0915 - refactor backlog
     """Execute assigned rules for the selected user."""
     user = get_current_username()
     if user is None:

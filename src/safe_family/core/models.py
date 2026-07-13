@@ -50,7 +50,7 @@ class User(db.Model):
         return False
 
     @classmethod
-    def get_user_by_username(cls, username: str):
+    def get_user_by_username(cls, username: str) -> "User | None":
         """Get a user by their username."""
         return cls.query.filter_by(username=username).first()
 

@@ -38,7 +38,7 @@ def analyze_logs():
         print(custom_start, custom_end)
         start, end = get_time_range(custom=(custom_start, custom_end))
     else:
-        start, end = get_time_range(range=time_range)
+        start, end = get_time_range(time_range=time_range)
 
     log_analysis(start, end)
 
@@ -51,14 +51,14 @@ def analyze_logs():
 
 
 def get_time_range(
-    range: str | None = None,
+    time_range: str | None = None,
     custom: tuple[str, str] | None = None,
     now: datetime | None = None,
 ) -> tuple[datetime, datetime]:
     """Return (start_time, end_time) based on predefined ranges or custom input.
 
     Args:
-        range: One of "yesterday", "last_hour", "last_5min"
+        time_range: One of "yesterday", "last_hour", "last_5min"
         custom: Tuple of two strings (start_str, end_str) in format "%Y-%m-%d %H:%M:%S"
         now: Override current time (useful for testing). Defaults to datetime.now()
 
@@ -72,11 +72,11 @@ def get_time_range(
     if now is None:
         now = datetime.now(local_tz)
 
-    if range and custom:
+    if time_range and custom:
         msg = "Cannot specify both range and custom"
         raise ValueError(msg)
 
-    if range == "yesterday":
+    if time_range == "yesterday":
         start_time = (now - timedelta(days=1)).replace(
             hour=0,
             minute=0,
@@ -85,21 +85,23 @@ def get_time_range(
         )
         end_time = start_time + timedelta(days=1)
 
-    elif range == "last_hour":
+    elif time_range == "last_hour":
         start_time = now.replace(hour=0, minute=0, second=0, microsecond=0)
         end_time = now - timedelta(hours=1)
 
-    elif range == "last_5min":
+    elif time_range == "last_5min":
         start_time = now.replace(hour=0, minute=0, second=0, microsecond=0)
         end_time = now - timedelta(minutes=5)
 
     elif custom:
-        if len(custom) != 2:
-            msg = "Custom range must provide exactly two timestamps"
-            raise ValueError(msg)
         try:
-            start_time = datetime.strptime(custom[0], "%Y-%m-%dT%H:%M:%S")
-            end_time = datetime.strptime(custom[1], "%Y-%m-%dT%H:%M:%S")
+            start_str, end_str = custom
+        except ValueError:
+            msg = "Custom range must provide exactly two timestamps"
+            raise ValueError(msg) from None
+        try:
+            start_time = datetime.strptime(start_str, "%Y-%m-%dT%H:%M:%S")
+            end_time = datetime.strptime(end_str, "%Y-%m-%dT%H:%M:%S")
         except ValueError as e:
             msg = "Invalid datetime format. Use 'YYYY-MM-DDTHH:MM:SS'"
             raise ValueError(msg, e) from e

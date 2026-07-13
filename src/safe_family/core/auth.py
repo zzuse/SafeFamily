@@ -3,6 +3,7 @@
 import hashlib
 import logging
 import secrets
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from functools import wraps
 from urllib.parse import urlencode
@@ -45,11 +46,11 @@ auth_bp = Blueprint("auth", __name__)
 OAUTH_STATE_TTL_SECONDS = 600
 
 
-def require_api_key(view_func):
+def require_api_key(view_func: Callable) -> Callable:
     """Require a valid API key for notesync endpoints."""
 
     @wraps(view_func)
-    def wrapped(*args, **kwargs):
+    def wrapped(*args: object, **kwargs: object) -> object:
         api_key = request.headers.get("X-API-Key", "")
         expected = settings.NOTESYNC_API_KEY
         if not expected or api_key != expected:
@@ -231,10 +232,10 @@ def session_register():
         }
 
         # temporary trick: attach json_data to g
-        g._json_data = json_data
+        g._json_data = json_data  # noqa: SLF001 - our own attr on flask.g  # noqa: SLF001 - our own attr on flask.g
         response = register_user()
         # remove the temp data
-        del g._json_data
+        del g._json_data  # noqa: SLF001 - our own attr on flask.g  # noqa: SLF001 - our own attr on flask.g
 
         _data, status_code = response
         if status_code != HTTP_CREATED:
@@ -258,13 +259,13 @@ def session_login():
     # So instead of request.get_json(), we'll modify login_user() slightly
 
     # temporary trick: attach json_data to g
-    g._json_data = json_data
+    g._json_data = json_data  # noqa: SLF001 - our own attr on flask.g
 
     # now call login_user() internally
     response = login_user()
 
     # remove the temp data
-    del g._json_data
+    del g._json_data  # noqa: SLF001 - our own attr on flask.g
 
     data, status_code = response
     if status_code != HTTP_OK:
@@ -295,9 +296,11 @@ def session_logout():
     return redirect("/auth/login-ui")
 
 
-def login_required(view_func):
+def login_required(view_func: Callable) -> Callable:
+    """Require a logged-in session for a view."""
+
     @wraps(view_func)
-    def wrapped(*args, **kwargs):
+    def wrapped(*args: object, **kwargs: object) -> object:
         token = session.get("access_token")
         if not token:
             logger.warning(
@@ -343,9 +346,11 @@ def get_current_username():
     return user
 
 
-def admin_required(view_func):
+def admin_required(view_func: Callable) -> Callable:
+    """Require a logged-in admin session for a view."""
+
     @wraps(view_func)
-    def wrapped(*args, **kwargs):
+    def wrapped(*args: object, **kwargs: object) -> object:
         token = session.get("access_token")
         if not token:
             flash("Please log in first.", "warning")
@@ -381,7 +386,7 @@ google_client_secrets = {
 }
 
 
-def _oauth_create_client(name: str):
+def _oauth_create_client(name: str) -> Flow | None:
     if name == "google":
         if not (
             settings.GOOGLE_CLIENT_ID
@@ -415,7 +420,8 @@ def _oauth_state_serializer() -> URLSafeTimedSerializer:
         current_app.secret_key or settings.APP_SECRET_KEY or settings.JWT_SECRET_KEY
     )
     if not secret:
-        raise RuntimeError("Missing secret key for OAuth state signing.")
+        msg = "Missing secret key for OAuth state signing."
+        raise RuntimeError(msg)
     return URLSafeTimedSerializer(secret, salt="notesync-oauth-state")
 
 
@@ -462,6 +468,7 @@ def _resolve_oauth_client(state_payload: dict | None) -> str:
 
 @auth_bp.get("/login/github")
 def login_github():
+    """Start the GitHub OAuth login flow."""
     client = (request.args.get("client") or "").strip().lower()
     if client in ("ios", "android"):
         session["oauth_client"] = client
@@ -482,6 +489,7 @@ def login_github():
 
 @auth_bp.get("/login/google")
 def login_google():
+    """Start the Google OAuth login flow."""
     client = (request.args.get("client") or "").strip().lower()
     if client in ("ios", "android"):
         session["oauth_client"] = client
@@ -535,7 +543,8 @@ def oauth_start():
 
 
 @auth_bp.get("/github/callback")
-def github_callback():
+def github_callback():  # noqa: C901, PLR0911, PLR0912, PLR0915 - refactor backlog
+    """Handle the GitHub OAuth callback and create the session."""
     if not _oauth_provider_available("github"):
         flash("GitHub login is not configured.", "danger")
         return redirect("/auth/login-ui")
@@ -644,6 +653,7 @@ def github_callback():
 
 @auth_bp.get("/google/callback")
 def google_callback():
+    """Handle the Google OAuth callback and create the session."""
     state = request.args.get("state")
     state_payload = _read_oauth_state(state)
     if not state_payload:

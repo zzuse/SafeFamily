@@ -17,6 +17,10 @@ lint.per-file-ignores = { "tests/*" = [
 ], "scripts/*" = [
     "INP001", # scripts/ is not a package
     "S108",   # writes to /tmp are intentional here
+], "src/safe_family/notesync/schemas.py" = [
+    "N815", # camelCase fields mirror the mobile app's JSON wire format
+], "deploy/*" = [
+    "INP001", # deploy configs are loaded by tools, not imported as packages
 ] }
 lint.ignore = [
     "T201",

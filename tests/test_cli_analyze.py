@@ -7,7 +7,7 @@ def test_cli_analyze_calls_log_analysis(monkeypatch):
     called = {}
 
     def fake_get_time_range(**kwargs):
-        called["range"] = kwargs.get("range")
+        called["range"] = kwargs.get("time_range")
         return ("start", "end")
 
     def fake_log_analysis(start, end):

@@ -43,7 +43,8 @@ def take_gas_snapshot(out_dir: Path = SNAPSHOT_DIR) -> Path:
     Uses Firefox: cbc.ca's CDN rejects headless Chromium with
     net::ERR_HTTP2_PROTOCOL_ERROR.
     """
-    from playwright.sync_api import sync_playwright
+    # Lazy import: keeps the app importable in environments without Playwright.
+    from playwright.sync_api import sync_playwright  # noqa: PLC0415
 
     out_dir.mkdir(parents=True, exist_ok=True)
     out_file = out_dir / f"gas_{_today()}.png"

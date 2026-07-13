@@ -17,7 +17,7 @@ from pydantic import ValidationError
 from config.settings import settings
 from src.safe_family.core.auth import consume_auth_code, require_api_key
 from src.safe_family.core.extensions import db
-from src.safe_family.core.models import Note, User
+from src.safe_family.core.models import Media, Note, User
 from src.safe_family.notesync.schemas import (
     AuthExchangeRequest,
     AuthExchangeResponse,
@@ -45,7 +45,7 @@ def _note_model_to_payload(note: Note) -> NotePayload:
     )
 
 
-def _media_model_to_dict(media) -> dict:
+def _media_model_to_dict(media: Media) -> dict:
     return {
         "id": media.id,
         "noteId": media.note_id,
@@ -57,7 +57,7 @@ def _media_model_to_dict(media) -> dict:
     }
 
 
-def _note_to_payload(note, fallback: NotePayload) -> NotePayload:
+def _note_to_payload(note: Note | None, fallback: NotePayload) -> NotePayload:
     if note is None:
         return fallback
     return NotePayload(
@@ -178,8 +178,7 @@ def get_notes():
     response_media = []
     for note in notes:
         response_notes.append(_note_model_to_payload(note).model_dump(mode="json"))
-        for media in note.media:
-            response_media.append(_media_model_to_dict(media))
+        response_media.extend(_media_model_to_dict(media) for media in note.media)
     return jsonify({"notes": response_notes, "media": response_media})
 
 

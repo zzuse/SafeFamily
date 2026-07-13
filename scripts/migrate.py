@@ -16,6 +16,7 @@ MIGRATIONS = [
 
 
 def main() -> None:
+    """Run all pending raw-SQL migrations."""
     conn = get_db_connection()
     cur = conn.cursor()
     for statement in MIGRATIONS:

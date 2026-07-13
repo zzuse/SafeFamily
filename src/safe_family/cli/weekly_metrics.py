@@ -30,6 +30,8 @@ STATUS_WEIGHTS = {
 
 @dataclass(frozen=True)
 class WeekMetrics:
+    """Aggregated weekly todo metrics."""
+
     completion_rate: float | None
     avg_tasks_per_day: float | None
     avg_planned_minutes: float | None
@@ -41,11 +43,12 @@ def _parse_iso_week(week_str: str) -> tuple[date, date]:
     """Return start/end dates (Mon-Sun) for an ISO week like 2025-W10."""
     match = re.fullmatch(r"(\d{4})-W(\d{2})", week_str.strip())
     if not match:
-        raise ValueError("week must be in YYYY-Www format (e.g., 2025-W10)")
+        msg = "week must be in YYYY-Www format (e.g., 2025-W10)"
+        raise ValueError(msg)
     year, week = int(match.group(1)), int(match.group(2))
     start = date.fromisocalendar(year, week, 1)
     end = date.fromisocalendar(year, week, 7)
-    logger.debug(f"Parsed week {week_str} as {start} to {end}")
+    logger.debug("Parsed week %s as %s to %s", week_str, start, end)
     return start, end
 
 
@@ -201,7 +204,8 @@ def main(args: list[str] | None = None) -> int:
     )
 
     if parsed_args.output_dir and parsed_args.output_file:
-        raise ValueError("Use only one of --output-dir or --output-file")
+        msg = "Use only one of --output-dir or --output-file"
+        raise ValueError(msg)
 
     if parsed_args.output_file:
         output_path = Path(parsed_args.output_file)
