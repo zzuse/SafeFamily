@@ -72,11 +72,17 @@ lint.per-file-ignores = { "tests/*" = [
 
 (Replaces the current `{"tests/*" = ["S101", "ANN001", "ANN202"]}`.)
 
-> **Status: steps 1 and 2 applied on 2026-07-12.** `ruff check .` went
-> from 974 to **209 findings** (183 in `src/`, 18 in `scripts/`, 6 in
-> `tests/`, 2 elsewhere); full pytest suite green (194 passed). The six
-> left in tests are small real fixes kept visible on purpose: PT011 ×3
-> (add `match=` to `pytest.raises`), RUF059 ×2, PLW0108 ×1.
+> **Status: steps 1–3 applied on 2026-07-12.** `ruff check .` went from
+> 974 to **181 findings**; full pytest suite green (194 passed).
+> Step 3 delivered: S113 timeout in log_poster, `utcnow()` →
+> `datetime.now(UTC).replace(tzinfo=None)` in auth.py + notesync/service.py
+> (kept naive-UTC storage semantics), tz-aware `now()` in weekly_metrics,
+> dead assignments removed (todo.py ×2, auth.py, test_receiver ×2), app.py
+> commented-out debug code deleted, sha1 marked `usedforsecurity=False`
+> (algorithm unchanged — DB rows depend on it), S603 noqa'd with rationale
+> in auto_git, DTZ007 added to `lint.ignore`. Remaining: step 4 style debt
+> (ANN ×46, D1xx ×32, N815 schemas ×10, PLW0603 ×8, EM/TRY ×16, PTH123 ×6,
+> complexity warnings) and PT011 ×3 / PLW0108 ×1 in tests.
 
 ## Step 3 — fix the findings that can bite at runtime (~1–2 hours)
 

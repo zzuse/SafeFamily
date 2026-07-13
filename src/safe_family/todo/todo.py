@@ -545,7 +545,7 @@ def split_slot():
             conn.close()
             return jsonify({"success": False, "error": "not found"}), 404
 
-        username, time_slot, task, completed = row
+        username, time_slot, _task, completed = row
         if username != selected_user:
             conn.close()
             return jsonify({"success": False, "error": "user mismatch"}), 400
@@ -666,7 +666,6 @@ def mark_todo_status():
 
         now = datetime.now(local_tz)
         log_date_naive = datetime.fromisoformat(log_date)
-        log_date_dt = local_tz.localize(log_date_naive)
         end_dt_naive = datetime.combine(log_date_naive.date(), end_time)
         end_dt = local_tz.localize(end_dt_naive)
         if now < end_dt and not is_admin:

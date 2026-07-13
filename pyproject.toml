@@ -25,6 +25,8 @@ lint.ignore = [
     "S105",
     "S201",
     "DTZ002",
+    "DTZ007", # strptime on clock strings ("16:00") that are combined with tz-aware now
+
     "D203",
     "D213",
     "ANN201",

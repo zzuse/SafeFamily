@@ -76,12 +76,12 @@ def test_receive_log_success(client, monkeypatch):
     assert len(inserts) == 2
 
     # Check oldest log (bad.com)
-    sql_1, params_1 = inserts[0]
+    _sql_1, params_1 = inserts[0]
     assert params_1[2] == "bad.com"  # qh
     assert params_1[3] is True       # is_filtered (FilteredBlackList)
 
     # Check newest log (google.com)
-    sql_2, params_2 = inserts[1]
+    _sql_2, params_2 = inserts[1]
     assert params_2[2] == "google.com"
     assert params_2[3] is False      # is_filtered (Rewritten != FilteredBlackList)
 

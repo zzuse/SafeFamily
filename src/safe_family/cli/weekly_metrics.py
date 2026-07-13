@@ -14,7 +14,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from src.safe_family.core.extensions import get_db_connection
+from src.safe_family.core.extensions import get_db_connection, local_tz
 
 logger = logging.getLogger(__name__)
 
@@ -178,7 +178,7 @@ def main(args: list[str] | None = None) -> int:
         start, end = _parse_iso_week(parsed_args.week)
         week_label = parsed_args.week
     else:
-        today = datetime.now().date()
+        today = datetime.now(local_tz).date()
         iso = today.isocalendar()
         week_label = f"{iso.year}-W{iso.week:02d}"
         start, end = _parse_iso_week(week_label)

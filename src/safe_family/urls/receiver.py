@@ -65,7 +65,8 @@ def make_dedupe_hash(row: dict) -> str:
     Stored in `ip` column (semantic repurpose).
     """
     raw = f"{row.get('time')}|{row.get('name')}"
-    return hashlib.sha1(raw.encode()).hexdigest()
+    # sha1 is a dedup key, not a credential hash; existing rows depend on it.
+    return hashlib.sha1(raw.encode(), usedforsecurity=False).hexdigest()
 
 
 def parse_ts(ts: str) -> datetime:

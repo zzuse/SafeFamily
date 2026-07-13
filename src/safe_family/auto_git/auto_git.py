@@ -54,16 +54,17 @@ def rule_auto_commit():
 
     git_path = shutil.which("git")
     try:
-        subprocess.check_call(
+        # Fixed git binary + constant args; cwd comes from settings, not user input.
+        subprocess.check_call(  # noqa: S603
             [git_path, "add", "."],
             cwd=settings.ADGUARD_RULE_PATH,
         )
         commit_msg = f"Auto update block_list {datetime.now(local_tz).strftime('%Y-%m-%d %H:%M:%S')}"
-        subprocess.check_call(
+        subprocess.check_call(  # noqa: S603
             [git_path, "commit", "-m", commit_msg],
             cwd=settings.ADGUARD_RULE_PATH,
         )
-        subprocess.check_call([git_path, "push"], cwd=settings.ADGUARD_RULE_PATH)
+        subprocess.check_call([git_path, "push"], cwd=settings.ADGUARD_RULE_PATH)  # noqa: S603
     except subprocess.CalledProcessError as e:
         logger.exception("Error adding files to git: %d", e.returncode)
 

@@ -42,7 +42,7 @@ def tail_log(file_path, url, checkpoint_file="checkpoint.txt"):
 
             try:
                 log_entry = json.loads(line.strip())
-                response = requests.post(url, json=log_entry)
+                response = requests.post(url, json=log_entry, timeout=10)
                 logging.info(
                     f"Sent log: {json.dumps(log_entry)} | Response: {response.status_code} {response.text}",
                 )

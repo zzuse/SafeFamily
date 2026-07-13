@@ -3,7 +3,7 @@
 import hashlib
 import logging
 import secrets
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from functools import wraps
 from urllib.parse import urlencode
 
@@ -64,7 +64,8 @@ def _hash_auth_code(code: str) -> str:
 
 
 def _naive_utc_now() -> datetime:
-    return datetime.utcnow()
+    # Naive UTC on purpose: AuthCode.expires_at/used_at columns store naive UTC.
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def create_auth_code(user_id: str) -> str:
@@ -235,7 +236,7 @@ def session_register():
         # remove the temp data
         del g._json_data
 
-        data, status_code = response
+        _data, status_code = response
         if status_code != HTTP_CREATED:
             flash("Invalid username or password", "danger")
             return render_template("register.html")

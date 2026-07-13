@@ -4,7 +4,7 @@ import base64
 import binascii
 import logging
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from src.safe_family.core.extensions import db
 from src.safe_family.core.models import Media, Note, NoteSyncOp, Tag
@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 def _now_utc() -> datetime:
-    return datetime.utcnow()
+    # Naive UTC on purpose: note timestamps are compared/stored tz-naive (see _naive).
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _naive(dt: datetime | None) -> datetime | None:
