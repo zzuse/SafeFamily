@@ -172,6 +172,26 @@ class AuthCode(db.Model):
         return self.expires_at <= now
 
 
+class CountdownConfig(db.Model):
+    """Per-user countdown target date and event description."""
+
+    __tablename__ = "countdown_config"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(), unique=True, nullable=False, index=True)
+    target_date = db.Column(db.String(10), nullable=False)
+    description = db.Column(db.Text, nullable=False, default="")
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
+
+    def __repr__(self) -> str:
+        """Return a string representation of the CountdownConfig."""
+        return f"<CountdownConfig(user_id='{self.user_id}', date='{self.target_date}')>"
+
+
 class AgileConfig(db.Model):
     """Configuration table for agile settings."""
 

@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    @keyframes cd-pulse-glow {
+
+        0%,
+        100% {
+            text-shadow: 0 0 40px rgba(255, 122, 46, .45);
+        }
+
+        50% {
+            text-shadow: 0 0 80px rgba(255, 122, 46, .75);
+        }
+    }
+
+    .cd-card {
+        max-width: 1280px;
+        margin: 0 auto;
+        background: #0A0E1A;
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
+        overflow: hidden;
+        color: #E8ECF5;
+    }
+
+    .cd-hero {
+        position: relative;
+        padding: 60px 24px 48px 24px;
+        background: #0A0E1A;
+        background-image: radial-gradient(600px 300px at 50% 0%, rgba(255, 122, 46, .10), transparent);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 6px;
+    }
+
+    .cd-eyebrow {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        color: #FF7A2E;
+        text-transform: uppercase;
+        letter-spacing: .16em;
+    }
+
+    .cd-days {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: clamp(96px, 16vw, 200px);
+        font-weight: 700;
+        line-height: 1;
+        color: #E8ECF5;
+        animation: cd-pulse-glow 2.2s ease-in-out infinite;
+    }
+
+    .cd-days-label {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+        color: #FF7A2E;
+        text-transform: uppercase;
+        letter-spacing: .2em;
+    }
+
+    .cd-event {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 26px;
+        font-weight: 600;
+        color: #FFB876;
+        margin-top: 14px;
+    }
+
+    .cd-target {
+        font-size: 13px;
+        color: #8B95B0;
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .cd-progress-wrap {
+        padding: 0 24px 28px 24px;
+    }
+
+    .cd-progress-track {
+        position: relative;
+        height: 10px;
+        background: #131829;
+        border: 1px solid #25304F;
+        border-radius: 999px;
+        overflow: hidden;
+    }
+
+    .cd-progress-fill {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        background: linear-gradient(90deg, #FF7A2E, #FFB876);
+        border-radius: 999px;
+        box-shadow: 0 0 12px rgba(255, 122, 46, .6);
+    }
+
+    .cd-progress-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 6px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px;
+        color: #5B6680;
+    }
+
+    .cd-progress-labels .cd-progress-event {
+        color: #FF7A2E;
+    }
+
+    .cd-form {
+        padding: 16px 24px 20px 24px;
+        border-top: 1px solid #1F2940;
+        background: #0F1422;
+    }
+
+    .cd-form-title {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px;
+        color: #5B6680;
+        text-transform: uppercase;
+        letter-spacing: .14em;
+        margin-bottom: 10px;
+        text-align: center;
+    }
+
+    .cd-form-row {
+        display: flex;
+        gap: 10px;
+        align-items: flex-end;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .cd-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .cd-field label {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 9px;
+        color: #5B6680;
+        text-transform: uppercase;
+        letter-spacing: .12em;
+    }
+
+    .cd-field input {
+        background: #0A0E1A;
+        color: #8B95B0;
+        border: 1px solid #1F2940;
+        border-radius: 5px;
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+
+    .cd-field input[type="date"] {
+        font-family: 'JetBrains Mono', monospace;
+        color-scheme: dark;
+    }
+
+    .cd-field-desc {
+        width: 240px;
+    }
+
+    .cd-save-btn {
+        background: #131829;
+        color: #8B95B0;
+        border: 1px solid #25304F;
+        padding: 7px 14px;
+        border-radius: 5px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .cd-save-btn:hover {
+        color: #E8ECF5;
+        border-color: #FF7A2E;
+    }
+</style>
+
+<div class="p-4">
+    <div class="cd-card">
+        <!-- hero countdown -->
+        <div class="cd-hero">
+            <div class="cd-eyebrow">▰▰▰▰▰░░░░░░░ Countdown</div>
+            <div id="countdown-days" class="cd-days">--</div>
+            <div id="countdown-unit" class="cd-days-label">days left</div>
+            <div id="countdown-description" class="cd-event">{{ countdown_description }}</div>
+            <div id="countdown-target" class="cd-target"></div>
+        </div>
+
+        <!-- progress strip -->
+        <div class="cd-progress-wrap">
+            <div class="cd-progress-track">
+                <div id="countdown-progress" class="cd-progress-fill" style="width: 2%;"></div>
+            </div>
+            <div class="cd-progress-labels">
+                <span>today</span>
+                <span id="countdown-progress-event" class="cd-progress-event">{{ countdown_description }}</span>
+            </div>
+        </div>
+
+        <!-- per-user countdown settings -->
+        <form method="POST" action="{{ url_for('index.countdown_save') }}" class="cd-form">
+            <div class="cd-form-title">Set your countdown</div>
+            <div class="cd-form-row">
+                <div class="cd-field">
+                    <label for="target-date">End date</label>
+                    <input id="target-date" name="target_date" type="date" value="{{ countdown_date }}" required>
+                </div>
+                <div class="cd-field cd-field-desc">
+                    <label for="target-description">Event description</label>
+                    <input id="target-description" name="description" type="text"
+                        value="{{ countdown_description }}" placeholder="What are we counting down to?">
+                </div>
+                <button type="submit" class="cd-save-btn">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const daysEl = document.getElementById('countdown-days');
+        const unitEl = document.getElementById('countdown-unit');
+        const descEl = document.getElementById('countdown-description');
+        const targetEl = document.getElementById('countdown-target');
+        const progressEl = document.getElementById('countdown-progress');
+        const progressEventEl = document.getElementById('countdown-progress-event');
+        const dateInput = document.getElementById('target-date');
+        const descInput = document.getElementById('target-description');
+
+        const update = () => {
+            const value = dateInput.value;
+            if (!value) {
+                daysEl.textContent = '--';
+                unitEl.textContent = 'set a target date';
+                targetEl.textContent = '';
+                progressEl.style.width = '2%';
+            } else {
+                const [y, m, d] = value.split('-').map(Number);
+                const target = new Date(y, m - 1, d);
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const days = Math.max(0, Math.round((target - today) / 86400000));
+                daysEl.textContent = days;
+                unitEl.textContent = days === 0 ? "it's today!" : 'days left';
+                targetEl.textContent = target.toLocaleDateString('en-US', {
+                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+                });
+                // Progress across a fixed 60-day window, matching the design mock
+                const span = 60;
+                const pct = Math.min(100, Math.max(2, Math.round((1 - Math.min(days, span) / span) * 100)));
+                progressEl.style.width = pct + '%';
+            }
+            descEl.textContent = descInput.value;
+            progressEventEl.textContent = descInput.value;
+        };
+
+        dateInput.addEventListener('input', update);
+        descInput.addEventListener('input', update);
+        update();
+    });
+</script>
+{% endblock %}

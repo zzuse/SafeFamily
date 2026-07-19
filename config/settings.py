@@ -109,5 +109,9 @@ class Settings:
         "APP_MOTTO",
     )
 
+    # Countdown page settings (date in YYYY-MM-DD)
+    COUNTDOWN_DATE = os.environ.get("COUNTDOWN_DATE", "")
+    COUNTDOWN_DESCRIPTION = os.environ.get("COUNTDOWN_DESCRIPTION", "")
+
 
 settings = Settings()

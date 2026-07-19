@@ -83,6 +83,7 @@ This will start:
 
 ### 2. Database Initialization
 On the first run, the `db` service automatically imports `deploy/init_db/dump.sql`.
+After docker up, run `docker exec safefamily_app python scripts/migrate.py`.
 
 ### 3. Key Mounts and Overrides
 - **Logs**: Backend logs are mirrored to the local `./logs` directory.

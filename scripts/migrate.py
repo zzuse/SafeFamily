@@ -12,6 +12,16 @@ MIGRATIONS = [
     CREATE INDEX IF NOT EXISTS idx_todo_list_username_date
         ON todo_list (username, date)
     """,
+    # Per-user countdown page settings (see CountdownConfig ORM model)
+    """
+    CREATE TABLE IF NOT EXISTS countdown_config (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR UNIQUE NOT NULL,
+        target_date VARCHAR(10) NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        updated_at TIMESTAMP
+    )
+    """,
 ]
 
 
