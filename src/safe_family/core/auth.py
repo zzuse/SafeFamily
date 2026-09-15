@@ -122,7 +122,7 @@ def register_user():
     new_user = User(
         username=data.get("username"),
         email=data.get("email"),
-        role=data.get("role"),
+        role="user",  # never trust a client-supplied role
     )
     new_user.set_password(data.get("password"))
     new_user.save()
@@ -217,7 +217,6 @@ def session_register():
     if request.method == "POST":
         username = request.form["username"]
         email = request.form["email"]
-        role = request.form["role"]
         password = request.form["password"]
         confirmed_password = request.form["confirm_password"]
         if password != confirmed_password:
@@ -227,7 +226,6 @@ def session_register():
         json_data = {
             "username": username,
             "email": email,
-            "role": role,
             "password": password,
         }
 
@@ -328,6 +326,20 @@ def login_required(view_func: Callable) -> Callable:
     return wrapped
 
 
+def is_admin_claims(claims: dict) -> bool:
+    """Return True only for a token issued to the configured admin identity.
+
+    The is_admin claim alone is not trusted: a token forged with a leaked or
+    guessed JWT secret could carry it for any user.
+    """
+    admin_identity = settings.ADMIN_IDENTITY
+    return (
+        bool(admin_identity)
+        and claims.get("is_admin") == "admin"
+        and str(claims.get("sub")) == admin_identity
+    )
+
+
 def get_current_username():
     """Retrieve the current logged-in user based on session token."""
     token = session.get("access_token")
@@ -338,7 +350,7 @@ def get_current_username():
         user_id = payload.get("sub")
         user = User.query.get(user_id)
         if user:
-            expected_role = "admin" if payload.get("is_admin") == "admin" else "user"
+            expected_role = "admin" if is_admin_claims(payload) else "user"
             if user.role != expected_role:
                 user.role = expected_role
     except (jwt_inner.ExpiredSignatureError, jwt_inner.InvalidTokenError):
@@ -357,7 +369,13 @@ def admin_required(view_func: Callable) -> Callable:
             return redirect("/auth/login-ui")
         try:
             payload = decode_token(token)
-            if payload.get("is_admin") != "admin":
+            if not is_admin_claims(payload):
+                logger.warning(
+                    "admin_required: denied path=%s sub=%s is_admin=%s",
+                    request.path,
+                    payload.get("sub"),
+                    payload.get("is_admin"),
+                )
                 flash("Admin Only.", "warning")
                 return redirect("/auth/login-ui")
         except (jwt_inner.ExpiredSignatureError, jwt_inner.InvalidTokenError):
@@ -715,7 +733,9 @@ def notesync_callback():
     if not code:
         return "Missing auth code. Return to the app and try again.", 400
     return (
-        "Auth code received. You can return to the app to finish login. "
-        f"If needed, copy this code: {code}",
+        (
+            "Auth code received. You can return to the app to finish login. "
+            f"If needed, copy this code: {code}"
+        ),
         200,
     )

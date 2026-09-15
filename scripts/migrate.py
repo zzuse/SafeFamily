@@ -22,6 +22,15 @@ MIGRATIONS = [
         updated_at TIMESTAMP
     )
     """,
+    # Audit trail for filter rules. Added without a default first so rows that
+    # predate the column stay NULL (unknown) instead of all getting the
+    # migration time; new rows get now().
+    """
+    ALTER TABLE filter_rule ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ
+    """,
+    """
+    ALTER TABLE filter_rule ALTER COLUMN created_at SET DEFAULT now()
+    """,
 ]
 
 

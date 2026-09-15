@@ -50,6 +50,52 @@ def test_rule_auto_commit_writes_files(monkeypatch, tmp_path):
     assert calls
 
 
+def test_rule_auto_commit_skips_invalid_rows(monkeypatch, tmp_path):
+    class AutoCursor:
+        def __init__(self):
+            self.calls = 0
+
+        def execute(self, sql, params=None):
+            return None
+
+        def fetchall(self):
+            self.calls += 1
+            if self.calls == 1:
+                return [
+                    ("%medal.tv;id", "video"),
+                    ("%san666u2.example", "../x"),
+                    ("%ok.example", " video"),
+                    ("%good.example", "video"),
+                ]
+            return [("$(id)",), ("||san666.com^\n;id;",), ("x" * 8000,), ("*.apple.com",)]
+
+    class AutoConn:
+        def __init__(self):
+            self.cursor_obj = AutoCursor()
+
+        def cursor(self):
+            return self.cursor_obj
+
+        def close(self):
+            return None
+
+    rules_dir = tmp_path / "rules"
+    rules_dir.mkdir()
+    monkeypatch.setattr(auto_git, "get_db_connection", AutoConn)
+    monkeypatch.setattr(auto_git.settings, "ADGUARD_RULE_PATH", str(rules_dir) + "/")
+    monkeypatch.setattr(auto_git.shutil, "which", lambda cmd: "/usr/bin/git")
+    monkeypatch.setattr(auto_git.subprocess, "check_call", lambda args, cwd=None: None)
+
+    auto_git.rule_auto_commit()
+
+    assert sorted(p.name for p in rules_dir.iterdir()) == ["block_video.txt", "filter.txt"]
+    assert not (tmp_path / "x.txt").exists()
+    block_content = (rules_dir / "block_video.txt").read_text()
+    assert "||good.example^" in block_content
+    assert "medal" not in block_content
+    assert (rules_dir / "filter.txt").read_text() == "*.apple.com\n\n"
+
+
 def test_auto_import_inserts_blocks(client, monkeypatch, tmp_path):
     class ImportCursor:
         def __init__(self):

@@ -15,9 +15,33 @@ from flask import (
 from src.safe_family.core.auth import admin_required
 from src.safe_family.core.extensions import get_db_connection, local_tz
 from src.safe_family.utils.exceptions import DatabaseConnectionError
+from src.safe_family.utils.validators import (
+    MAX_LINES_PER_REQUEST,
+    MAX_PATTERN_LENGTH,
+    is_valid_block_qh,
+    is_valid_block_type,
+    is_valid_filter_rule,
+    positive_int,
+    safe_date,
+    split_lines,
+)
 
 suspicious_bp = Blueprint("suspicious", __name__)
 logger = logging.getLogger(__name__)
+
+# Rejected input is never echoed back: flashes are stored in the session cookie.
+INVALID_FILTER_RULE_MSG = (
+    "Rejected: filter rules may only contain letters, digits and . * ? % _ - "
+    f"(max {MAX_PATTERN_LENGTH} chars, {MAX_LINES_PER_REQUEST} rules per submit)."
+)
+INVALID_BLOCK_MSG = (
+    "Rejected: block entries may only contain letters, digits and . % _ / - "
+    f"(max {MAX_PATTERN_LENGTH} chars, {MAX_LINES_PER_REQUEST} per submit) and need a valid type."
+)
+
+
+def _today() -> str:
+    return datetime.now(local_tz).strftime("%Y-%m-%d")
 
 
 @suspicious_bp.route("/suspicious", methods=["GET"])
@@ -31,14 +55,12 @@ def view_suspicious():
     for specific URLs in the block list and filter rules.
     The suspicious URLs are filtered by a specific date, and the results are
     """
-    page = int(request.args.get("page", 1))
-    block_page = int(request.args.get("block_page", 1))
-    rule_page = int(request.args.get("rule_page", 1))
+    page = positive_int(request.args.get("page"))
+    block_page = positive_int(request.args.get("block_page"))
+    rule_page = positive_int(request.args.get("rule_page"))
     search_query = request.args.get("search", "").strip()
 
-    date = request.args.get("date")
-    if date is None:
-        date = datetime.now(local_tz).strftime("%Y-%m-%d")
+    date = safe_date(request.args.get("date"), _today())
     error = request.args.get("error")
 
     limit = 10
@@ -99,12 +121,12 @@ def view_suspicious():
         total_rules = cur.fetchone()[0]
         if search_query:
             cur.execute(
-                "SELECT * FROM filter_rule WHERE qh ILIKE %s",
+                "SELECT qh, created_at FROM filter_rule WHERE qh ILIKE %s",
                 (f"%{search_query}%",),
             )
         else:
             cur.execute(
-                "SELECT * FROM filter_rule ORDER BY qh LIMIT %s OFFSET %s",
+                "SELECT qh, created_at FROM filter_rule ORDER BY qh LIMIT %s OFFSET %s",
                 (rule_limit, rule_offset),
             )
         filter_rules = cur.fetchall()
@@ -149,16 +171,16 @@ def view_suspicious():
 @suspicious_bp.route("/update_filter_rule", methods=["POST"])
 @admin_required
 def update_filter_rule():
-    """Update filter rules based on user input.
-
-    This route allows users to modify existing filter rules for suspicious URLs.
-    """
-    raw_text = request.form.getlist("rule")
-    date = request.form.get("date", "")
-    rules = [line.strip() for line in raw_text if line.strip()]
+    """Add filter rules submitted from the admin form, one rule per line."""
+    date = safe_date(request.form.get("date"), _today())
+    rules = split_lines(request.form.getlist("rule"))
 
     if not rules:
-        return redirect("suspicious?date=" + date)
+        return redirect(f"/suspicious?date={date}")
+    if len(rules) > MAX_LINES_PER_REQUEST or not all(is_valid_filter_rule(rule) for rule in rules):
+        logger.warning("Rejected filter rule submission with %d line(s)", len(rules))
+        flash(INVALID_FILTER_RULE_MSG, "danger")
+        return redirect(f"/suspicious?date={date}")
 
     conn = get_db_connection()
     cur = conn.cursor()
@@ -166,9 +188,9 @@ def update_filter_rule():
     error = None
     try:
         for rule in rules:
-            logger.info(rule)
+            logger.info("Adding filter rule %r", rule)
             try:
-                cur.execute("INSERT INTO filter_rule VALUES (%s)", (rule.strip(),))
+                cur.execute("INSERT INTO filter_rule (qh) VALUES (%s)", (rule,))
             except psycopg2.Error as insert_error:
                 error = f"Insert error for '{rule}': {insert_error.pgerror}"
                 logger.exception(error)
@@ -183,9 +205,8 @@ def update_filter_rule():
         conn.close()
 
     if error:
-        error = error.replace("\n", " | ")
-        return redirect(f"/suspicious?date={date}&error={error}")
-    return redirect("/suspicious?date=" + date)
+        flash(error, "danger")
+    return redirect(f"/suspicious?date={date}")
 
 
 @suspicious_bp.route("/delete_filter_rule/<rule>", methods=["POST"])
@@ -203,7 +224,7 @@ def delete_filter_rule(rule: str):
 
 
     """
-    date = request.args.get("date", datetime.today().strftime("%Y-%m-%d"))
+    date = safe_date(request.args.get("date"), _today())
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -217,18 +238,24 @@ def delete_filter_rule(rule: str):
 
 
 @suspicious_bp.route("/tag_block", methods=["POST"])
+@admin_required
 def tag_block():
     """Tag a suspicious URL as blocked. This route allows users to modify existing block rules for suspicious URLs."""
-    qh = request.form.get("qh")
-    type_ = request.form.get("type")
-    date = request.form.get("date")
+    qh = (request.form.get("qh") or "").strip()
+    type_ = (request.form.get("type") or "").strip()
+    date = safe_date(request.form.get("date"), _today())
+    if not (is_valid_block_qh(qh) and is_valid_block_type(type_)):
+        flash(INVALID_BLOCK_MSG, "danger")
+        return redirect(f"/suspicious?date={date}")
+
     conn = get_db_connection()
     cur = conn.cursor()
     try:
         cur.execute("INSERT INTO block_list (qh, type) VALUES (%s, %s)", (qh, type_))
         conn.commit()
         flash(f"Tagged '{qh}' as '{type_}' successfully.", "success")
-    except DatabaseConnectionError:
+    except (DatabaseConnectionError, psycopg2.Error):
+        conn.rollback()
         flash(
             f"Error: Could not insert '{qh}' — it may already exist in block list.",
             "danger",
@@ -242,22 +269,39 @@ def tag_block():
 @suspicious_bp.route("/add_block", methods=["POST"])
 @admin_required
 def add_block():
-    """Add a URL to the block list.
+    """Add URLs to the block list, one per line.
 
     This route allows users to add new block rules for suspicious URLs.
     """
-    date = request.args.get("date", datetime.today().strftime("%Y-%m-%d"))
-    qh = request.form.get("qh").strip()
-    type_ = request.form.get("type").strip()
+    date = safe_date(request.args.get("date"), _today())
+    entries = split_lines(request.form.getlist("qh"))
+    type_ = (request.form.get("type") or "").strip()
+    if (
+        not entries
+        or len(entries) > MAX_LINES_PER_REQUEST
+        or not is_valid_block_type(type_)
+        or not all(is_valid_block_qh(qh) for qh in entries)
+    ):
+        logger.warning("Rejected block submission with %d line(s)", len(entries))
+        flash(INVALID_BLOCK_MSG, "danger")
+        return redirect(f"/suspicious?date={date}")
+
+    conn = get_db_connection()
+    cur = conn.cursor()
     try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("INSERT INTO block_list (qh, type) VALUES (%s, %s)", (qh, type_))
+        for qh in entries:
+            cur.execute(
+                "INSERT INTO block_list (qh, type) VALUES (%s, %s) ON CONFLICT (qh) DO NOTHING",
+                (qh, type_),
+            )
         conn.commit()
+    except (DatabaseConnectionError, psycopg2.Error):
+        conn.rollback()
+        logger.exception("Add block error")
+        flash("Could not add block entries.", "danger")
+    finally:
         cur.close()
         conn.close()
-    except DatabaseConnectionError:
-        logger.exception("Add block error")
     return redirect(f"/suspicious?date={date}")
 
 
@@ -275,7 +319,7 @@ def delete_block(block_id: int):
         Redirect to the suspicious URLs view with the current date.
 
     """
-    date = request.args.get("date", datetime.today().strftime("%Y-%m-%d"))
+    date = safe_date(request.args.get("date"), _today())
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("DELETE FROM block_list WHERE id = %s", (block_id,))
@@ -300,9 +344,12 @@ def modify_block(block_id: int):
         Redirect to the suspicious URLs view with the current date.
 
     """
-    qh = request.form["qh"]
-    type_ = request.form["type"]
-    date = request.args.get("date", datetime.today().strftime("%Y-%m-%d"))
+    qh = request.form.get("qh", "").strip()
+    type_ = request.form.get("type", "").strip()
+    date = safe_date(request.args.get("date"), _today())
+    if not (is_valid_block_qh(qh) and is_valid_block_type(type_)):
+        flash(INVALID_BLOCK_MSG, "danger")
+        return redirect(f"/suspicious?date={date}")
 
     conn = get_db_connection()
     cur = conn.cursor()
@@ -313,9 +360,11 @@ def modify_block(block_id: int):
         )
         conn.commit()
         flash("Block list entry updated.", "success")
-    except DatabaseConnectionError as e:
+    except (DatabaseConnectionError, psycopg2.Error) as e:
+        conn.rollback()
         flash(f"Failed to update block list entry: {e!s}", "danger")
     finally:
+        cur.close()
         conn.close()
 
     return redirect(f"/suspicious?date={date}")

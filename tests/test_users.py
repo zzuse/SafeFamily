@@ -18,7 +18,7 @@ def patch_jwt(monkeypatch):
 
 def test_get_all_users_admin(client, monkeypatch):
     """Admin can list users with pagination."""
-    monkeypatch.setattr(users, "get_jwt", lambda: {"is_admin": "admin"})
+    monkeypatch.setattr(users, "get_jwt", lambda: {"sub": "admin", "is_admin": "admin"})
 
     fake_users = [SimpleNamespace(id="1", username="alice", email="a@a.com")]
 

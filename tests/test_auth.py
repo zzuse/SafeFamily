@@ -38,6 +38,20 @@ def test_admin_required_blocks_non_admin(client, monkeypatch):
     assert "/auth/login-ui" in resp.location
 
 
+def test_admin_required_rejects_admin_claim_for_non_admin_sub(client, monkeypatch):
+    """Forged is_admin claim on another user's token is not enough."""
+    monkeypatch.setattr(
+        auth,
+        "decode_token",
+        lambda token: {"sub": "c1ac6ed1-attacker", "is_admin": "admin"},
+    )
+    _set_session_token(client)
+
+    resp = client.post("/update_filter_rule", data={"rule": "example.com"})
+    assert resp.status_code == 302
+    assert "/auth/login-ui" in resp.location
+
+
 def test_login_user_invalid_credentials(client, monkeypatch):
     fake_user = SimpleNamespace(check_password=lambda pw: False)
     monkeypatch.setattr(auth.User, "get_user_by_username", lambda username: fake_user)

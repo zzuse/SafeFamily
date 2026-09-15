@@ -21,15 +21,34 @@ from src.safe_family.urls.receiver import receiver_bp
 from src.safe_family.urls.suspicious import suspicious_bp
 from src.safe_family.users.users import user_bp
 
+MIN_SECRET_LENGTH = 32
+
+
+def _require_strong_secret(name: str, value: str | None) -> None:
+    """Refuse to start with a missing or guessable signing secret.
+
+    Anyone who knows these secrets can forge session cookies and admin JWTs.
+    """
+    if not value or len(value) < MIN_SECRET_LENGTH:
+        msg = (
+            f"{name} must be a random string of at least {MIN_SECRET_LENGTH} characters. "
+            'Generate one with: python -c "import secrets; print(secrets.token_urlsafe(64))"'
+        )
+        raise RuntimeError(msg)
+
 
 def create_app():
     """Create and configure the Flask application."""
+    _require_strong_secret("FLASK_APP_SECRET_KEY", settings.APP_SECRET_KEY)
+    _require_strong_secret("FLASK_JWT_SECRET_KEY", settings.JWT_SECRET_KEY)
     app = Flask(__name__)
     setup_logging()  # Initialize logging configuration
     app.config["FLASK_DEBUG"] = settings.FLASK_DEBUG
     app.config["SQLALCHEMY_DATABASE_URI"] = settings.SQLALCHEMY_DATABASE_URI
     app.config["SQLALCHEMY_ECHO"] = settings.SQLALCHEMY_ECHO
     app.config["SECRET_KEY"] = settings.APP_SECRET_KEY
+    # Session cookies are not sent on cross-site POSTs (basic CSRF protection).
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
     app.config["JWT_SECRET_KEY"] = settings.JWT_SECRET_KEY
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(
         hours=settings.JWT_ACCESS_TOKEN_EXPIRES,

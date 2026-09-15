@@ -14,6 +14,11 @@ from flask import Blueprint, flash, redirect
 from config.settings import settings
 from src.safe_family.core.auth import admin_required
 from src.safe_family.core.extensions import get_db_connection, local_tz
+from src.safe_family.utils.validators import (
+    is_valid_block_qh,
+    is_valid_block_type,
+    is_valid_filter_rule,
+)
 
 logger = logging.getLogger(__name__)
 auto_git_bp = Blueprint("auto_git", __name__)
@@ -29,10 +34,14 @@ def rule_auto_commit():
     rows_filter = cur.fetchall()
     conn.close()
 
-    # Group by type
+    # Group by type. Rows that bypassed validation (legacy data, direct DB
+    # writes) are skipped: type becomes a file name and qh a rule line.
 
     grouped = defaultdict(list)
     for qh, type_ in rows:
+        if not (is_valid_block_type(type_) and is_valid_block_qh(qh)):
+            logger.warning("Skipping invalid block_list row qh=%r type=%r", qh, type_)
+            continue
         grouped[type_].append(qh)
 
     # Write files
@@ -48,8 +57,11 @@ def rule_auto_commit():
 
     filter_path = Path(f"{settings.ADGUARD_RULE_PATH}filter.txt")
     with filter_path.open("w", encoding="utf-8") as ff:
-        for qh in rows_filter:
-            ff.write(f"{qh[0]}\n")
+        for (qh,) in rows_filter:
+            if not is_valid_filter_rule(qh):
+                logger.warning("Skipping invalid filter_rule row qh=%r", qh)
+                continue
+            ff.write(f"{qh}\n")
         ff.write("\n")
 
     git_path = shutil.which("git")

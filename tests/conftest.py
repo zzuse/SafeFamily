@@ -45,6 +45,16 @@ class FakeConnection:
         return None
 
 
+TEST_SECRET = "test-secret-key-that-is-long-enough-0123456789"
+
+
+def _patch_test_secrets(monkeypatch):
+    """Satisfy create_app's secret-strength check and pin the admin identity."""
+    monkeypatch.setattr("config.settings.settings.APP_SECRET_KEY", TEST_SECRET)
+    monkeypatch.setattr("config.settings.settings.JWT_SECRET_KEY", TEST_SECRET)
+    monkeypatch.setattr("config.settings.settings.ADMIN_IDENTITY", "admin")
+
+
 @pytest.fixture
 def app(monkeypatch):
     """Flask application with patched DB connection."""
@@ -56,6 +66,7 @@ def app(monkeypatch):
         "config.settings.settings.SQLALCHEMY_DATABASE_URI",
         "sqlite:///:memory:",
     )
+    _patch_test_secrets(monkeypatch)
     flask_app = create_app()
     flask_app.config["SECRET_KEY"] = "test"
     with flask_app.app_context():
@@ -76,10 +87,7 @@ def notesync_app(tmp_path, monkeypatch):
         "config.settings.settings.SQLALCHEMY_DATABASE_URI",
         f"sqlite:///{db_path}",
     )
-    monkeypatch.setattr(
-        "config.settings.settings.JWT_SECRET_KEY",
-        "test-secret",
-    )
+    _patch_test_secrets(monkeypatch)
     monkeypatch.setattr(
         "config.settings.settings.NOTESYNC_API_KEY",
         "test-api-key",

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker compose *)",
+      "Bash(python3 -c ' *)",
+      "Bash(node --check src/safe_family/static/js/todo.js)",
+      "Bash(python3 -c \"print\\('no node, skip js syntax check'\\)\")"
+    ]
+  }
+}

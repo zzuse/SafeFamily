@@ -197,7 +197,7 @@
                     <label for="block_type">Type:</label>
                     <select class="h-10" name="type" id="block_type">
                         {% for t in block_types %}
-                        <option value=" {{ t }}">{{ t }}
+                        <option value="{{ t }}">{{ t }}
                         </option>
                         {% endfor %}
                     </select>
@@ -223,6 +223,7 @@
                 <thead>
                     <tr>
                         <th>QH</th>
+                        <th>Added</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -230,12 +231,11 @@
                     {% for rule in filter_rules %}
                     <tr>
                         <td>{{ rule[0] }}</td>
+                        <td>{{ rule[1].strftime('%Y-%m-%d %H:%M') if rule[1] else '—' }}</td>
                         <td>
-                            <button class="btn btn-danger">
-                                <a href="/delete_filter_rule/{{ rule[0] }}?date={{ date }}">
-                                    Delete
-                                </a>
-                            </button>
+                            <form method="post" action="/delete_filter_rule/{{ rule[0]|urlencode }}?date={{ date }}">
+                                <button type="submit" class="btn btn-danger">Delete</button>
+                            </form>
                         </td>
                     </tr>
                     {% endfor %}

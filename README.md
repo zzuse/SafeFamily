@@ -99,6 +99,67 @@ After docker up, run `docker exec safefamily_app python scripts/migrate.py`.
   ```bash
   docker-compose exec app python -m safe_family.cli.analyze --range last_5min
   ```
+- **Prune Cache** (safe — never touches volumes):
+  ```bash
+  docker builder prune -af    # build cache; regrows on every rebuild
+  docker image prune -f       # dangling/untagged layers only
+  sudo journalctl --vacuum-size=500M
+  sudo systemctl restart systemd-journald
+  ```
+  Do **not** use `docker image prune -a` here: the `app` image is built locally
+  and old builds are unrecoverable once pruned. To stop the journal regrowing,
+  set `SystemMaxUse=500M` in `/etc/systemd/journald.conf`.
+
+### 5. Database Persistence
+
+The `db` service maps `db_data:/var/lib/postgresql/data`. This is a **named
+volume**, not a bind mount, so the two halves mean different things:
+
+- `/var/lib/postgresql/data` — PGDATA *inside the container*.
+- `db_data` — a Docker-managed volume (declared under top-level `volumes:`),
+  which Compose namespaces as `safefamily_db_data`.
+
+Resolve the real host directory with:
+```bash
+docker volume inspect safefamily_db_data --format '{{.Mountpoint}}'
+```
+
+On this host Docker is installed via **snap**, so the data root is
+`/var/snap/docker/common/var-lib-docker/...` rather than the usual
+`/var/lib/docker/...`. Don't assume the path — always inspect it. Note that
+`/var/lib/postgresql/14/main` (a native apt Postgres install) is unrelated to
+this stack.
+
+**Safe** — data survives all of these: `docker compose stop`/`start`,
+`docker compose down` then `up`, container recreation, image rebuilds, and the
+prune commands listed above.
+
+**Destroys the database** — never run these against this stack:
+```bash
+docker compose down -v              # -v removes named volumes
+docker volume rm safefamily_db_data
+docker system prune --volumes
+```
+
+Because a named volume is less discoverable than a bind mount, take logical
+backups rather than relying on the volume alone:
+```bash
+set -a; source .env; set +a    # else $DB_USER is empty and pg_dump fails
+docker exec safefamily_db pg_dump -U "$DB_USER" "$DB_NAME" > backup_$(date +%F).sql
+```
+Restore with `psql -U "$DB_USER" -d "$DB_NAME" < backup.sql`. Skipping the
+`source` step falls back to the compose defaults (`user`/`logdb`) and fails with
+`role "user" does not exist`. If you would
+rather have the data at a visible host path, switch line 13 of
+`docker-compose.yml` to a bind mount and migrate the existing contents.
+
+### 6. Host Maintenance Notes
+- Snap auto-refreshes Docker several times a day (`snap refresh --time`). A
+  refresh restarts the daemon and briefly stops containers; `restart: always`
+  brings them back, but the timing is not under your control. Use
+  `snap refresh --hold` or a maintenance window if that matters.
+- Postgres publishes `5432` on all interfaces (`0.0.0.0`), not just localhost —
+  intentional for remote pgAdmin, but it should be firewalled.
 
 ## Tests
 Run the full suite with coverage enforcement:

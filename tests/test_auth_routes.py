@@ -199,3 +199,68 @@ def test_get_current_username_sets_role(monkeypatch):
         result = auth.get_current_username()
         assert result.username == "alice"
         assert result.role == "user"
+
+
+def test_get_current_username_ignores_admin_claim_for_other_user(monkeypatch):
+    """A forged token with is_admin=admin must not promote a regular user."""
+    monkeypatch.setattr(auth.settings, "ADMIN_IDENTITY", "real-admin-id")
+    monkeypatch.setattr(
+        auth,
+        "decode_token",
+        lambda token: {"sub": "attacker", "is_admin": "admin"},
+    )
+    fake_user = SimpleNamespace(id="attacker", username="probe", role="user", email="p@p.com")
+    monkeypatch.setattr(
+        auth,
+        "User",
+        SimpleNamespace(query=SimpleNamespace(get=lambda user_id: fake_user)),
+        raising=False,
+    )
+    app = Flask(__name__)
+    app.secret_key = "test"
+    with app.test_request_context("/"):
+        session["access_token"] = "token"
+        assert auth.get_current_username().role == "user"
+
+
+def test_get_current_username_promotes_configured_admin(monkeypatch):
+    monkeypatch.setattr(auth.settings, "ADMIN_IDENTITY", "real-admin-id")
+    monkeypatch.setattr(
+        auth,
+        "decode_token",
+        lambda token: {"sub": "real-admin-id", "is_admin": "admin"},
+    )
+    fake_user = SimpleNamespace(id="real-admin-id", username="zz", role=None, email="z@z.com")
+    monkeypatch.setattr(
+        auth,
+        "User",
+        SimpleNamespace(query=SimpleNamespace(get=lambda user_id: fake_user)),
+        raising=False,
+    )
+    app = Flask(__name__)
+    app.secret_key = "test"
+    with app.test_request_context("/"):
+        session["access_token"] = "token"
+        assert auth.get_current_username().role == "admin"
+
+
+def test_is_admin_claims_requires_configured_identity(monkeypatch):
+    monkeypatch.setattr(auth.settings, "ADMIN_IDENTITY", None)
+    assert not auth.is_admin_claims({"sub": "None", "is_admin": "admin"})
+    monkeypatch.setattr(auth.settings, "ADMIN_IDENTITY", "admin")
+    assert auth.is_admin_claims({"sub": "admin", "is_admin": "admin"})
+    assert not auth.is_admin_claims({"sub": "admin", "is_admin": "user"})
+
+
+def test_register_user_ignores_client_role(client, monkeypatch):
+    monkeypatch.setattr(auth.User, "get_user_by_username", lambda username: None)
+    saved = {}
+    monkeypatch.setattr(auth.User, "save", lambda self: saved.setdefault("user", self))
+
+    resp = client.post(
+        "/auth/register",
+        json={"username": "probe", "email": "p@p.com", "role": "admin", "password": "secret"},
+    )
+
+    assert resp.status_code == 201
+    assert saved["user"].role == "user"

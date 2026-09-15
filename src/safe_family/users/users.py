@@ -3,6 +3,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt, jwt_required
 
+from src.safe_family.core.auth import is_admin_claims
 from src.safe_family.core.models import User
 from src.safe_family.core.schemas import UserOut
 
@@ -14,7 +15,7 @@ user_bp = Blueprint("users", __name__)
 def get_all_users():
     """Get a paginated list of all users. Admins only."""
     claims = get_jwt()
-    if claims.get("is_admin") != "admin":
+    if not is_admin_claims(claims):
         return jsonify({"msg": "Admins only!"}), 403
     page = request.args.get("page", default=1, type=int)
     per_page = request.args.get("per_page", default=3, type=int)

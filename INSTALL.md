@@ -69,9 +69,13 @@ Example `.env`:
 ```
 FLASK_DEBUG=False
 FLASK_SQLALCHEMY_DATABASE_URI=postgresql://user:password@localhost/safefamily
-FLASK_APP_SECRET_KEY=your-secret-key-here
-FLASK_JWT_SECRET_KEY=your_jwt_secret_key
+FLASK_APP_SECRET_KEY=<random, at least 32 chars>
+FLASK_JWT_SECRET_KEY=<a different random value, at least 32 chars>
 ```
+
+Generate each secret with `python -c "import secrets; print(secrets.token_urlsafe(64))"`.
+The app refuses to start if either is missing or shorter than 32 characters: anyone
+who knows them can forge admin sessions.
 
 ### 6. Database Setup
 ```bash
