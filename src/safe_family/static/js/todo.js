@@ -428,7 +428,40 @@ function setupHeatmapTooltips() {
     });
 }
 
+function setupAuditSelects() {
+    document.querySelectorAll(".sf-audit-select").forEach(select => {
+        select.addEventListener("change", () => {
+            const previous = select.dataset.value;
+            fetch("/todo/audit_mark", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    item_id: select.dataset.itemId,
+                    user_id: select.dataset.userId,
+                    date: select.dataset.date,
+                    value: select.value,
+                })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        select.dataset.value = select.value;
+                    } else {
+                        select.value = previous;
+                        alert("Audit update failed: " + (data.error || "unknown error"));
+                    }
+                })
+                .catch(err => {
+                    console.error("Audit update error:", err);
+                    select.value = previous;
+                    alert("Error updating audit.");
+                });
+        });
+    });
+}
+
 setupSplitSlotButtons();
 setupCurrentSubtaskInputs();
 setupPlanDrawer();
 setupHeatmapTooltips();
+setupAuditSelects();

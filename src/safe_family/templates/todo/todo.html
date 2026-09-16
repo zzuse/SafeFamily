@@ -588,6 +588,85 @@
         opacity: .45;
     }
 
+    /* weekly audit matrix */
+    .sf-audit-card {
+        margin-top: 16px;
+    }
+
+    .sf-audit-week {
+        font-family: var(--sf-mono);
+        font-size: 11px;
+        font-weight: 400;
+        color: var(--sf-ink-dim);
+    }
+
+    .sf-audit-scroll {
+        overflow-x: auto;
+    }
+
+    .sf-audit-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+
+    .sf-audit-table th,
+    .sf-audit-table td {
+        padding: 6px 8px;
+        border-bottom: 1px solid var(--sf-border);
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .sf-audit-table thead th {
+        font-family: var(--sf-mono);
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--sf-ink-dim);
+    }
+
+    .sf-audit-table tbody th {
+        text-align: left;
+        font-weight: 600;
+        color: var(--sf-ink);
+    }
+
+    .sf-audit-table .sf-audit-today {
+        background: var(--sf-accent-soft);
+    }
+
+    .sf-audit-value,
+    .sf-audit-select {
+        font-family: var(--sf-mono);
+        font-size: 12px;
+        color: var(--sf-ink-dim);
+    }
+
+    .sf-audit-select {
+        background: var(--sf-surface-3);
+        border: 1px solid var(--sf-border);
+        border-radius: var(--sf-radius-sm);
+        padding: 2px 4px;
+    }
+
+    .sf-audit-value[data-value="yes"],
+    .sf-audit-select[data-value="yes"] {
+        color: var(--sf-success);
+        font-weight: 700;
+    }
+
+    .sf-audit-value[data-value="no"],
+    .sf-audit-select[data-value="no"] {
+        color: var(--sf-danger);
+        font-weight: 700;
+    }
+
+    .sf-audit-empty {
+        margin: 0;
+        color: var(--sf-ink-muted);
+        font-size: 13px;
+    }
+
     /* activity heatmap — cell size lives in --hm-cell; column count comes
        from the template so it always matches HEATMAP_WEEKS */
     .sf-heatmap-scroll {
@@ -732,10 +811,10 @@
     {% set total_count = today_tasks|length if today_tasks else 0 %}
     {% set pct = (done_count * 100 // total_count) if total_count else 0 %}
     {# Current mission = first incomplete task still ongoing or upcoming (slot end >= now);
-       fall back to the first incomplete one when every remaining task is already overdue. #}
+    fall back to the first incomplete one when every remaining task is already overdue. #}
     {% set now_hm = now.strftime('%H:%M') %}
     {% set ns = namespace(next_task=None, next_start=None, next_id=None,
-                          first_task=None, first_start=None, first_id=None) %}
+    first_task=None, first_start=None, first_id=None) %}
     {% for todo_id, time_slot, task, completed, completion_status in today_tasks %}
     {% if not completed %}
     {% if ns.first_id is none %}
@@ -891,10 +970,10 @@
                         {% set end_str = time_slot.split('-')[1].strip() %}
                         {% set end_minutes = end_str[:2]|int * 60 + end_str[3:]|int %}
                         {% set now_minutes = now.hour * 60 + now.minute %}
-                        {% set in_grace = now_minutes >= end_minutes and now_minutes <= end_minutes + 30 %}
-                        {% set is_locked = False if role == 'admin' else (completion_status or not in_grace) %}
-                        <select class="status-select admin-status-select" data-todo-id="{{ todo_id }}"
-                            {% if is_locked %}disabled{% endif %}>
+                        {% set in_grace = now_minutes >= end_minutes and now_minutes <= end_minutes + 30 %} {% set
+                            is_locked=False if role=='admin' else (completion_status or not in_grace) %} <select
+                            class="status-select admin-status-select" data-todo-id="{{ todo_id }}" {% if is_locked
+                            %}disabled{% endif %}>
                             <option value="" {% if completion_status=='' %}selected{% endif %}>—</option>
                             <option value="skipped" {% if completion_status=='skipped' %}selected{% endif %}>Skipped
                             </option>
@@ -906,7 +985,7 @@
                                 Mostly</option>
                             <option value="done" {% if completion_status=='done' %}selected{% endif %}>Done
                             </option>
-                        </select>
+                            </select>
                     </div>
                     <button type="button" class="split-slot-btn" data-todo-id="{{ todo_id }}"
                         aria-label="Split this slot into 30 minute blocks">+</button>
@@ -1035,6 +1114,54 @@
                 </div>
             </div>
         </div>
+        </div>
+
+        {# ===== weekly audit matrix — admin marks yes/no, everyone else reads this week only ===== #}
+        <div class="sf-card sf-audit-card">
+            <div class="sf-card-header">
+                <span>Weekly audit, tired of remind every time, every field is a 'no', will reduce 10 min of game in the
+                    Saturday or Sunday</span>
+                <span class="sf-audit-week">{{ audit.days[0].date }} → {{ audit.days[-1].date }}</span>
+            </div>
+            {% if audit.rows %}
+            <div class="sf-audit-scroll">
+                <table class="sf-audit-table">
+                    <thead>
+                        <tr>
+                            <th scope="col"></th>
+                            {% for day in audit.days %}
+                            <th scope="col" class="{% if day.is_today %}sf-audit-today{% endif %}">{{ day.label }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in audit.rows %}
+                        <tr>
+                            <th scope="row">{{ row.name }}</th>
+                            {% for value in row.cells %}
+                            {% set day = audit.days[loop.index0] %}
+                            <td class="{% if day.is_today %}sf-audit-today{% endif %}">
+                                {% if role == 'admin' %}
+                                <select class="sf-audit-select" data-value="{{ value or '' }}"
+                                    data-item-id="{{ row.id }}" data-user-id="{{ selected_user_row_id }}"
+                                    data-date="{{ day.date }}" aria-label="{{ row.name }} {{ day.label }}">
+                                    <option value="" {% if not value %}selected{% endif %}>null</option>
+                                    <option value="yes" {% if value=='yes' %}selected{% endif %}>yes</option>
+                                    <option value="no" {% if value=='no' %}selected{% endif %}>no</option>
+                                </select>
+                                {% else %}
+                                <span class="sf-audit-value" data-value="{{ value or '' }}">{{ value or 'null' }}</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="sf-audit-empty">No audit items yet.</p>
+            {% endif %}
         </div>
 
         {# ===== PULL-OUT DRAWER: planner + configuration ===== #}

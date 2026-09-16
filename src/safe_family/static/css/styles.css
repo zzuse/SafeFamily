@@ -1073,3 +1073,34 @@ td form button {
 .sched-job-next.paused {
     color: var(--sf-ink-dim);
 }
+
+/* Store calculator: shift accounting */
+@media (min-width: 64rem) {
+    .shift-section {
+        grid-column: 3;
+    }
+}
+
+.shift-summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    padding-block: 0.25rem;
+}
+
+.shift-summary-value {
+    font-size: 1.875rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
+.shift-summary-diff {
+    border-top: 1px solid #475569;
+    margin-top: 0.5rem;
+    padding-top: 0.75rem;
+}
+
+.shift-summary-value.is-off {
+    color: #f87171;
+}

@@ -70,7 +70,11 @@ def app(monkeypatch):
     flask_app = create_app()
     flask_app.config["SECRET_KEY"] = "test"
     with flask_app.app_context():
+        # ORM-backed features rendered on raw-SQL pages (e.g. the /todo audit
+        # matrix) need their tables even when get_db_connection is faked.
+        db.create_all()
         yield flask_app
+        db.session.remove()
 
 
 @pytest.fixture

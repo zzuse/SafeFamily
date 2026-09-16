@@ -209,3 +209,52 @@ class AgileConfig(db.Model):
     def __repr__(self) -> str:
         """Return a string representation of the AgileConfig."""
         return f"<AgileConfig(key='{self.config_key}', value='{self.config_value}')>"
+
+
+class AuditItem(db.Model):
+    """A row of the weekly audit matrix on /todo (e.g. Piano, Math).
+
+    Admins add rows directly in the database; sort_order controls display order.
+    """
+
+    __tablename__ = "audit_item"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
+
+    def __repr__(self) -> str:
+        """Return a string representation of the AuditItem."""
+        return f"<AuditItem(name='{self.name}')>"
+
+
+class AuditMark(db.Model):
+    """Admin's yes/no mark for one audit item, user and day.
+
+    A missing row means the cell is still null.
+    """
+
+    __tablename__ = "audit_mark"
+    __table_args__ = (
+        db.UniqueConstraint("item_id", "user_id", "mark_date", name="uq_audit_mark_item_user_date"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    item_id = db.Column(
+        db.Integer,
+        db.ForeignKey("audit_item.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_id = db.Column(db.String(), nullable=False)
+    mark_date = db.Column(db.Date, nullable=False)
+    value = db.Column(db.String(3), nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
+
+    def __repr__(self) -> str:
+        """Return a string representation of the AuditMark."""
+        return f"<AuditMark(item_id={self.item_id}, date='{self.mark_date}', value='{self.value}')>"

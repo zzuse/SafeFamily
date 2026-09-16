@@ -122,6 +122,56 @@
                 <div id="cigar-grand-total" class="text-5xl font-black text-purple-400">0</div>
             </div>
         </section>
+        <!-- SHIFT ACCOUNTING SECTION -->
+        <section class="shift-section flex flex-col gap-6">
+            <h2 class="text-2xl font-black text-black border-b-4 border-black pb-2 uppercase tracking-tighter">Shift Accounting</h2>
+            <div class="calc-card bg-white p-6 shadow-md rounded-lg border border-gray-300">
+                <table class="w-full text-lg">
+                    <thead>
+                        <tr class="border-b-2 border-black">
+                            <th class="py-3 text-left text-black font-bold uppercase tracking-wider">Item</th>
+                            <th class="py-3 text-center text-black font-bold uppercase tracking-wider">Amount 1</th>
+                            <th class="py-3 text-center text-black font-bold uppercase tracking-wider">Amount 2</th>
+                            <th class="py-3 text-right text-blue-700 font-bold uppercase tracking-wider">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for label, group in [
+                            ('Fuel Sales', 'expected'), ('Item Sales', 'expected'), ('GST5', 'expected'),
+                            ('PST7', 'expected'), ('Total POS', 'actual'), ('Man Cpns', 'actual'),
+                            ('Redemption', 'actual'), ('Payout', 'actual'), ('Safedrops', 'actual')
+                        ] %}
+                        <tr class="shift-row border-b last:border-0 border-gray-200" data-group="{{ group }}">
+                            <td class="py-3 font-black text-black text-xl">{{ label }}</td>
+                            <td class="py-3 text-center">
+                                <input type="number" step="0.01" value="0"
+                                    class="shift1-input text-center text-xl font-semibold border-2 border-gray-400 rounded focus:border-blue-600 focus:ring-0 focus:outline-none py-1">
+                            </td>
+                            <td class="py-3 text-center">
+                                <input type="number" step="0.01" value="0"
+                                    class="shift2-input text-center text-xl font-semibold border-2 border-gray-400 rounded focus:border-blue-600 focus:ring-0 focus:outline-none py-1">
+                            </td>
+                            <td class="shift-row-sum text-right font-bold text-blue-700 text-xl">$0.00</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="p-6 bg-slate-900 text-white rounded-xl shadow-lg border-4 border-black">
+                <div class="shift-summary-row">
+                    <span class="text-sm text-slate-300 uppercase font-black">Expected</span>
+                    <span id="shift-expected" class="shift-summary-value">$0.00</span>
+                </div>
+                <div class="shift-summary-row">
+                    <span class="text-sm text-slate-300 uppercase font-black">Actual</span>
+                    <span id="shift-actual" class="shift-summary-value">$0.00</span>
+                </div>
+                <div class="shift-summary-row shift-summary-diff">
+                    <span class="text-sm text-slate-300 uppercase font-black">Diff</span>
+                    <span id="shift-diff" class="shift-summary-value text-green-400">$0.00</span>
+                </div>
+            </div>
+        </section>
     </div>
 
     <!-- GLOBAL ACTIONS -->
@@ -175,10 +225,29 @@
             document.getElementById('cigar-grand-total').textContent = grandTotal;
         };
 
+        const calcShift = () => {
+            const totals = { expected: 0, actual: 0 };
+            document.querySelectorAll('.shift-row').forEach(r => {
+                const amount1 = parseFloat(r.querySelector('.shift1-input').value) || 0;
+                const amount2 = parseFloat(r.querySelector('.shift2-input').value) || 0;
+                const rowSum = amount1 + amount2;
+                r.querySelector('.shift-row-sum').textContent = (rowSum < 0 ? '-$' : '$') + Math.abs(rowSum).toFixed(2);
+                totals[r.dataset.group] += rowSum;
+            });
+            const diff = Math.round((totals.expected - totals.actual) * 100) / 100;
+            const sign = diff > 0 ? '+' : diff < 0 ? '-' : '';
+            const diffEl = document.getElementById('shift-diff');
+            document.getElementById('shift-expected').textContent = '$' + totals.expected.toFixed(2);
+            document.getElementById('shift-actual').textContent = '$' + totals.actual.toFixed(2);
+            diffEl.textContent = sign + '$' + Math.abs(diff).toFixed(2);
+            diffEl.classList.toggle('is-off', diff !== 0);
+        };
+
         const updateAll = () => {
             calcLotto();
             calcCash();
             calcCigar();
+            calcShift();
         };
 
         document.querySelectorAll('input').forEach(i => {

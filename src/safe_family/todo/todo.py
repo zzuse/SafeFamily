@@ -9,8 +9,13 @@ from flask import Blueprint, flash, jsonify, redirect, render_template, request,
 from psycopg2 import extensions as pg
 
 from src.safe_family.cli import weekly_metrics
-from src.safe_family.core.auth import get_current_username, login_required
-from src.safe_family.core.extensions import get_db_connection, local_tz
+from src.safe_family.core.auth import (
+    admin_required,
+    get_current_username,
+    login_required,
+)
+from src.safe_family.core.extensions import db, get_db_connection, local_tz
+from src.safe_family.core.models import AuditItem, AuditMark, User
 from src.safe_family.notifications.notifier import (
     send_discord_notification,
     send_email_notification,
@@ -50,6 +55,9 @@ HEATMAP_WEEKS = 26
 # How long after a slot ends the user can still pick a completion status
 # before the automatic default ("mostly done" / "skipped") is applied.
 DEFAULT_STATUS_GRACE_MINUTES = 30
+# Weekly audit matrix: columns run Monday..Sunday of the current week.
+AUDIT_DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+AUDIT_VALUES = {"yes", "no"}
 
 
 def generate_time_slots(
@@ -239,6 +247,38 @@ def build_week_strip_and_heatmap(
     return week_strip, heatmap
 
 
+def current_week_start(today: date) -> date:
+    """Return the Monday of the week containing ``today``."""
+    return today - timedelta(days=today.weekday())
+
+
+def build_audit_matrix(user_id: str, today: date) -> dict:
+    """Return this week's audit matrix for a user.
+
+    Only marks dated this Monday..Sunday are loaded, so every Monday starts
+    with an all-null table; older weeks stay in the database but are never shown.
+    """
+    week_start = current_week_start(today)
+    days = [week_start + timedelta(days=offset) for offset in range(7)]
+    items = AuditItem.query.order_by(AuditItem.sort_order, AuditItem.id).all()
+    marks = AuditMark.query.filter(
+        AuditMark.user_id == str(user_id),
+        AuditMark.mark_date >= days[0],
+        AuditMark.mark_date <= days[-1],
+    ).all()
+    values = {(mark.item_id, mark.mark_date): mark.value for mark in marks}
+    return {
+        "days": [
+            {"label": label, "date": day.isoformat(), "is_today": day == today}
+            for label, day in zip(AUDIT_DAY_LABELS, days, strict=True)
+        ],
+        "rows": [
+            {"id": item.id, "name": item.name, "cells": [values.get((item.id, day)) for day in days]}
+            for item in items
+        ],
+    }
+
+
 @todo_bp.route("/todo", methods=["GET", "POST"])
 @login_required
 def todo_page():  # noqa: C901, PLR0915 - refactor backlog: split save/view paths
@@ -376,6 +416,7 @@ def todo_page():  # noqa: C901, PLR0915 - refactor backlog: split save/view path
         week_strip=week_strip,
         heatmap=heatmap,
         mandatory_subjects=MANDATORY_SUBJECTS,
+        audit=build_audit_matrix(selected_user_id, today_date),
     )
 
 
@@ -695,6 +736,41 @@ def mark_todo_status():  # noqa: PLR0911 - one early return per validation step
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+@todo_bp.post("/todo/audit_mark")
+@admin_required
+def audit_mark():
+    """Set one cell of this week's audit matrix to yes/no, or clear it back to null."""
+    data = request.get_json(silent=True) or {}
+    value = str(data.get("value") or "").strip().lower()
+    if value and value not in AUDIT_VALUES:
+        return jsonify({"success": False, "error": "invalid value"}), 400
+    user_id = str(data.get("user_id") or "")
+    try:
+        item_id = int(data.get("item_id"))
+        mark_date = date.fromisoformat(str(data.get("date") or ""))
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error": "invalid item or date"}), 400
+
+    # Past weeks are hidden, so they are not editable either.
+    week_start = current_week_start(datetime.now(local_tz).date())
+    if not user_id or not week_start <= mark_date < week_start + timedelta(days=7):
+        return jsonify({"success": False, "error": "date outside this week"}), 403
+    if db.session.get(AuditItem, item_id) is None or db.session.get(User, user_id) is None:
+        return jsonify({"success": False, "error": "item or user not found"}), 404
+
+    mark = AuditMark.query.filter_by(item_id=item_id, user_id=user_id, mark_date=mark_date).first()
+    if not value:
+        if mark is not None:
+            db.session.delete(mark)
+    elif mark is None:
+        db.session.add(AuditMark(item_id=item_id, user_id=user_id, mark_date=mark_date, value=value))
+    else:
+        mark.value = value
+    db.session.commit()
+    logger.info("audit_mark: item=%s user=%s date=%s value=%s", item_id, user_id, mark_date, value or None)
+    return jsonify({"success": True, "value": value or None})
 
 
 @todo_bp.route("/exec_rules/<string:selected_user_id>", methods=["POST"])

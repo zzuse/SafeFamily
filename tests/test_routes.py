@@ -20,6 +20,28 @@ def test_store_sum_renders_when_logged_in(client, monkeypatch):
     assert resp.status_code == 200
 
 
+def test_store_sum_includes_shift_accounting(client, monkeypatch):
+    monkeypatch.setattr(
+        "src.safe_family.core.auth.decode_token",
+        lambda token: {"sub": "user"},
+    )
+    with client.session_transaction() as sess:
+        sess["access_token"] = "token"
+
+    resp = client.get("/store_sum")
+    html = resp.get_data(as_text=True)
+    assert "Shift Accounting" in html
+    for label in ["Fuel Sales", "Item Sales", "GST5", "PST7", "Total POS", "Man Cpns", "Redemption", "Payout", "Safedrops"]:
+        assert label in html
+    assert html.count('data-group="expected"') == 4
+    assert html.count('data-group="actual"') == 5
+    assert html.count('class="shift1-input ') == 9
+    assert html.count('class="shift2-input ') == 9
+    assert html.count('class="shift-row-sum ') == 9
+    for element_id in ["shift-expected", "shift-actual", "shift-diff"]:
+        assert f'id="{element_id}"' in html
+
+
 def test_calc_guide_renders_when_logged_in(client, monkeypatch):
     # Bypass JWT validation and provide a session token
     monkeypatch.setattr(

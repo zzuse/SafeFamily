@@ -16,3 +16,4 @@ venv/
 metrics/
 deploy/init_db/
 docs/incident-*
+backup/
