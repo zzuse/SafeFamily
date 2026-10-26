@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section>
+    <article class="card blog-post">
+        <h1 class="blog-post-title">{{ post.title }}</h1>
+        <div class="blog-meta">
+            Created {{ post.created_local.strftime("%Y-%m-%d %H:%M") }}
+            {% if post.updated_at != post.created_at %}· updated {{ post.updated_local.strftime("%Y-%m-%d %H:%M") }}{% endif %}
+            {% if not post.is_public %}· <span class="blog-draft">draft (only you can see this)</span>{% endif %}
+        </div>
+        {% if post.tags %}
+        <div class="blog-tags">
+            {% for tag in post.tags %}
+            <a class="blog-tag" href="{{ url_for('blog.blog_list', tag=tag.name) }}">{{ tag.name }}</a>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="blog-prose">{{ body_html }}</div>
+    </article>
+
+    <div class="blog-toolbar">
+        {% if session.access_token %}
+        <a href="{{ url_for('blog.blog_list') }}">&laquo; All posts</a>
+        {% endif %}
+        {% if is_owner %}
+        <div class="blog-actions">
+            <a href="{{ url_for('blog.blog_edit', post_id=post.id) }}" class="btn btn-secondary blog-btn">Edit</a>
+            <form action="{{ url_for('blog.blog_delete', post_id=post.id) }}" method="POST"
+                onsubmit="return confirm('Delete this post permanently?');">
+                <button type="submit" class="btn btn-danger blog-btn">Delete</button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+{% endblock %}

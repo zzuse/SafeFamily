@@ -15,6 +15,7 @@ from src.safe_family.rules.scheduler import schedule_rules_bp
 from src.safe_family.todo.todo import todo_bp
 from src.safe_family.urls.analyzer import analyze_bp
 from src.safe_family.urls.blocker import rules_toggle_bp
+from src.safe_family.urls.blog import blog_bp
 from src.safe_family.urls.miscellaneous import root_bp
 from src.safe_family.urls.notes import notes_bp
 from src.safe_family.urls.receiver import receiver_bp
@@ -73,6 +74,7 @@ def create_app():
 
     app.register_blueprint(root_bp)
     app.register_blueprint(notes_bp)
+    app.register_blueprint(blog_bp)
     app.register_blueprint(receiver_bp)
     app.register_blueprint(analyze_bp)
     app.register_blueprint(api_bp, url_prefix="/api")

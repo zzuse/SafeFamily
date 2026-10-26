@@ -78,6 +78,11 @@ class Settings:
         "http://localhost:9181/alert",
     )
 
+    # Blog settings: cap on the stored Markdown source of a single post
+    BLOG_MAX_MARKDOWN_BYTES = int(
+        os.environ.get("BLOG_MAX_MARKDOWN_BYTES", "524288"),
+    )
+
     # Notesync settings
     NOTESYNC_API_KEY = os.environ.get("NOTESYNC_API_KEY", "")
     NOTESYNC_AUTH_CODE_TTL_SECONDS = int(
