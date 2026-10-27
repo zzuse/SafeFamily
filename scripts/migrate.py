@@ -3,6 +3,12 @@
 Run inside the app environment: python scripts/migrate.py
 """
 
+import sys
+from pathlib import Path
+
+# Allow `python scripts/migrate.py` from any cwd: put the repo root on sys.path.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from src.safe_family.core.extensions import get_db_connection
 
 MIGRATIONS = [
