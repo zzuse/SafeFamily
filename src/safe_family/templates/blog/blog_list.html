@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section>
+    <div class="blog-toolbar">
+        <div class="card-header" style="margin: 0;">Blog</div>
+        <a href="{{ url_for('blog.blog_new') }}" class="btn btn-primary blog-btn">✏️ New post</a>
+    </div>
+
+    {% if tag_filter %}
+    <div class="note blog-filter">
+        Tagged <span class="blog-tag">{{ tag_filter }}</span>
+        <a href="{{ url_for('blog.blog_list') }}">clear filter</a>
+    </div>
+    {% endif %}
+
+    {% if posts %}
+    <div class="blog-list">
+        {% for post in posts %}
+        <article class="card blog-card">
+            <a href="{{ url_for('blog.blog_view', post_id=post.id) }}" class="blog-card-title">{{ post.title }}</a>
+            <div class="blog-meta">
+                {{ post.created_local.strftime("%Y-%m-%d %H:%M") }}
+                {% if post.updated_at != post.created_at %}· edited {{ post.updated_local.strftime("%Y-%m-%d") }}{% endif %}
+                {% if post.user_id == current_user_id and not post.is_public %}· <span class="blog-draft">draft</span>{% endif %}
+            </div>
+            {% if post.excerpt %}
+            <p class="blog-excerpt">{{ post.excerpt }}</p>
+            {% endif %}
+            {% if post.tags %}
+            <div class="blog-tags">
+                {% for tag in post.tags %}
+                <a class="blog-tag" href="{{ url_for('blog.blog_list', tag=tag.name) }}">{{ tag.name }}</a>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </article>
+        {% endfor %}
+    </div>
+
+    {% if pagination.pages > 1 %}
+    <div class="blog-pagination">
+        {% if pagination.has_prev %}
+        <a href="{{ url_for('blog.blog_list', page=pagination.prev_num, tag=tag_filter or None) }}">&laquo; Newer</a>
+        {% endif %}
+        <span>Page {{ pagination.page }} / {{ pagination.pages }}</span>
+        {% if pagination.has_next %}
+        <a href="{{ url_for('blog.blog_list', page=pagination.next_num, tag=tag_filter or None) }}">Older &raquo;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="note">No posts yet. Write your first one!</div>
+    {% endif %}
+</section>
+
+{% endblock %}

@@ -63,6 +63,43 @@ MIGRATIONS = [
     CREATE INDEX IF NOT EXISTS idx_audit_mark_user_date
         ON audit_mark (user_id, mark_date)
     """,
+    # Technical blog (see BlogPost / BlogTag ORM models). The original Markdown
+    # is stored as-is; HTML is rendered on read.
+    """
+    CREATE TABLE IF NOT EXISTS blog_posts (
+        id VARCHAR PRIMARY KEY,
+        user_id VARCHAR NOT NULL,
+        title VARCHAR(200) NOT NULL,
+        markdown TEXT NOT NULL DEFAULT '',
+        is_public BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMP NOT NULL,
+        updated_at TIMESTAMP NOT NULL
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS ix_blog_posts_user_id ON blog_posts (user_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS ix_blog_posts_created_at ON blog_posts (created_at)
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS blog_tags (
+        id VARCHAR PRIMARY KEY,
+        user_id VARCHAR NOT NULL,
+        name VARCHAR(64) NOT NULL,
+        CONSTRAINT uq_blog_tags_user_name UNIQUE (user_id, name)
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS ix_blog_tags_user_id ON blog_tags (user_id)
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS blog_post_tags (
+        post_id VARCHAR NOT NULL REFERENCES blog_posts (id) ON DELETE CASCADE,
+        tag_id VARCHAR NOT NULL REFERENCES blog_tags (id) ON DELETE CASCADE,
+        PRIMARY KEY (post_id, tag_id)
+    )
+    """,
 ]
 
 

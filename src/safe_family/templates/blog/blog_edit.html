@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section>
+    <div class="card-header">{% if post %}Edit post{% else %}New post{% endif %}</div>
+
+    <form method="POST" class="card blog-editor"
+        action="{% if post %}{{ url_for('blog.blog_update', post_id=post.id) }}{% else %}{{ url_for('blog.blog_create') }}{% endif %}">
+        <input type="text" name="title" value="{{ values.title }}" placeholder="Title" maxlength="200" required>
+        <input type="text" name="tags" value="{{ values.tags }}" placeholder="tags, comma separated">
+
+        <div class="blog-tabs" role="tablist">
+            <button type="button" class="blog-tab is-active" data-pane="write">Write</button>
+            <button type="button" class="blog-tab" data-pane="preview">Preview</button>
+            <span id="blog-size" class="blog-meta" data-max="{{ max_bytes }}"></span>
+        </div>
+        <textarea id="blog-markdown" name="markdown" rows="22" class="blog-source"
+            placeholder="Write Markdown… fenced ```code```, tables, headings and links are supported.">{{ values.markdown }}</textarea>
+        <div id="blog-preview" class="blog-prose blog-preview" hidden></div>
+
+        <div class="blog-toolbar">
+            <label class="blog-check">
+                <input type="checkbox" name="is_public" {% if values.is_public %}checked{% endif %}>
+                Public (readable without logging in)
+            </label>
+            <div class="blog-actions">
+                <a href="{% if post %}{{ url_for('blog.blog_view', post_id=post.id) }}{% else %}{{ url_for('blog.blog_list') }}{% endif %}">Cancel</a>
+                <button type="submit" class="btn btn-primary blog-btn">Save</button>
+            </div>
+        </div>
+    </form>
+</section>
+
+<script>
+    (() => {
+        const source = document.getElementById("blog-markdown");
+        const preview = document.getElementById("blog-preview");
+        const size = document.getElementById("blog-size");
+        const maxBytes = Number(size.dataset.max);
+
+        const updateSize = () => {
+            const bytes = new TextEncoder().encode(source.value).length;
+            size.textContent = `${(bytes / 1024).toFixed(1)} / ${Math.round(maxBytes / 1024)} KB`;
+            size.classList.toggle("is-over", bytes > maxBytes);
+        };
+        source.addEventListener("input", updateSize);
+        updateSize();
+
+        const showPreview = async () => {
+            preview.textContent = "Rendering…";
+            const body = new FormData();
+            body.append("markdown", source.value);
+            try {
+                const resp = await fetch("{{ url_for('blog.blog_preview') }}", { method: "POST", body });
+                const data = await resp.json();
+                // Server returns HTML already sanitized by nh3.
+                preview.innerHTML = data.html ?? "";
+                if (data.error) preview.textContent = data.error;
+            } catch (err) {
+                preview.textContent = "Preview failed.";
+            }
+        };
+
+        document.querySelectorAll(".blog-tab").forEach((tab) => {
+            tab.addEventListener("click", () => {
+                document.querySelectorAll(".blog-tab").forEach((t) => t.classList.toggle("is-active", t === tab));
+                const isPreview = tab.dataset.pane === "preview";
+                source.hidden = isPreview;
+                preview.hidden = !isPreview;
+                if (isPreview) showPreview();
+            });
+        });
+    })();
+</script>
+
+{% endblock %}

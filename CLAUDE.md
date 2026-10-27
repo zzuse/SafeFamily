@@ -67,7 +67,7 @@ python -m safe_family.cli.analyze --range last_5min
 
 The project uses **two DB access styles in parallel**:
 
-1. **SQLAlchemy ORM** (`src/safe_family/core/extensions.py` → `db`) — used for `users`, `token_blocklist`, `notes`, `tags`, `media`, `note_sync_ops`, `auth_codes`, `agile_config`.
+1. **SQLAlchemy ORM** (`src/safe_family/core/extensions.py` → `db`) — used for `users`, `token_blocklist`, `notes`, `tags`, `media`, `note_sync_ops`, `auth_codes`, `agile_config`, `blog_posts`, `blog_tags`, `blog_post_tags`.
 2. **Raw psycopg2** (`get_db_connection()` in `extensions.py`) — used by logs, suspicious, block_list, filter_rule, schedule_rules, todo_list. These tables are not in SQLAlchemy models and must be created manually (see `scripts/notesync_schema.sql` and `docs/implementation.md`).
 
 Tests stub the raw connection with `FakeConnection`/`FakeCursor` (see `tests/conftest.py`). Notesync tests use a real SQLite DB via `notesync_app` fixture.
@@ -84,6 +84,7 @@ All blueprints are registered in `src/safe_family/app.py`:
 | `rules_toggle_bp` | `urls/blocker.py` | — |
 | `suspicious_bp` | `urls/suspicious.py` | — |
 | `notes_bp` | `urls/notes.py` | — |
+| `blog_bp` | `urls/blog.py` | — |
 | `auto_git_bp` | `auto_git/auto_git.py` | — |
 | `schedule_rules_bp` | `rules/scheduler.py` | — |
 | `auth_bp` | `core/auth.py` | `/auth` |

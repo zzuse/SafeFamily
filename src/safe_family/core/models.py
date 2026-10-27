@@ -258,3 +258,61 @@ class AuditMark(db.Model):
     def __repr__(self) -> str:
         """Return a string representation of the AuditMark."""
         return f"<AuditMark(item_id={self.item_id}, date='{self.mark_date}', value='{self.value}')>"
+
+
+blog_post_tags = db.Table(
+    "blog_post_tags",
+    db.Column(
+        "post_id",
+        db.String(),
+        db.ForeignKey("blog_posts.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    db.Column(
+        "tag_id",
+        db.String(),
+        db.ForeignKey("blog_tags.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+)
+
+
+class BlogPost(db.Model):
+    """Technical blog post; the original Markdown is the source of truth.
+
+    HTML is rendered on read, so changing the renderer never requires a data
+    migration. Kept separate from notesync notes so posts never sync to the
+    mobile app.
+    """
+
+    __tablename__ = "blog_posts"
+
+    id = db.Column(db.String(), primary_key=True, default=lambda: uuid.uuid4().hex)
+    user_id = db.Column(db.String(), nullable=False, index=True)
+    title = db.Column(db.String(200), nullable=False)
+    markdown = db.Column(db.Text(), nullable=False, default="")
+    is_public = db.Column(db.Boolean(), nullable=False, default=False)
+    created_at = db.Column(db.DateTime(), nullable=False, index=True)
+    updated_at = db.Column(db.DateTime(), nullable=False)
+    tags = db.relationship(
+        "BlogTag",
+        secondary=blog_post_tags,
+        back_populates="posts",
+        order_by="BlogTag.name",
+    )
+
+    def __repr__(self) -> str:
+        """Return a string representation of the BlogPost."""
+        return f"<BlogPost(id='{self.id}', title='{self.title}')>"
+
+
+class BlogTag(db.Model):
+    """Per-user tag for blog posts."""
+
+    __tablename__ = "blog_tags"
+    __table_args__ = (db.UniqueConstraint("user_id", "name", name="uq_blog_tags_user_name"),)
+
+    id = db.Column(db.String(), primary_key=True, default=lambda: uuid.uuid4().hex)
+    user_id = db.Column(db.String(), nullable=False, index=True)
+    name = db.Column(db.String(64), nullable=False)
+    posts = db.relationship("BlogPost", secondary=blog_post_tags, back_populates="tags")
