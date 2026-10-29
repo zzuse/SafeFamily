@@ -1,0 +1,15 @@
+modules:
+  # Fetch the site through nginx inside the compose network. The Host header
+  # and TLS server name match server_name in deploy/nginx/nginx.docker.conf, so
+  # the real certificate is checked (expiry, hostname, chain).
+  safefamily_https:
+    prober: http
+    timeout: 10s
+    http:
+      method: GET
+      valid_status_codes: [200]
+      fail_if_not_ssl: true
+      headers:
+        Host: zzuse.duckdns.org
+      tls_config:
+        server_name: zzuse.duckdns.org

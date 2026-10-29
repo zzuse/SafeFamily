@@ -1,0 +1,169 @@
+groups:
+  - name: disk
+    rules:
+      - alert: DiskSpaceLow
+        expr: |
+          node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|nsfs"}
+            / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|nsfs"} < 0.15
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk {{ $labels.mountpoint }} has {{ $value | humanizePercentage }} free"
+          description: >-
+            Free space is below 15%. The Postgres volume, app logs and backups
+            all live on host disks; see the "Directory sizes" panel in Grafana.
+
+      - alert: DiskSpaceCritical
+        expr: |
+          node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|nsfs"}
+            / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|nsfs"} < 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk {{ $labels.mountpoint }} is almost full ({{ $value | humanizePercentage }} free)"
+          description: Postgres stops accepting writes when its disk fills up.
+
+      - alert: DiskWillFillIn24h
+        expr: |
+          predict_linear(node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|nsfs"}[6h], 24 * 3600) < 0
+            and node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|nsfs"}
+              / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|nsfs"} < 0.40
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk {{ $labels.mountpoint }} will be full within 24h at the current rate"
+
+  - name: host
+    rules:
+      - alert: HostMemoryLow
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host has only {{ $value | humanizePercentage }} memory available"
+
+      - alert: HostHighLoad
+        expr: node_load15 / count without (cpu, mode) (node_cpu_seconds_total{mode="idle"}) > 1.5
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "15-minute load is {{ $value | humanize }}x the CPU count"
+
+  - name: containers
+    rules:
+      - alert: ContainerDown
+        expr: |
+          absent(container_last_seen{name="safefamily_app"})
+            or absent(container_last_seen{name="safefamily_db"})
+            or absent(container_last_seen{name="safefamily_proxy"})
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Container {{ $labels.name }} is not running"
+          description: "Check with: docker compose ps && docker compose logs --tail=100 {{ $labels.name }}"
+
+      - alert: ContainerHighMemory
+        expr: container_memory_working_set_bytes{name=~"safefamily_(app|db|proxy)"} > 2 * 1024 * 1024 * 1024
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.name }} uses {{ $value | humanize1024 }}B of memory"
+
+      - alert: ScrapeTargetDown
+        expr: up == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus cannot scrape {{ $labels.job }} ({{ $labels.instance }})"
+
+  - name: database
+    rules:
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Postgres is not answering the exporter
+
+      - alert: PostgresTooManyConnections
+        expr: sum(pg_stat_activity_count) / max(pg_settings_max_connections) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Postgres is at {{ $value | humanizePercentage }} of max_connections"
+
+      - alert: PostgresDatabaseGrowingFast
+        expr: delta(pg_database_size_bytes{datname!~"template.*|postgres"}[24h]) > 1024 * 1024 * 1024
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database {{ $labels.datname }} grew by {{ $value | humanize1024 }}B in 24h"
+          description: Usually the logs or media tables. Check disk headroom.
+
+  - name: website
+    rules:
+      - alert: WebsiteDown
+        expr: probe_success{job="website"} == 0
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} is failing (HTTP status or TLS check)"
+          description: "Last HTTP status: check probe_http_status_code in Grafana; then docker compose logs proxy app."
+
+      - alert: WebsiteSlow
+        expr: probe_duration_seconds{job="website"} > 3
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} takes {{ $value | humanize }}s to load"
+
+      - alert: TLSCertificateExpiringSoon
+        expr: probe_ssl_earliest_cert_expiry{job="website"} - time() < 14 * 24 * 3600
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "TLS certificate expires in {{ $value | humanizeDuration }}"
+
+  - name: backup
+    rules:
+      - alert: DatabaseBackupMissing
+        expr: |
+          time() - safefamily_backup_last_success_timestamp_seconds > 26 * 3600
+            or absent(safefamily_backup_last_success_timestamp_seconds)
+        for: 1h
+        labels:
+          severity: critical
+        annotations:
+          summary: No successful encrypted database backup in the last 26 hours
+          description: "Check: systemctl status safefamily-backup.service and journalctl -u safefamily-backup.service"
+
+      - alert: DatabaseBackupFailed
+        expr: safefamily_backup_last_run_success == 0
+        labels:
+          severity: critical
+        annotations:
+          summary: The last database backup run failed
+          description: "See: journalctl -u safefamily-backup.service"
+
+      - alert: MetricsFileUnreadable
+        expr: node_textfile_scrape_error == 1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: node-exporter cannot read a .prom file in its textfile directory
+          description: "Backup and directory-size metrics go missing. Check: docker logs safefamily_node_exporter | grep textfile"

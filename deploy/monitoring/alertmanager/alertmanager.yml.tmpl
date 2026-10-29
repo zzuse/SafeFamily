@@ -1,0 +1,35 @@
+# Rendered by entrypoint.sh: ${NAME} placeholders come from the container env
+# (see docker-compose.monitoring.yml), so no secret is stored in this file.
+global:
+  smtp_smarthost: '${ALERT_SMTP_SMARTHOST}'
+  smtp_from: '${MAIL_ACCOUNT}'
+  smtp_auth_username: '${MAIL_ACCOUNT}'
+  smtp_auth_password: '${MAIL_PASSWORD}'
+  smtp_require_tls: true
+
+route:
+  receiver: email
+  group_by: [alertname]
+  group_wait: 1m
+  group_interval: 10m
+  repeat_interval: 12h
+  routes:
+    - matchers: [severity="critical"]
+      receiver: email
+      repeat_interval: 3h
+
+receivers:
+  - name: email
+    email_configs:
+      - to: '${ALERT_EMAIL_TO}'
+        send_resolved: true
+        headers:
+          Subject: '[SafeFamily {{ .Status | toUpper }}] {{ .CommonLabels.alertname }} ({{ .Alerts | len }})'
+
+inhibit_rules:
+  # When the site is down because a container is down, only mail about the container.
+  - source_matchers: [alertname="ContainerDown"]
+    target_matchers: [alertname=~"WebsiteDown|WebsiteSlow|ScrapeTargetDown"]
+  - source_matchers: [alertname="DiskSpaceCritical"]
+    target_matchers: [alertname=~"DiskSpaceLow|DiskWillFillIn24h"]
+    equal: [mountpoint]

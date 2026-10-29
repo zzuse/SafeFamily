@@ -52,6 +52,12 @@ pytest -q tests/test_misc_routes.py::test_notes_media_public_note_for_other_user
 ruff check .
 ```
 
+### Monitoring and backups
+Monitoring overlay: `deploy/monitoring/docker-compose.monitoring.yml` (Prometheus, Alertmanager, Grafana, exporters). Encrypted backups: `scripts/db_backup.sh` / `scripts/db_restore.sh` (age, public-key). See `docs/monitoring.md`. Validate rule changes with:
+```bash
+docker run --rm -v "$PWD/deploy/monitoring/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.5.0 check config /etc/prometheus/prometheus.yml
+```
+
 ### Run log analysis CLI
 ```bash
 python -m safe_family.cli.analyze --range last_5min

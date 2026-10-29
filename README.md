@@ -288,7 +288,19 @@ gunzip -c backup/full-2026-09-16.sql.gz \
   the analyzer pages will simply have no history until new AdGuard logs arrive.
 - `backup/` is gitignored, as is `deploy/init_db/`.
 
-### 7. Host Maintenance Notes
+### 7. Monitoring and Encrypted Backups
+Prometheus, Grafana and Alertmanager (disk space, database size and health,
+per-container CPU/memory, nginx load, website/TLS checks, email alerts) and the
+age-encrypted daily database backup are described in
+[docs/monitoring.md](docs/monitoring.md). Quick start:
+```bash
+# .env: GRAFANA_ADMIN_PASSWORD=... and
+# COMPOSE_FILE=docker-compose.yml:deploy/monitoring/docker-compose.monitoring.yml
+docker compose up -d                      # Grafana on http://127.0.0.1:3000
+sudo systemctl start safefamily-backup    # after the one-time setup in the doc
+```
+
+### 8. Host Maintenance Notes
 - Snap auto-refreshes Docker several times a day (`snap refresh --time`). A
   refresh restarts the daemon and briefly stops containers; `restart: always`
   brings them back, but the timing is not under your control. Use

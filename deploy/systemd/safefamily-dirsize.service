@@ -1,0 +1,13 @@
+# Directory sizes for Grafana. Install alongside safefamily-backup.* (same
+# path edit applies):
+#   sudo cp deploy/systemd/safefamily-dirsize.* /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now safefamily-dirsize.timer
+[Unit]
+Description=SafeFamily directory size metrics
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/safefamily/backup.env
+ExecStart=/srv/SafeFamily/scripts/monitoring/dir_sizes.sh
+Nice=19
+IOSchedulingClass=idle
