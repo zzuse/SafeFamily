@@ -7,14 +7,14 @@
 # stolen server or backup disk cannot be used to read the backups; decrypting
 # needs the private key you keep elsewhere (see docs/monitoring.md).
 #
-# Run on the host (it uses `docker exec`), daily via
+# Run on the host (it uses `docker exec`), weekly via
 # deploy/systemd/safefamily-backup.timer or cron. Settings come from the
 # environment, typically /etc/safefamily/backup.env:
 #
 #   BACKUP_DIR              where backups go       (/var/backups/safefamily)
 #   BACKUP_AGE_RECIPIENTS   file of age public keys (/etc/safefamily/backup-recipients.txt)
-#   BACKUP_KEEP_DAILY       days of daily backups   (14)
-#   BACKUP_KEEP_MONTHLY     monthly backups to keep (12)
+#   BACKUP_KEEP_WEEKLY      weekly backups to keep  (8)
+#   BACKUP_KEEP_MONTHLY     monthly backups to keep (6)
 #   BACKUP_DB_CONTAINER     Postgres container      (safefamily_db)
 #   NODE_EXPORTER_TEXTFILE_DIR  metrics for Prometheus (/var/lib/node_exporter/textfile)
 
@@ -22,8 +22,8 @@ set -euo pipefail
 
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/safefamily}"
 RECIPIENTS="${BACKUP_AGE_RECIPIENTS:-/etc/safefamily/backup-recipients.txt}"
-KEEP_DAILY="${BACKUP_KEEP_DAILY:-14}"
-KEEP_MONTHLY="${BACKUP_KEEP_MONTHLY:-12}"
+KEEP_WEEKLY="${BACKUP_KEEP_WEEKLY:-8}"
+KEEP_MONTHLY="${BACKUP_KEEP_MONTHLY:-6}"
 CONTAINER="${BACKUP_DB_CONTAINER:-safefamily_db}"
 TEXTFILE_DIR="${NODE_EXPORTER_TEXTFILE_DIR:-/var/lib/node_exporter/textfile}"
 
@@ -55,7 +55,7 @@ write_metrics() {
             echo "safefamily_backup_last_success_timestamp_seconds $now"
             echo "# HELP safefamily_backup_last_size_bytes Size of the last encrypted backup."
             echo "# TYPE safefamily_backup_last_size_bytes gauge"
-            echo "safefamily_backup_last_size_bytes $(stat -c %s "$BACKUP_DIR/daily/$name")"
+            echo "safefamily_backup_last_size_bytes $(stat -c %s "$BACKUP_DIR/weekly/$name")"
             echo "# HELP safefamily_backup_last_duration_seconds How long the last backup took."
             echo "# TYPE safefamily_backup_last_duration_seconds gauge"
             echo "safefamily_backup_last_duration_seconds $((now - start_ts))"
@@ -89,7 +89,7 @@ if grep -q "AGE-SECRET-KEY" "$RECIPIENTS"; then
 fi
 
 umask 077
-mkdir -p "$BACKUP_DIR/daily" "$BACKUP_DIR/monthly"
+mkdir -p "$BACKUP_DIR/weekly" "$BACKUP_DIR/monthly"
 
 # Dump inside the container using its own POSTGRES_* env, so the DB password
 # never passes through this script. pg_restore --list proves the archive is
@@ -100,26 +100,32 @@ docker exec "$CONTAINER" sh -c \
      && pg_restore --list "$1" > /dev/null' \
     sh "$container_tmp"
 
-partial="$BACKUP_DIR/daily/.$name.partial"
+partial="$BACKUP_DIR/weekly/.$name.partial"
 docker exec "$CONTAINER" cat "$container_tmp" | age --encrypt --recipients-file "$RECIPIENTS" --output "$partial"
-mv "$partial" "$BACKUP_DIR/daily/$name"
+mv "$partial" "$BACKUP_DIR/weekly/$name"
 partial=""
-log "wrote $BACKUP_DIR/daily/$name ($(du -h "$BACKUP_DIR/daily/$name" | cut -f1))"
+log "wrote $BACKUP_DIR/weekly/$name ($(du -h "$BACKUP_DIR/weekly/$name" | cut -f1))"
 
 # Keep the first backup of each month for longer. A hard link costs no space.
 month="${stamp:0:6}"
 if ! compgen -G "$BACKUP_DIR/monthly/safefamily-${month}*.dump.age" > /dev/null; then
-    ln "$BACKUP_DIR/daily/$name" "$BACKUP_DIR/monthly/$name"
+    ln "$BACKUP_DIR/weekly/$name" "$BACKUP_DIR/monthly/$name"
     log "kept as monthly backup for ${month}"
 fi
 
-find "$BACKUP_DIR/daily" -name 'safefamily-*.dump.age' -mtime "+$((KEEP_DAILY - 1))" -delete
-# Names sort chronologically; delete all but the newest KEEP_MONTHLY.
-find "$BACKUP_DIR/monthly" -name 'safefamily-*.dump.age' -printf '%f\n' | sort -r \
-    | tail -n "+$((KEEP_MONTHLY + 1))" | while read -r old; do
-        rm -f "$BACKUP_DIR/monthly/$old"
-        log "pruned monthly backup $old"
-    done
+# Keep the newest N of each set, by count rather than age, so a long run of
+# failed backups never prunes away the last good ones. Names sort
+# chronologically.
+prune() {
+    local dir="$1" keep="$2" old
+    find "$dir" -name 'safefamily-*.dump.age' -printf '%f\n' | sort -r \
+        | tail -n "+$((keep + 1))" | while read -r old; do
+            rm -f "$dir/$old"
+            log "pruned $(basename "$dir") backup $old"
+        done
+}
+prune "$BACKUP_DIR/weekly" "$KEEP_WEEKLY"
+prune "$BACKUP_DIR/monthly" "$KEEP_MONTHLY"
 
 write_metrics 1
 log "done in $(($(date +%s) - start_ts))s"

@@ -291,8 +291,10 @@ gunzip -c backup/full-2026-09-16.sql.gz \
 ### 7. Monitoring and Encrypted Backups
 Prometheus, Grafana and Alertmanager (disk space, database size and health,
 per-container CPU/memory, nginx load, website/TLS checks, email alerts) and the
-age-encrypted daily database backup are described in
-[docs/monitoring.md](docs/monitoring.md). Quick start:
+age-encrypted weekly database backup are described in
+[docs/monitoring.md](docs/monitoring.md); set it up with
+[docs/operations-checklist.md](docs/operations-checklist.md), starting with
+`sudo scripts/monitoring/preflight.sh --deep`. Quick start:
 ```bash
 # .env: GRAFANA_ADMIN_PASSWORD=... and
 # COMPOSE_FILE=docker-compose.yml:deploy/monitoring/docker-compose.monitoring.yml

@@ -380,7 +380,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Age of the last successful encrypted backup written by scripts/db_backup.sh.",
+      "description": "Age of the last successful encrypted backup (weekly) written by scripts/db_backup.sh.",
       "gridPos": {
         "h": 4,
         "w": 3,
@@ -425,11 +425,11 @@
               },
               {
                 "color": "yellow",
-                "value": 93600
+                "value": 691200
               },
               {
                 "color": "red",
-                "value": 172800
+                "value": 864000
               }
             ]
           }

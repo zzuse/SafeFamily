@@ -1,7 +1,9 @@
 # Monitoring and encrypted backups
 
 What runs, how to turn it on, what each alert means, and how to back up and
-restore the database.
+restore the database. For a step-by-step setup with checks, routine tasks and
+troubleshooting, follow [operations-checklist.md](operations-checklist.md);
+`scripts/monitoring/preflight.sh` verifies the host first.
 
 ```
             ┌──────────── host ─────────────┐
@@ -43,6 +45,7 @@ GRAFANA_ADMIN_PASSWORD=<a long random password>
 # ALERT_EMAIL_TO=you@example.com            # default: MAIL_ACCOUNT
 # GRAFANA_BIND=0.0.0.0                      # default: 127.0.0.1 (localhost only)
 # DOCKER_ROOT_DIR=/var/snap/docker/common/var-lib-docker   # snap-installed Docker
+# CONTAINERD_SOCKET=/run/snap.docker/containerd/containerd.sock  # if preflight says so
 # Make plain `docker compose ...` include the monitoring services:
 COMPOSE_FILE=docker-compose.yml:deploy/monitoring/docker-compose.monitoring.yml
 ```
@@ -71,12 +74,13 @@ PostgreSQL, **12708** NGINX exporter.
   so it reports DOWN with a self-signed one. Either use a real certificate
   (Let's Encrypt works with duckdns), or add `insecure_skip_verify: true` under
   `tls_config` in `deploy/monitoring/blackbox/blackbox.yml`.
-- **Docker 29+ / containerd image store**: cadvisor talks to containerd at
-  `/run/containerd/containerd.sock`. If `docker logs safefamily_cadvisor` says
-  `unable to create containerd client`, find the socket
-  (`sudo find /run -name containerd.sock`) and mount it there, e.g. for snap
-  Docker add under `cadvisor.volumes`:
-  `- /run/snap.docker/containerd/containerd.sock:/run/containerd/containerd.sock:ro`
+- **Docker 29+ / containerd image store**: cadvisor asks containerd for
+  container details, at `/run/containerd/containerd.sock` by default. If
+  `docker logs safefamily_cadvisor` says `unable to create containerd client`
+  (or the container panels are empty), set `CONTAINERD_SOCKET` in `.env` to the
+  real socket; `scripts/monitoring/preflight.sh` finds it and prints the exact
+  line (for example `CONTAINERD_SOCKET=/run/snap.docker/containerd/containerd.sock`
+  for snap Docker). Then `docker compose up -d cadvisor`.
 - **Snap Docker** may refuse bind mounts outside `$HOME`. If node-exporter or
   cadvisor fail to start with a mount error, install node-exporter on the host
   instead (`sudo apt install prometheus-node-exporter`, set
@@ -104,7 +108,7 @@ Alertmanager (critical alerts repeat every 3h, warnings every 12h, and a
 | WebsiteDown | HTTPS check of `/auth/login-ui` fails for 3 min | `docker compose logs proxy app` |
 | WebsiteSlow | page load > 3s for 10 min | "Page load phases" panel |
 | TLSCertificateExpiringSoon | cert expires in < 14 days | renew the certificate |
-| DatabaseBackupMissing | no successful backup for 26h | `journalctl -u safefamily-backup.service` |
+| DatabaseBackupMissing | no successful backup for 8 days (backups are weekly) | `journalctl -u safefamily-backup.service` |
 | DatabaseBackupFailed | the last backup run failed | same |
 | MetricsFileUnreadable | node-exporter cannot read a `.prom` file | `docker logs safefamily_node_exporter` |
 | ScrapeTargetDown | an exporter is unreachable for 5 min | `docker compose ps` |
@@ -128,9 +132,15 @@ decrypt, so a stolen server, disk, or offsite copy reveals nothing.
 
 Each run: `pg_dump --format=custom` inside the db container → `pg_restore
 --list` to prove the dump is readable → `age` encrypt → atomic rename into
-`$BACKUP_DIR/daily/`. The first backup of each month is also hard-linked into
-`monthly/`. Keeps 14 daily and 12 monthly by default. Writes metrics for the
-backup alerts and the "Last DB backup" panel.
+`$BACKUP_DIR/weekly/`. Runs **weekly** (Sundays 03:17, or at the next boot if
+the server was off). The first backup of each month is also hard-linked into
+`monthly/` at no extra disk cost. Keeps the newest **8 weekly** (two months)
+and **6 monthly** (half a year) backups; change with `BACKUP_KEEP_WEEKLY` /
+`BACKUP_KEEP_MONTHLY` in `/etc/safefamily/backup.env`. Retention counts
+backups rather than days, so if backups fail for a long time the last good
+ones are never pruned. Writes metrics for the backup alerts and the "Last DB
+backup" panel. To change the day or time, edit `OnCalendar=` in
+`/etc/systemd/system/safefamily-backup.timer` and run `sudo systemctl daemon-reload`.
 
 ### One-time setup
 
@@ -163,14 +173,14 @@ sudo systemctl enable --now safefamily-backup.timer safefamily-dirsize.timer
 
 sudo systemctl start safefamily-backup.service   # first backup now
 journalctl -u safefamily-backup.service -n 20
-ls -l /var/backups/safefamily/daily/
+ls -l /var/backups/safefamily/weekly/
 ```
 
 The recipients file may hold several public keys (one per line), e.g. one for
 you and one for a family member; any one of them can decrypt. The script
 refuses to run if the file contains a private key.
 
-Cron instead of systemd: `17 3 * * * set -a; . /etc/safefamily/backup.env; /srv/SafeFamily/scripts/db_backup.sh`
+Cron instead of systemd (Sundays 03:17): `17 3 * * 0 set -a; . /etc/safefamily/backup.env; /srv/SafeFamily/scripts/db_backup.sh`
 
 ### Offsite copies
 
@@ -186,7 +196,7 @@ scratch database (`safefamily_restore_test`) and never touches live data:
 
 ```bash
 # On the server, with the key temporarily copied over:
-scripts/db_restore.sh -i safefamily-backup-key.txt /var/backups/safefamily/daily/safefamily-<stamp>.dump.age
+scripts/db_restore.sh -i safefamily-backup-key.txt /var/backups/safefamily/weekly/safefamily-<stamp>.dump.age
 
 # Or keep the key on your laptop and stream the decrypted dump:
 age -d -i safefamily-backup-key.txt safefamily-<stamp>.dump.age \

@@ -1,4 +1,4 @@
-# Encrypted daily database backup. Install (edit the path first if your
+# Encrypted weekly database backup. Install (edit the path first if your
 # checkout is not /srv/SafeFamily):
 #   sudo cp deploy/systemd/safefamily-backup.* /etc/systemd/system/
 #   sudo systemctl daemon-reload && sudo systemctl enable --now safefamily-backup.timer

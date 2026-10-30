@@ -37,7 +37,7 @@ services:
     environment:
       MAIL_ACCOUNT: ${MAIL_ACCOUNT:?MAIL_ACCOUNT must be set in .env for alert emails}
       MAIL_PASSWORD: ${MAIL_PASSWORD:?MAIL_PASSWORD must be set in .env for alert emails}
-      ALERT_EMAIL_TO: ${ALERT_EMAIL_TO:-${MAIL_ACCOUNT}}
+      ALERT_EMAIL_TO: ${ALERT_EMAIL_TO:-}  # empty: send to MAIL_ACCOUNT
       ALERT_SMTP_SMARTHOST: ${ALERT_SMTP_SMARTHOST:-smtp.gmail.com:587}
     volumes:
       - ./deploy/monitoring/alertmanager:/etc/alertmanager:ro
@@ -88,6 +88,11 @@ services:
     privileged: true
     command:
       - --docker_only=true
+      # Docker 29+ with the containerd image store: cadvisor asks containerd
+      # for container layers. Set CONTAINERD_SOCKET in .env when the socket is
+      # not at the default path (scripts/monitoring/preflight.sh tells you).
+      # It must be under /run or /var/run, which is mounted below.
+      - --containerd=${CONTAINERD_SOCKET:-/run/containerd/containerd.sock}
       - --housekeeping_interval=30s
       - --store_container_labels=false
       - --disable_metrics=percpu,sched,tcp,udp,disk,diskIO,hugetlb,referenced_memory,cpu_topology,resctrl

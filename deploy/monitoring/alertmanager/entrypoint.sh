@@ -4,6 +4,10 @@
 # value is doubled to stay valid YAML.
 set -eu
 
+# Unset or empty ALERT_EMAIL_TO: mail the sending account itself.
+: "${ALERT_EMAIL_TO:=$MAIL_ACCOUNT}"
+export ALERT_EMAIL_TO
+
 out=/tmp/alertmanager.yml
 awk '{
     while (match($0, /\$\{[A-Z_]+\}/)) {

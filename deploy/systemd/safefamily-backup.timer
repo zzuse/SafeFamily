@@ -1,10 +1,11 @@
 [Unit]
-Description=Run the SafeFamily database backup daily
+Description=Run the SafeFamily database backup weekly
 
 [Timer]
-OnCalendar=*-*-* 03:17
+# Sundays at 03:17. Change the day/time here, then: sudo systemctl daemon-reload
+OnCalendar=Sun *-*-* 03:17
 RandomizedDelaySec=15m
-# Run at next boot if the machine was off at 03:17.
+# Run at next boot if the machine was off at that time.
 Persistent=true
 
 [Install]

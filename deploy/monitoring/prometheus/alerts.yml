@@ -142,13 +142,13 @@ groups:
     rules:
       - alert: DatabaseBackupMissing
         expr: |
-          time() - safefamily_backup_last_success_timestamp_seconds > 26 * 3600
+          time() - safefamily_backup_last_success_timestamp_seconds > 8 * 24 * 3600
             or absent(safefamily_backup_last_success_timestamp_seconds)
         for: 1h
         labels:
           severity: critical
         annotations:
-          summary: No successful encrypted database backup in the last 26 hours
+          summary: No successful encrypted database backup in the last 8 days
           description: "Check: systemctl status safefamily-backup.service and journalctl -u safefamily-backup.service"
 
       - alert: DatabaseBackupFailed
