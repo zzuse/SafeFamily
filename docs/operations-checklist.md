@@ -111,7 +111,10 @@ expected on the first run; Phase 2 fixes them.
    sudo chmod 600 /etc/safefamily/backup.env
    sudo nano /etc/safefamily/backup.env      # SAFEFAMILY_DIR, DOCKER_ROOT_DIR if needed
    ```
-   Defaults: weekly backups, keep 8 weekly + 6 monthly.
+   Defaults: weekly backups, keep 8 weekly + 6 monthly. Backups are
+   root-only unless you set `BACKUP_GROUP=<your login group>` (see `id -gn`)
+   in `backup.env`; do that so you (and your offsite-copy script) can copy
+   them without sudo. They are encrypted, so this is safe.
 
 9. - [ ] **Install the timers** (fix `ExecStart=` first if the checkout is not `/srv/SafeFamily`):
    ```bash
@@ -127,8 +130,11 @@ expected on the first run; Phase 2 fixes them.
     and `sudo ls -l /var/backups/safefamily/weekly/` shows one `.dump.age` file.
     Within a minute, Grafana's "Last DB backup" tile shows a few minutes.
 
-11. - [ ] **Restore drill** (proves the key and the backup both work). On your laptop:
+11. - [ ] **Restore drill** (proves the key and the backup both work). On your laptop
+    (needs `BACKUP_GROUP` from step 8; otherwise first copy the file somewhere
+    readable on the server: `sudo install -m 644 /var/backups/safefamily/weekly/<file> /tmp/`):
     ```bash
+    ssh <server> ls /var/backups/safefamily/weekly/          # find the newest <stamp>
     scp <server>:/var/backups/safefamily/weekly/safefamily-<stamp>.dump.age .
     age -d -i safefamily-backup-key.txt safefamily-<stamp>.dump.age \
         | ssh <server> 'cd /srv/SafeFamily && scripts/db_restore.sh -'

@@ -15,6 +15,9 @@
 #   BACKUP_AGE_RECIPIENTS   file of age public keys (/etc/safefamily/backup-recipients.txt)
 #   BACKUP_KEEP_WEEKLY      weekly backups to keep  (8)
 #   BACKUP_KEEP_MONTHLY     monthly backups to keep (6)
+#   BACKUP_GROUP            optional group allowed to read the (encrypted)
+#                           backups, e.g. your login group, so scp/rsync work
+#                           without sudo. Unset: root only.
 #   BACKUP_DB_CONTAINER     Postgres container      (safefamily_db)
 #   NODE_EXPORTER_TEXTFILE_DIR  metrics for Prometheus (/var/lib/node_exporter/textfile)
 
@@ -24,6 +27,7 @@ BACKUP_DIR="${BACKUP_DIR:-/var/backups/safefamily}"
 RECIPIENTS="${BACKUP_AGE_RECIPIENTS:-/etc/safefamily/backup-recipients.txt}"
 KEEP_WEEKLY="${BACKUP_KEEP_WEEKLY:-8}"
 KEEP_MONTHLY="${BACKUP_KEEP_MONTHLY:-6}"
+GROUP="${BACKUP_GROUP:-}"
 CONTAINER="${BACKUP_DB_CONTAINER:-safefamily_db}"
 TEXTFILE_DIR="${NODE_EXPORTER_TEXTFILE_DIR:-/var/lib/node_exporter/textfile}"
 
@@ -126,6 +130,19 @@ prune() {
 }
 prune "$BACKUP_DIR/weekly" "$KEEP_WEEKLY"
 prune "$BACKUP_DIR/monthly" "$KEEP_MONTHLY"
+
+# Backups are encrypted, so letting one group read them is safe; it lets a
+# normal user copy them offsite. Applied to every file so a newly set group
+# also covers older backups. A wrong group name never fails the backup.
+if [[ -n "$GROUP" ]]; then
+    if getent group "$GROUP" > /dev/null; then
+        chgrp -R "$GROUP" "$BACKUP_DIR"
+        chmod 750 "$BACKUP_DIR" "$BACKUP_DIR/weekly" "$BACKUP_DIR/monthly"
+        find "$BACKUP_DIR" -name 'safefamily-*.dump.age' -exec chmod 640 {} +
+    else
+        log "WARNING: BACKUP_GROUP '$GROUP' does not exist; backups stay root-only"
+    fi
+fi
 
 write_metrics 1
 log "done in $(($(date +%s) - start_ts))s"

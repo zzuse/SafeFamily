@@ -146,7 +146,10 @@ Each run: `pg_dump --format=custom` inside the db container → `pg_restore
 `$BACKUP_DIR/weekly/`. Runs **weekly** (Sundays 03:17, or at the next boot if
 the server was off). The first backup of each month is also hard-linked into
 `monthly/` at no extra disk cost. Keeps the newest **8 weekly** (two months)
-and **6 monthly** (half a year) backups; change with `BACKUP_KEEP_WEEKLY` /
+and **6 monthly** (half a year) backups. Files are root-only unless
+`BACKUP_GROUP` names a group allowed to read them (safe: they are
+encrypted), which lets you `scp` them or copy them offsite without sudo.
+Change retention with `BACKUP_KEEP_WEEKLY` /
 `BACKUP_KEEP_MONTHLY` in `/etc/safefamily/backup.env`. Retention counts
 backups rather than days, so if backups fail for a long time the last good
 ones are never pruned. Writes metrics for the backup alerts and the "Last DB
