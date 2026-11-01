@@ -13,12 +13,18 @@ Paths assume the checkout is at `/srv/SafeFamily`; substitute yours.
 
 ## Phase 0: Requirements (15 min)
 
-Run the preflight first. It only reads, never changes anything:
+Run the preflight first. It only reads, never changes anything. Run it from
+the repository root; `sudo` lets it check root-only files, and `--deep` also
+test-mounts the host folders the exporters need (it pulls the node-exporter
+and cadvisor images the first time):
 
 ```bash
 cd /srv/SafeFamily && git pull
-sudo scripts/monitoring/preflight.sh --deep
+sudo scripts/monitoring/preflight.sh --deep    # or: sudo bash ./scripts/monitoring/preflight.sh --deep
 ```
+
+Before Phase 2 it reports "backups are not set up yet" as a warning, not a
+failure, so you can do monitoring first.
 
 - [ ] **Summary shows 0 failures.** Warnings are fine if you understand them
       (see table). Re-run after every fix.
@@ -31,7 +37,7 @@ sudo scripts/monitoring/preflight.sh --deep
 | Snap-installed Docker | confinement may block host mounts | `--deep` tests them; fallback in monitoring.md "Host-specific notes" |
 | Docker root dir not `/var/lib/docker` (snap) | cadvisor and `dir_sizes.sh` read it | set `DOCKER_ROOT_DIR=` as printed |
 | containerd image store (Docker 29+ default) | cadvisor needs the containerd socket | set `CONTAINERD_SOCKET=` as printed |
-| 2 GiB+ RAM, 10 GiB+ free disk | stack uses ~600 MiB RAM, Prometheus up to 5 GB | free space or `PROMETHEUS_RETENTION_SIZE=2GB` |
+| 2 GiB+ RAM; 15%+ disk free **after** Prometheus's history (5 GB by default) | `DiskSpaceLow` fires under 15% free | preflight prints the largest `PROMETHEUS_RETENTION_SIZE` that fits, or free space first |
 | Ports 3000, 9090 free on 127.0.0.1 | Grafana, Prometheus | free them or change the host port in the overlay |
 | Real (not self-signed) TLS certificate | website probe verifies it | Let's Encrypt, or `insecure_skip_verify` (see monitoring.md) |
 | Outbound TCP 587 to smtp.gmail.com | alert emails | open the firewall, or set `ALERT_SMTP_SMARTHOST` |
@@ -45,13 +51,17 @@ expected on the first run; Phase 2 fixes them.
 
 ## Phase 1: Monitoring (20 min)
 
-1. - [ ] **Add to `.env`** (edit it yourself; values per Phase 0):
+1. - [ ] **Add to `.env`** (edit it yourself; values per Phase 0). Use these
+   exact names: the Grafana password is `GRAFANA_ADMIN_PASSWORD`, not
+   Grafana's internal `GF_SECURITY_ADMIN_PASSWORD` (the compose file maps one
+   to the other).
    ```bash
    GRAFANA_ADMIN_PASSWORD=<long random password>
    COMPOSE_FILE=docker-compose.yml:deploy/monitoring/docker-compose.monitoring.yml
    # only if preflight printed them:
    # DOCKER_ROOT_DIR=...
    # CONTAINERD_SOCKET=...
+   # PROMETHEUS_RETENTION_SIZE=1GB     (if preflight warns about disk space)
    # ALERT_EMAIL_TO=you@example.com    (default: MAIL_ACCOUNT)
    ```
    Check: `docker compose config --services` lists `prometheus` and `grafana`.
@@ -166,7 +176,7 @@ sudo systemctl start safefamily-backup.service     # extra backup now (e.g. befo
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `docker compose` errors `... must be set in .env` | missing `MAIL_ACCOUNT`, `MAIL_PASSWORD` or `GRAFANA_ADMIN_PASSWORD` | add it to `.env` |
+| `docker compose` errors `... must be set in .env` | missing `MAIL_ACCOUNT`, `MAIL_PASSWORD` or `GRAFANA_ADMIN_PASSWORD` (note: not `GF_SECURITY_ADMIN_PASSWORD`) | add it to `.env` under that exact name |
 | Container panels empty, `count(...)` tile shows 0 | cadvisor cannot reach containerd / Docker data | preflight; set `CONTAINERD_SOCKET` / `DOCKER_ROOT_DIR`; `docker compose up -d cadvisor` |
 | node-exporter or cadvisor won't start: mount error | snap Docker confinement | host node-exporter fallback in monitoring.md |
 | Website tile DOWN but the site works | self-signed cert, or the `server_name` in blackbox.yml differs from nginx | see Phase 0 table |
