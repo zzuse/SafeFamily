@@ -141,7 +141,7 @@ expected on the first run; Phase 2 fixes them.
     ```
     Check: it prints row counts for every table, matching what you expect
     (users, todo_list, notes, ...). Then clean up:
-    `ssh <server> docker exec safefamily_db dropdb -U <DB_USER> safefamily_restore_test`
+    `ssh <server> 'cd /srv/SafeFamily && scripts/db_restore.sh --drop-test'`
 
 12. - [ ] **Offsite copy**: add `/var/backups/safefamily/` to your existing backup
     script (it is already encrypted).

@@ -218,7 +218,7 @@ age -d -i safefamily-backup-key.txt safefamily-<stamp>.dump.age \
 ```
 
 It prints the row count of every table. Drop the scratch DB afterwards with
-`docker exec safefamily_db dropdb -U "$DB_USER" safefamily_restore_test`.
+`scripts/db_restore.sh --drop-test`.
 
 Real disaster recovery (replaces the live data):
 

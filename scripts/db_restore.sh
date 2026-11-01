@@ -5,6 +5,9 @@
 #       Restores into a scratch database (safefamily_restore_test) and prints
 #       row counts: a safe restore drill that leaves the live data alone.
 #
+#   scripts/db_restore.sh --drop-test
+#       Deletes the scratch database again when you are done looking at it.
+#
 #   scripts/db_restore.sh -i KEY --into-live BACKUP.dump.age
 #       Replaces the live database's contents after you type its name. Stop
 #       the app first: docker compose stop app
@@ -25,13 +28,18 @@ identity=""
 into_live=0
 confirm=""
 
-usage() { sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -i|--identity) identity="$2"; shift 2 ;;
         --into-live) into_live=1; shift ;;
         --confirm) confirm="$2"; shift 2 ;;
+        --drop-test)
+            # Runs as the container's own Postgres superuser (POSTGRES_USER).
+            docker exec "$CONTAINER" sh -c 'dropdb -U "$POSTGRES_USER" --if-exists "$1"' sh "$TEST_DB"
+            echo "dropped scratch database $TEST_DB (live data untouched)" >&2
+            exit 0 ;;
         -h|--help) usage ;;
         -) break ;;
         -*) echo "unknown option $1" >&2; usage ;;
@@ -84,5 +92,5 @@ docker exec "$CONTAINER" sh -c 'psql -U "$POSTGRES_USER" -d "$1" -c "
     WHERE table_schema = \$\$public\$\$ AND table_type = \$\$BASE TABLE\$\$
     ORDER BY 1"' sh "$target"
 if [[ $into_live -eq 0 ]]; then
-    echo "Drop the scratch database when done: docker exec $CONTAINER dropdb -U \"\$DB_USER\" $TEST_DB" >&2
+    echo "Live data was not touched. Delete the scratch copy when done: $0 --drop-test" >&2
 fi
