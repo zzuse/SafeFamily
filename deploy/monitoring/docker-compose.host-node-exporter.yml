@@ -1,0 +1,21 @@
+# Use a node-exporter installed on the host instead of the container. Needed
+# when containers cannot see the host's real filesystem, e.g. snap-installed
+# Docker (scripts/monitoring/preflight.sh --deep detects this). Add it after
+# the monitoring overlay:
+#
+#   COMPOSE_FILE=docker-compose.yml:deploy/monitoring/docker-compose.monitoring.yml:deploy/monitoring/docker-compose.host-node-exporter.yml
+#
+# Host setup (docs/monitoring.md "Snap Docker"):
+#   sudo apt install prometheus-node-exporter
+#   ARGS="--collector.textfile.directory=/var/lib/node_exporter/textfile"
+#   in /etc/default/prometheus-node-exporter, then restart it.
+
+services:
+  # Only started when someone explicitly enables this profile, i.e. never.
+  node-exporter:
+    profiles: ["container-node-exporter"]
+
+  prometheus:
+    extra_hosts:
+      # prometheus.yml scrapes node-exporter:9100; point that name at the host.
+      - "node-exporter:host-gateway"

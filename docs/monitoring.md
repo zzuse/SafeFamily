@@ -81,25 +81,39 @@ PostgreSQL, **12708** NGINX exporter.
   real socket; `scripts/monitoring/preflight.sh` finds it and prints the exact
   line (for example `CONTAINERD_SOCKET=/run/snap.docker/containerd/containerd.sock`
   for snap Docker). Then `docker compose up -d cadvisor`.
-- **Snap Docker, textfile dir**: snap's confinement can refuse to mount
-  `/var/lib/node_exporter/textfile` (`preflight.sh --deep` shows the error).
-  Use a directory inside snap Docker's own data area instead, and set it in
-  **both** files, since the compose file and the host scripts each need it:
+- **Snap Docker**: snap's confinement can give containers the snap's own
+  small filesystem instead of the host's `/` (`preflight.sh --deep`: "containers
+  see a different /"), which makes every disk number and disk alert wrong, and
+  can refuse the textfile mount ("read-only file system"). Then run
+  node-exporter **on the host** instead; the dashboard, alerts and backup
+  metrics work unchanged:
   ```bash
-  sudo mkdir -p /var/snap/docker/common/node_exporter_textfile
-  # .env and /etc/safefamily/backup.env:
-  NODE_EXPORTER_TEXTFILE_DIR=/var/snap/docker/common/node_exporter_textfile
-  docker compose up -d node-exporter
+  sudo apt install prometheus-node-exporter
+  # /etc/default/prometheus-node-exporter: read the same dir the scripts write to
+  sudo sed -i 's#^ARGS=.*#ARGS="--collector.textfile.directory=/var/lib/node_exporter/textfile"#' \
+      /etc/default/prometheus-node-exporter
+  sudo mkdir -p /var/lib/node_exporter/textfile
+  sudo systemctl restart prometheus-node-exporter
+  curl -s localhost:9100/metrics | grep -c '^node_filesystem_size_bytes'   # > 0
+
+  # .env: append the host overlay to COMPOSE_FILE
+  COMPOSE_FILE=docker-compose.yml:deploy/monitoring/docker-compose.monitoring.yml:deploy/monitoring/docker-compose.host-node-exporter.yml
+
+  docker rm -f safefamily_node_exporter    # the old container, if it exists
+  docker compose up -d
   ```
-- **Snap Docker, other mounts**: if node-exporter or cadvisor still fail to
-  start with a mount error, or `preflight.sh --deep` reports that containers
-  see a different `/` than the host, install node-exporter on the host
-  instead (`sudo apt install prometheus-node-exporter`, set
-  `ARGS="--collector.textfile.directory=/var/lib/node_exporter/textfile"` in
-  `/etc/default/prometheus-node-exporter`), remove the `node-exporter` service,
-  and point the `node` job in `prometheus/prometheus.yml` at
-  `host.docker.internal:9100` with `extra_hosts: ["host.docker.internal:host-gateway"]`
-  on the prometheus service.
+  The overlay disables the node-exporter container and points Prometheus's
+  `node-exporter` name at the host. If `ufw` is active, let containers reach
+  it: `sudo ufw allow from 172.16.0.0/12 to any port 9100 proto tcp` (port
+  9100 needs no opening to the internet). Keep `NODE_EXPORTER_TEXTFILE_DIR` at
+  its default; the `/var/snap/...` textfile dir suggested for snap does not
+  apply in this mode.
+- **Snap Docker, textfile dir only**: if `--deep` reports the real `/` but
+  refuses the textfile mount, either use host mode above or a directory in
+  snap Docker's own data area, set in **both** `.env` and
+  `/etc/safefamily/backup.env`:
+  `NODE_EXPORTER_TEXTFILE_DIR=/var/snap/docker/common/node_exporter_textfile`
+  (create it first), then `docker compose up -d node-exporter`.
 
 ## 2. Alerts
 

@@ -34,7 +34,7 @@ failure, so you can do monitoring first.
 | Linux host (not macOS/Windows Docker Desktop) | exporters must see the real disks and containers | run the stack on the Linux server |
 | Docker Engine 24+ (tested on 29.9) | cadvisor, compose features | upgrade Docker |
 | Docker Compose **v2** plugin, 2.20+ (tested on 5.6) | overlay file, `COMPOSE_FILE` | `sudo apt install docker-compose-plugin`; legacy `docker-compose` v1 is not supported |
-| Snap-installed Docker | confinement may block host mounts | `--deep` tests them; fallback in monitoring.md "Host-specific notes" |
+| Snap-installed Docker | confinement may hide the real `/` and block mounts | `--deep` tests them; if they fail, node-exporter runs on the host (monitoring.md "Snap Docker") |
 | Docker root dir not `/var/lib/docker` (snap) | cadvisor and `dir_sizes.sh` read it | set `DOCKER_ROOT_DIR=` as printed |
 | containerd image store (Docker 29+ default) | cadvisor needs the containerd socket | set `CONTAINERD_SOCKET=` as printed |
 | 2 GiB+ RAM; 15%+ disk free **after** Prometheus's history (5 GB by default) | `DiskSpaceLow` fires under 15% free | preflight prints the largest `PROMETHEUS_RETENTION_SIZE` that fits, or free space first |
@@ -185,8 +185,9 @@ sudo systemctl start safefamily-backup.service     # extra backup now (e.g. befo
 |---|---|---|
 | `docker compose` errors `... must be set in .env` | missing `MAIL_ACCOUNT`, `MAIL_PASSWORD` or `GRAFANA_ADMIN_PASSWORD` (note: not `GF_SECURITY_ADMIN_PASSWORD`) | add it to `.env` under that exact name |
 | Container panels empty, `count(...)` tile shows 0 | cadvisor cannot reach containerd / Docker data | preflight; set `CONTAINERD_SOCKET` / `DOCKER_ROOT_DIR`; `docker compose up -d cadvisor` |
-| `--deep`: "node-exporter can read the textfile dir" FAILs | snap Docker refuses `/var/lib/node_exporter/textfile` | use `/var/snap/docker/common/node_exporter_textfile` in both `.env` and `/etc/safefamily/backup.env` (preflight prints the steps) |
-| node-exporter or cadvisor won't start: mount error, or `--deep` says containers see a different `/` | snap Docker confinement | host node-exporter fallback in monitoring.md |
+| `--deep` says containers see a different `/`; Grafana disk tiles and "Last DB backup" empty | snap Docker confinement | run node-exporter on the host: "Snap Docker" in monitoring.md (apt package + `docker-compose.host-node-exporter.yml`) |
+| `--deep`: only the textfile dir mount FAILs | snap Docker refuses `/var/lib/node_exporter/textfile` | host mode as above, or `/var/snap/docker/common/node_exporter_textfile` in both `.env` and `/etc/safefamily/backup.env` |
+| Host mode: `node` scrape target down | ufw blocks containers from host port 9100 | `sudo ufw allow from 172.16.0.0/12 to any port 9100 proto tcp` |
 | Website tile DOWN but the site works | self-signed cert, or the `server_name` in blackbox.yml differs from nginx | see Phase 0 table |
 | No alert emails | Gmail app password, port 587 blocked | `docker logs safefamily_alertmanager \| grep -i notify` |
 | "Last DB backup" tile "No data" | backup never ran, or metrics file unreadable | step 10; `MetricsFileUnreadable` alert; `ls -l /var/lib/node_exporter/textfile` |

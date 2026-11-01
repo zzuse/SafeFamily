@@ -24,6 +24,7 @@ esac
 
 repo="$(cd "$(dirname "$0")/../.." && pwd)"
 overlay="deploy/monitoring/docker-compose.monitoring.yml"
+host_ne_overlay="deploy/monitoring/docker-compose.host-node-exporter.yml"
 backup_env="/etc/safefamily/backup.env"
 fails=0
 warns=0
@@ -68,7 +69,12 @@ compose_ok=0
 load_compose_config() {
     local err_file
     err_file="$(mktemp)"
-    if cfg_json="$(docker compose -f docker-compose.yml -f "$overlay" config --format json 2>"$err_file")"; then
+    # Use the user's COMPOSE_FILE when it includes monitoring (it may also add
+    # the host node-exporter overlay); otherwise main file + monitoring overlay.
+    if cfg_json="$(docker compose config --format json 2>/dev/null)" \
+        && python3 -c 'import json,sys; sys.exit("prometheus" not in json.load(sys.stdin)["services"])' <<< "$cfg_json"; then
+        compose_ok=1
+    elif cfg_json="$(docker compose -f docker-compose.yml -f "$overlay" config --format json 2>"$err_file")"; then
         compose_ok=1
     fi
     # Drop compose's harmless "variable is not set" warnings for optional vars.
@@ -87,6 +93,12 @@ if key == "command":
 else:
     print(next((v.get("source", "") for v in s.get("volumes") or [] if v.get("target") == want), ""))
 ' "$@" <<< "$cfg_json"
+}
+# host_ne: 1 when node-exporter runs on the host (host overlay in use).
+host_ne=0
+detect_host_ne() {
+    (( compose_ok )) && python3 -c 'import json,sys; sys.exit("node-exporter" in json.load(sys.stdin)["services"])' <<< "$cfg_json" \
+        && host_ne=1
 }
 # env_has NAME: .env defines NAME (checks the name only, never reads values).
 env_has() { [[ -r .env ]] && grep -Eq "^[[:space:]]*(export[[:space:]]+)?$1=" .env; }
@@ -125,7 +137,7 @@ else
             warn "Docker Engine $server is old (tested on 29.x)" "upgrade Docker; if you stay, watch cadvisor logs"
         fi
 
-        docker compose version >/dev/null 2>&1 && load_compose_config
+        docker compose version >/dev/null 2>&1 && load_compose_config && detect_host_ne
         root_dir="$(docker info -f '{{.DockerRootDir}}' 2>/dev/null)"
         if [[ "$root_dir" == /var/snap/* ]] || { command -v snap >/dev/null && snap list docker >/dev/null 2>&1; }; then
             if (( deep )); then
@@ -235,7 +247,26 @@ if [[ -d "$NODE_EXPORTER_TEXTFILE_DIR" ]]; then
 else
     fail "$NODE_EXPORTER_TEXTFILE_DIR missing (checklist Phase 1 step 2)" "sudo mkdir -p $NODE_EXPORTER_TEXTFILE_DIR"
 fi
-if (( compose_ok )); then
+if (( host_ne )); then
+    info "node-exporter runs on the host ($host_ne_overlay)"
+    if curl -fsS --max-time 3 http://127.0.0.1:9100/metrics >/dev/null 2>&1; then
+        pass "host node-exporter answers on :9100"
+        # Which textfile dir it reads: its --collector.textfile.directory flag.
+        # Match the process name only (the kernel truncates it to 15 chars:
+        # "prometheus-node"), never other command lines that mention it.
+        ne_args="$(pgrep -a '^(node_exporter|prometheus-node)' | head -1)"
+        ne_dir="$(sed -n 's/.*--collector\.textfile\.directory[= ]\([^ ]*\).*/\1/p' <<< "$ne_args")"
+        if [[ "$ne_dir" == "$NODE_EXPORTER_TEXTFILE_DIR" ]]; then
+            pass "host node-exporter reads the textfile dir $ne_dir"
+        else
+            fail "host node-exporter reads textfile dir '${ne_dir:-its package default}', scripts write to $NODE_EXPORTER_TEXTFILE_DIR" \
+                 "set ARGS=\"--collector.textfile.directory=$NODE_EXPORTER_TEXTFILE_DIR\" in /etc/default/prometheus-node-exporter, then: sudo systemctl restart prometheus-node-exporter"
+        fi
+    else
+        fail "no node-exporter on the host at :9100" \
+             "sudo apt install prometheus-node-exporter (see 'Snap Docker' in docs/monitoring.md)"
+    fi
+elif (( compose_ok )); then
     mounted_textfile="$(cfg_value node-exporter volume /textfile)"
     if [[ "$mounted_textfile" != "$NODE_EXPORTER_TEXTFILE_DIR" ]]; then
         fail "scripts write metrics to $NODE_EXPORTER_TEXTFILE_DIR but node-exporter reads $mounted_textfile" \
@@ -396,11 +427,15 @@ if (( deep )); then
         return 1
     }
     snap_note="Docker from snap is confined; see 'Host-specific notes' in docs/monitoring.md"
+    host_mode_fix="run node-exporter on the host: 'Snap Docker' in docs/monitoring.md (apt install prometheus-node-exporter + add $host_ne_overlay to COMPOSE_FILE)"
+    root_ok=1
 
     # 1. node-exporter measures disks through a read-only mount of /. Under
     # some confinement setups / inside containers is not the host's root, and
     # every disk number (and alert) for / would be wrong.
-    if host_root_kb="$(df -Pk / | awk 'NR==2 {print $2}')" \
+    if (( host_ne )); then
+        info "node-exporter runs on the host, so its container mount tests are skipped"
+    elif host_root_kb="$(df -Pk / | awk 'NR==2 {print $2}')" \
         && try_run "node-exporter can mount / read-only" "$snap_note" \
             -v /:/host:ro --entrypoint /bin/ls "$ne_image" /host/etc/hostname; then
         seen_kb="$(docker run --rm -v /:/host:ro --entrypoint /bin/df "$ne_image" -Pk /host 2>/dev/null \
@@ -408,8 +443,9 @@ if (( deep )); then
         if [[ -n "$seen_kb" ]] && (( seen_kb * 100 / host_root_kb >= 99 && seen_kb * 100 / host_root_kb <= 101 )); then
             pass "containers see the host's real / ($((host_root_kb / 1024 / 1024)) GiB), so disk metrics are right"
         else
+            root_ok=0
             fail "containers see a different / (${seen_kb:-?} KiB) than the host ($host_root_kb KiB): disk metrics for / would be wrong" \
-                 "run node-exporter on the host instead: 'Snap Docker' in docs/monitoring.md Host-specific notes"
+                 "$host_mode_fix"
         fi
     fi
 
@@ -418,7 +454,11 @@ if (( deep )); then
     textfile_src="$NODE_EXPORTER_TEXTFILE_DIR"
     (( compose_ok )) && textfile_src="$(cfg_value node-exporter volume /textfile)"
     snap_textfile=/var/snap/docker/common/node_exporter_textfile
-    if [[ ! -d "$textfile_src" ]]; then
+    if (( host_ne )); then
+        :
+    elif (( ! root_ok )); then
+        info "textfile mount test skipped: running node-exporter on the host (fix above) also solves it"
+    elif [[ ! -d "$textfile_src" ]]; then
         warn "textfile dir $textfile_src does not exist yet, so it cannot be test-mounted" \
              "sudo mkdir -p $textfile_src, then rerun"
     elif ! try_run "node-exporter can read the textfile dir $textfile_src" \
