@@ -110,6 +110,7 @@ expected on the first run; Phase 2 fixes them.
    sudo cp deploy/monitoring/backup.env.example /etc/safefamily/backup.env
    sudo chmod 600 /etc/safefamily/backup.env
    sudo nano /etc/safefamily/backup.env      # SAFEFAMILY_DIR, DOCKER_ROOT_DIR if needed
+   # echo 'BACKUP_GROUP=<your login group>' | sudo tee -a /etc/safefamily/backup.env
    ```
    Defaults: weekly backups, keep 8 weekly + 6 monthly. Backups are
    root-only unless you set `BACKUP_GROUP=<your login group>` (see `id -gn`)
