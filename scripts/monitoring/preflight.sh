@@ -235,6 +235,13 @@ if [[ -d "$NODE_EXPORTER_TEXTFILE_DIR" ]]; then
 else
     fail "$NODE_EXPORTER_TEXTFILE_DIR missing (checklist Phase 1 step 2)" "sudo mkdir -p $NODE_EXPORTER_TEXTFILE_DIR"
 fi
+if (( compose_ok )); then
+    mounted_textfile="$(cfg_value node-exporter volume /textfile)"
+    if [[ "$mounted_textfile" != "$NODE_EXPORTER_TEXTFILE_DIR" ]]; then
+        fail "scripts write metrics to $NODE_EXPORTER_TEXTFILE_DIR but node-exporter reads $mounted_textfile" \
+             "set the same NODE_EXPORTER_TEXTFILE_DIR in .env and in $backup_env"
+    fi
+fi
 # Prometheus's volume lives under the Docker root dir and grows to its
 # retention size, so check free space as it will be once that is used up.
 # DiskSpaceLow fires below 15% free.
@@ -368,19 +375,70 @@ fi
 
 if (( deep )); then
     section "Container mounts (--deep)"
-    try_mount() { # $1 description, rest: docker run args
-        local what="$1"; shift
+    ne_image=prom/node-exporter:v1.9.1
+    # docker run's errors end with a "Run 'docker run --help'" footer; keep
+    # the lines that say what actually went wrong.
+    show_error() {
+        grep -v -e "^Run 'docker run --help'" -e '^[[:space:]]*$' <<< "$1" | tail -n 3 \
+            | sed -e 's/^docker: //' -e 's/^/        error: /'
+    }
+    # try_run DESCRIPTION FIX DOCKER-RUN-ARGS...: PASS, or FAIL with the real error.
+    try_run() {
+        local what="$1" fix="$2"
+        shift 2
         if out="$(docker run --rm "$@" 2>&1)"; then
             pass "$what"
-        else
-            fail "$what: ${out##*$'\n'}" "see 'Host-specific notes' in docs/monitoring.md"
+            return 0
         fi
+        fail "$what"
+        show_error "$out"
+        printf '        fix: %s\n' "$fix"
+        return 1
     }
-    try_mount "node-exporter can mount / read-only" \
-        -v /:/host:ro --entrypoint /bin/ls prom/node-exporter:v1.9.1 /host/etc/hostname
-    try_mount "node-exporter can read the textfile dir" \
-        -v "$NODE_EXPORTER_TEXTFILE_DIR:/textfile:ro" --entrypoint /bin/ls prom/node-exporter:v1.9.1 /textfile
-    try_mount "cadvisor can mount /sys, /var/run and the Docker root" \
+    snap_note="Docker from snap is confined; see 'Host-specific notes' in docs/monitoring.md"
+
+    # 1. node-exporter measures disks through a read-only mount of /. Under
+    # some confinement setups / inside containers is not the host's root, and
+    # every disk number (and alert) for / would be wrong.
+    if host_root_kb="$(df -Pk / | awk 'NR==2 {print $2}')" \
+        && try_run "node-exporter can mount / read-only" "$snap_note" \
+            -v /:/host:ro --entrypoint /bin/ls "$ne_image" /host/etc/hostname; then
+        seen_kb="$(docker run --rm -v /:/host:ro --entrypoint /bin/df "$ne_image" -Pk /host 2>/dev/null \
+            | awk 'NR==2 {print $2}')"
+        if [[ -n "$seen_kb" ]] && (( seen_kb * 100 / host_root_kb >= 99 && seen_kb * 100 / host_root_kb <= 101 )); then
+            pass "containers see the host's real / ($((host_root_kb / 1024 / 1024)) GiB), so disk metrics are right"
+        else
+            fail "containers see a different / (${seen_kb:-?} KiB) than the host ($host_root_kb KiB): disk metrics for / would be wrong" \
+                 "run node-exporter on the host instead: 'Snap Docker' in docs/monitoring.md Host-specific notes"
+        fi
+    fi
+
+    # 2. The textfile directory: the scripts write metrics there and
+    # node-exporter reads them. Test the directory compose really mounts.
+    textfile_src="$NODE_EXPORTER_TEXTFILE_DIR"
+    (( compose_ok )) && textfile_src="$(cfg_value node-exporter volume /textfile)"
+    snap_textfile=/var/snap/docker/common/node_exporter_textfile
+    if [[ ! -d "$textfile_src" ]]; then
+        warn "textfile dir $textfile_src does not exist yet, so it cannot be test-mounted" \
+             "sudo mkdir -p $textfile_src, then rerun"
+    elif ! try_run "node-exporter can read the textfile dir $textfile_src" \
+            "see the suggestion below" \
+            -v "$textfile_src:/textfile:ro" --entrypoint /bin/ls "$ne_image" /textfile; then
+        # Snap Docker can always use its own data area under /var/snap/docker/common.
+        if [[ -d /var/snap/docker/common ]] && docker run --rm -v /var/snap/docker/common:/probe:ro \
+                --entrypoint /bin/ls "$ne_image" /probe >/dev/null 2>&1; then
+            info "Docker can mount /var/snap/docker/common, so use a textfile dir there:"
+            info "  sudo mkdir -p $snap_textfile"
+            info "  add to .env:                    NODE_EXPORTER_TEXTFILE_DIR=$snap_textfile"
+            info "  add to /etc/safefamily/backup.env: NODE_EXPORTER_TEXTFILE_DIR=$snap_textfile"
+            info "  then: docker compose up -d node-exporter, and rerun this check"
+        else
+            info "$snap_note"
+        fi
+    fi
+
+    # 3. cadvisor's host mounts.
+    try_run "cadvisor can mount /sys, /var/run and the Docker root" "$snap_note" \
         --privileged -v /sys:/sys:ro -v /var/run:/var/run:ro -v "${root_dir:-/var/lib/docker}:/var/lib/docker:ro" \
         --entrypoint /bin/ls gcr.io/cadvisor/cadvisor:v0.54.1 /var/lib/docker
 fi

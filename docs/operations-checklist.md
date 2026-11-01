@@ -178,7 +178,8 @@ sudo systemctl start safefamily-backup.service     # extra backup now (e.g. befo
 |---|---|---|
 | `docker compose` errors `... must be set in .env` | missing `MAIL_ACCOUNT`, `MAIL_PASSWORD` or `GRAFANA_ADMIN_PASSWORD` (note: not `GF_SECURITY_ADMIN_PASSWORD`) | add it to `.env` under that exact name |
 | Container panels empty, `count(...)` tile shows 0 | cadvisor cannot reach containerd / Docker data | preflight; set `CONTAINERD_SOCKET` / `DOCKER_ROOT_DIR`; `docker compose up -d cadvisor` |
-| node-exporter or cadvisor won't start: mount error | snap Docker confinement | host node-exporter fallback in monitoring.md |
+| `--deep`: "node-exporter can read the textfile dir" FAILs | snap Docker refuses `/var/lib/node_exporter/textfile` | use `/var/snap/docker/common/node_exporter_textfile` in both `.env` and `/etc/safefamily/backup.env` (preflight prints the steps) |
+| node-exporter or cadvisor won't start: mount error, or `--deep` says containers see a different `/` | snap Docker confinement | host node-exporter fallback in monitoring.md |
 | Website tile DOWN but the site works | self-signed cert, or the `server_name` in blackbox.yml differs from nginx | see Phase 0 table |
 | No alert emails | Gmail app password, port 587 blocked | `docker logs safefamily_alertmanager \| grep -i notify` |
 | "Last DB backup" tile "No data" | backup never ran, or metrics file unreadable | step 10; `MetricsFileUnreadable` alert; `ls -l /var/lib/node_exporter/textfile` |

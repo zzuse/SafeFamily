@@ -81,8 +81,19 @@ PostgreSQL, **12708** NGINX exporter.
   real socket; `scripts/monitoring/preflight.sh` finds it and prints the exact
   line (for example `CONTAINERD_SOCKET=/run/snap.docker/containerd/containerd.sock`
   for snap Docker). Then `docker compose up -d cadvisor`.
-- **Snap Docker** may refuse bind mounts outside `$HOME`. If node-exporter or
-  cadvisor fail to start with a mount error, install node-exporter on the host
+- **Snap Docker, textfile dir**: snap's confinement can refuse to mount
+  `/var/lib/node_exporter/textfile` (`preflight.sh --deep` shows the error).
+  Use a directory inside snap Docker's own data area instead, and set it in
+  **both** files, since the compose file and the host scripts each need it:
+  ```bash
+  sudo mkdir -p /var/snap/docker/common/node_exporter_textfile
+  # .env and /etc/safefamily/backup.env:
+  NODE_EXPORTER_TEXTFILE_DIR=/var/snap/docker/common/node_exporter_textfile
+  docker compose up -d node-exporter
+  ```
+- **Snap Docker, other mounts**: if node-exporter or cadvisor still fail to
+  start with a mount error, or `preflight.sh --deep` reports that containers
+  see a different `/` than the host, install node-exporter on the host
   instead (`sudo apt install prometheus-node-exporter`, set
   `ARGS="--collector.textfile.directory=/var/lib/node_exporter/textfile"` in
   `/etc/default/prometheus-node-exporter`), remove the `node-exporter` service,
