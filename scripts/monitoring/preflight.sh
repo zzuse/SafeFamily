@@ -388,8 +388,31 @@ for r in json.load(sys.stdin)["data"]["result"]:
         if grep -q "node_filesystem_size_bytes" <<< "$lines"; then
             pass "node-exporter reports $mnt (Grafana and the share alerts can see it)"
         elif grep -qE 'node_filesystem_device_error.* 1$' <<< "$lines"; then
-            fail "node-exporter lists $mnt but cannot read it (device error)" \
-                 "it runs as user prometheus: check 'sudo -u prometheus stat -f $mnt' and the mount's permissions"
+            # Usually a parent folder the exporter's user may not pass
+            # through, e.g. a 750 home directory. Find which ones.
+            ne_user="$(systemctl show prometheus-node-exporter -p User --value 2>/dev/null)"
+            ne_user="${ne_user:-prometheus}"
+            blocked=()
+            if (( EUID == 0 )) && id "$ne_user" > /dev/null 2>&1; then
+                dir=""
+                IFS=/ read -ra parts <<< "${mnt#/}"
+                for part in "${parts[@]::${#parts[@]}-1}"; do
+                    dir+="/$part"
+                    # Stop at the first one: everything below it looks
+                    # blocked too until it is fixed, so rerun afterwards.
+                    if ! runuser -u "$ne_user" -- test -x "$dir" 2> /dev/null; then
+                        blocked+=("$dir")
+                        break
+                    fi
+                done
+            fi
+            if (( ${#blocked[@]} )); then
+                fail "node-exporter (user $ne_user) cannot pass through ${blocked[0]} to reach $mnt" \
+                     "sudo setfacl -m u:$ne_user:x ${blocked[0]}  (pass-through only, it cannot list or read it; needs the acl package), wait a minute, rerun"
+            else
+                fail "node-exporter lists $mnt but cannot read it (device error)" \
+                     "check: sudo -u $ne_user stat -f $mnt (run this preflight with sudo to find a blocking parent folder)"
+            fi
         else
             fail "node-exporter does not report $mnt at all${ne_version:+ (version $ne_version)}" \
                  "its mount-point/fs-type filter skips it: compare 'prometheus-node-exporter --help 2>&1 | grep -A1 -E \"mount-points|fs-types\"' with $mnt ($real_fs); see docs/monitoring.md 'Samba share'"

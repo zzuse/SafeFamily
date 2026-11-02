@@ -187,6 +187,7 @@ sudo systemctl start safefamily-backup.service     # extra backup now (e.g. befo
 | "App containers running" No data, container panels empty, `ContainerDown` firing | cadvisor cannot name containers (usually the containerd socket) | `sudo scripts/monitoring/preflight.sh` shows cadvisor's error and the fix; then `docker compose up -d cadvisor` |
 | `--deep` says containers see a different `/`; Grafana disk tiles and "Last DB backup" empty | snap Docker confinement | run node-exporter on the host: "Snap Docker" in monitoring.md (apt package + `docker-compose.host-node-exporter.yml`) |
 | `--deep`: only the textfile dir mount FAILs | snap Docker refuses `/var/lib/node_exporter/textfile` | host mode as above, or `/var/snap/docker/common/node_exporter_textfile` in both `.env` and `/etc/safefamily/backup.env` |
+| Share under `/home`: node-exporter shows `device_error="permission denied"` | the home folder is 750; node-exporter runs as user `prometheus` | `sudo setfacl -m u:prometheus:x /home/<you>` (pass-through only); preflight names the folder |
 | Host mode: `node` scrape target down | ufw blocks containers from host port 9100 | `sudo ufw allow from 172.16.0.0/12 to any port 9100 proto tcp` |
 | Website tile DOWN but the site works | self-signed cert, or the `server_name` in blackbox.yml differs from nginx | see Phase 0 table |
 | No alert emails | Gmail app password, port 587 blocked | `docker logs safefamily_alertmanager \| grep -i notify` |
