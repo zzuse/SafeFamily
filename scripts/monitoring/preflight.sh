@@ -47,10 +47,16 @@ BACKUP_DIR=/var/backups/safefamily
 BACKUP_AGE_RECIPIENTS=/etc/safefamily/backup-recipients.txt
 NODE_EXPORTER_TEXTFILE_DIR=/var/lib/node_exporter/textfile
 if [[ -r "$backup_env" ]]; then
-    set -a
-    # shellcheck disable=SC1090
-    . "$backup_env"
-    set +a
+    # Read only the settings used here, in a subshell, so nothing else from
+    # the file leaks into this script's environment (and into the docker
+    # compose calls, where it would hide a missing .env setting).
+    eval "$(
+        # shellcheck disable=SC1090
+        . "$backup_env" >/dev/null 2>&1
+        for v in BACKUP_DIR BACKUP_AGE_RECIPIENTS NODE_EXPORTER_TEXTFILE_DIR; do
+            [[ -n "${!v:-}" ]] && printf '%s=%q\n' "$v" "${!v}"
+        done
+    )"
 fi
 
 cd "$repo" || exit 1
@@ -187,8 +193,19 @@ else
             if (( compose_ok )) && [[ "$(cfg_value cadvisor command --containerd)" == "$sock" ]]; then
                 pass "containerd socket at $sock, and CONTAINERD_SOCKET points cadvisor to it"
             elif (( compose_ok )); then
-                warn "containerd socket is at $sock, but cadvisor is set to $(cfg_value cadvisor command --containerd)" \
-                     "set in .env: CONTAINERD_SOCKET=$sock, then docker compose up -d cadvisor"
+                # Say why a CONTAINERD_SOCKET the user believes is set has no effect.
+                why=""
+                if env_has CONTAINERD_SOCKET; then
+                    why=" (.env sets CONTAINERD_SOCKET, but a CONTAINERD_SOCKET variable in this shell overrides it: unset CONTAINERD_SOCKET)"
+                elif [[ -r .env ]] && grep -Eq '^[[:space:]]*#.*CONTAINERD_SOCKET' .env; then
+                    why=" (the CONTAINERD_SOCKET line in .env is commented out)"
+                elif [[ -r "$backup_env" ]] && grep -q CONTAINERD_SOCKET "$backup_env"; then
+                    why=" (CONTAINERD_SOCKET is in $backup_env, but Docker Compose only reads $repo/.env)"
+                else
+                    why=" ($repo/.env has no CONTAINERD_SOCKET line)"
+                fi
+                warn "containerd socket is at $sock, but cadvisor is set to $(cfg_value cadvisor command --containerd)$why" \
+                     "put CONTAINERD_SOCKET=$sock in $repo/.env, then docker compose up -d cadvisor"
             else
                 warn "containerd socket is at $sock, not where cadvisor looks" "add to .env: CONTAINERD_SOCKET=$sock"
             fi
