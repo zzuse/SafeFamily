@@ -53,7 +53,7 @@ if [[ -r "$backup_env" ]]; then
     eval "$(
         # shellcheck disable=SC1090
         . "$backup_env" >/dev/null 2>&1
-        for v in BACKUP_DIR BACKUP_AGE_RECIPIENTS NODE_EXPORTER_TEXTFILE_DIR; do
+        for v in BACKUP_DIR BACKUP_AGE_RECIPIENTS NODE_EXPORTER_TEXTFILE_DIR WATCH_MOUNTS; do
             [[ -n "${!v:-}" ]] && printf '%s=%q\n' "$v" "${!v}"
         done
     )"
@@ -337,6 +337,65 @@ for dir in "${root_dir:-/var/lib/docker}" "$(dirname "$BACKUP_DIR")"; do
         warn "$msg, but only ${after_pct}% once Prometheus uses its ${retention}: DiskSpaceLow (<15%) would fire" "$fix"
     fi
 done
+
+if [[ -n "${WATCH_MOUNTS:-}" ]]; then
+    section "Watched mounts (WATCH_MOUNTS)"
+    # Where node-exporter's metrics can be read: the host exporter directly,
+    # otherwise the container through Prometheus.
+    ne_metrics=""
+    if (( host_ne )); then
+        ne_metrics="$(curl -fsS --max-time 10 http://127.0.0.1:9100/metrics 2>/dev/null)"
+        ne_version="$(sed -n 's/^node_exporter_build_info{.*version="\([^"]*\)".*/\1/p' <<< "$ne_metrics" | head -1)"
+        [[ -n "$ne_version" ]] && info "host node-exporter version $ne_version"
+    fi
+    for mnt in ${WATCH_MOUNTS}; do
+        fstypes="$(findmnt -n -M "$mnt" -o FSTYPE 2>/dev/null | tr '\n' ' ')"
+        real_fs="$(tr ' ' '\n' <<< "$fstypes" | grep -vx -e autofs -e '' | head -1)"
+        if [[ -n "$real_fs" ]]; then
+            pass "$mnt is mounted ($real_fs)"
+        elif [[ "$fstypes" == *autofs* ]]; then
+            fail "$mnt is only an automount placeholder: the share itself did not mount" \
+                 "ls $mnt; sudo journalctl -b | grep -iE 'cifs|mount' | tail; check the server and the credentials file"
+            continue
+        else
+            fail "$mnt is not a mount point" "check its /etc/fstab line, then: sudo mount $mnt"
+            continue
+        fi
+        ok_file="$NODE_EXPORTER_TEXTFILE_DIR/safefamily_mounts.prom"
+        if grep -q "mountpoint=\"$mnt\"} 1" "$ok_file" 2>/dev/null; then
+            pass "watch check reports $mnt OK"
+        else
+            warn "watch check has no OK result for $mnt yet" "sudo systemctl start safefamily-dirsize.service, then rerun"
+        fi
+        # A sandboxed exporter service may not be allowed into /home.
+        if (( host_ne )) && [[ "$mnt" == /home/* || "$mnt" == /root/* ]] && [[ -d /run/systemd/system ]]; then
+            protect="$(systemctl show prometheus-node-exporter -p ProtectHome --value 2>/dev/null)"
+            if [[ -n "$protect" && "$protect" != "no" ]]; then
+                fail "prometheus-node-exporter runs with ProtectHome=$protect, so it cannot read $mnt" \
+                     "sudo systemctl edit prometheus-node-exporter, add [Service] / ProtectHome=no, then sudo systemctl restart prometheus-node-exporter"
+            fi
+        fi
+        if (( host_ne )); then
+            lines="$(grep -F "mountpoint=\"$mnt\"" <<< "$ne_metrics")"
+        else
+            lines="$(curl -fsS --max-time 5 --get http://127.0.0.1:9090/api/v1/query \
+                --data-urlencode "query={__name__=~\"node_filesystem_(size_bytes|device_error)\",mountpoint=\"$mnt\"}" 2>/dev/null \
+                | python3 -c '
+import json, sys
+for r in json.load(sys.stdin)["data"]["result"]:
+    print(r["metric"]["__name__"], r["value"][1])' 2>/dev/null)"
+        fi
+        if grep -q "node_filesystem_size_bytes" <<< "$lines"; then
+            pass "node-exporter reports $mnt (Grafana and the share alerts can see it)"
+        elif grep -qE 'node_filesystem_device_error.* 1$' <<< "$lines"; then
+            fail "node-exporter lists $mnt but cannot read it (device error)" \
+                 "it runs as user prometheus: check 'sudo -u prometheus stat -f $mnt' and the mount's permissions"
+        else
+            fail "node-exporter does not report $mnt at all${ne_version:+ (version $ne_version)}" \
+                 "its mount-point/fs-type filter skips it: compare 'prometheus-node-exporter --help 2>&1 | grep -A1 -E \"mount-points|fs-types\"' with $mnt ($real_fs); see docs/monitoring.md 'Samba share'"
+        fi
+    done
+fi
 
 section "TLS certificate and outbound mail"
 cert=/etc/ssl/certs/safefamily.crt
