@@ -480,9 +480,11 @@ else
 fi
 
 section "Encrypted backups (checklist Phase 2)"
+# Only backup-specific artifacts count: /etc/safefamily and other safefamily-*
+# units also come from the AdGuard and display-export setups.
 backup_started=0
-[[ -e /etc/safefamily || -d "$BACKUP_DIR" ]] && backup_started=1
-if [[ -d /run/systemd/system ]] && systemctl list-unit-files 'safefamily-*' 2>/dev/null | grep -q safefamily; then
+[[ -e "$BACKUP_AGE_RECIPIENTS" || -e "$backup_env" || -d "$BACKUP_DIR" ]] && backup_started=1
+if [[ -d /run/systemd/system ]] && systemctl list-unit-files 'safefamily-backup.*' 2>/dev/null | grep -q safefamily-backup; then
     backup_started=1
 fi
 if (( ! backup_started )); then
