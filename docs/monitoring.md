@@ -383,3 +383,69 @@ P='docker run --rm -v '"$PWD"'/deploy/monitoring/prometheus:/etc/prometheus:ro -
 $P check config /etc/prometheus/prometheus.yml
 $P test rules /etc/prometheus/tests/network_mounts_test.yml
 ```
+
+## 5. Status picture for the P4 display
+
+`deploy/monitoring/docker-compose.display-export.yml` renders the
+**SafeFamily Display** dashboard (the Status and AdGuard tiles plus the
+blocking timeline, laid out for exactly 1280x800) to a PNG every 5 minutes and
+puts it in a folder the ESP32-P4 display reads:
+
+- `grafana-renderer`: Grafana's own headless-Chromium renderer, behind
+  Grafana's `/render` URL. Internal only; about 0.5 GB of RAM while rendering.
+- `display-export`: fetches the PNG, checks it is a real 1280x800 PNG, writes
+  it to a hidden temp file (`.grafana-status.png.tmp`) and renames it over
+  `grafana-status.png`, one fixed name, so the display never reads a partial
+  file and old files never pile up. A failed render keeps the last good
+  picture; the display's STALE banner (10 min) then shows it is old.
+- The display dashboard is generated from the overview's panels; after
+  changing those, run `python3 deploy/monitoring/display-export/make_display_dashboard.py`
+  and `docker compose restart grafana`.
+
+### Set it up
+
+1. Mount the writable share **at boot, without `x-systemd.automount`**: a
+   container only sees a share that was mounted before it started. Example
+   `/etc/fstab` line (adjust server, share and path; `uid`/`gid` = your user):
+   ```
+   //10.0.0.133/display /home/zzuse/code/esphome-config/grafana-export cifs credentials=/etc/cifs-display.cred,rw,uid=1000,gid=1000,iocharset=utf8,_netdev,nofail,x-systemd.mount-timeout=30 0 0
+   ```
+   `sudo mount /home/zzuse/code/esphome-config/grafana-export`, then
+   `findmnt` on that path should show `cifs`.
+2. Add to `.env` (append the overlay to your existing `COMPOSE_FILE`):
+   ```bash
+   COMPOSE_FILE=docker-compose.yml:deploy/monitoring/docker-compose.monitoring.yml:deploy/monitoring/docker-compose.host-node-exporter.yml:deploy/monitoring/docker-compose.display-export.yml
+   COMPOSE_PROFILES=display-export     # run the exporter container
+   DISPLAY_EXPORT_DIR=/home/zzuse/code/esphome-config/grafana-export
+   DISPLAY_TZ=America/Toronto          # your time zone, for the timeline
+   ```
+3. `docker compose up -d`, then within a minute or two:
+   ```bash
+   docker logs safefamily_display_export --tail 3   # "wrote /export/grafana-status.png (1280x800, ... bytes)"
+   ls -l /home/zzuse/code/esphome-config/grafana-export/
+   ```
+   To look at the picture without the display:
+   <http://127.0.0.1:3000/d/safefamily-display?kiosk> in a browser.
+
+The exporter refuses to write while the folder is not a `cifs` mount ("not
+writing: /export is 'ext4', expected cifs"), so pictures never land hidden in
+the bare folder under the mount point. After mounting the share later, run
+`docker compose restart display-export`. For a plain local folder set
+`DISPLAY_EXPORT_REQUIRE_FSTYPE=""`.
+
+It logs in to Grafana with `GRAFANA_ADMIN_USER`/`GRAFANA_ADMIN_PASSWORD` from
+`.env`. If you change the admin password in the Grafana UI, update `.env` and
+`docker compose up -d display-export`.
+
+**Snap Docker refuses the folder** (`docker compose up` fails with a mount
+error for `display-export`): run the same script on the host instead.
+Remove `COMPOSE_PROFILES=display-export` from `.env` (the renderer keeps
+running), `docker rm -f safefamily_display_export`, then:
+```bash
+sudo install -m 600 /dev/null /etc/safefamily/display-export.env
+printf 'GRAFANA_PASSWORD=%s\nEXPORT_DIR=%s\nDISPLAY_TZ=%s\n' 'your-grafana-password' \
+    /home/zzuse/code/esphome-config/grafana-export America/Toronto | sudo tee /etc/safefamily/display-export.env
+sudo cp deploy/systemd/safefamily-display-export.* /etc/systemd/system/
+sudo sed -i 's#/srv/SafeFamily#'"$PWD"'#' /etc/systemd/system/safefamily-display-export.service
+sudo systemctl daemon-reload && sudo systemctl enable --now safefamily-display-export.timer
+```

@@ -101,6 +101,11 @@ expected on the first run; Phase 2 fixes them.
    Check: Grafana's AdGuard row shows UP / ON, and preflight's "AdGuard check"
    section passes.
 
+6c. - [ ] **Optional: status picture for the P4 display**: follow section 5 of
+   [monitoring.md](monitoring.md#5-status-picture-for-the-p4-display).
+   Check: `docker logs safefamily_display_export --tail 1` says `wrote ...
+   (1280x800, ...)` and the file's time updates every 5 minutes.
+
 ---
 
 ## Phase 2: Weekly encrypted backups (20 min)

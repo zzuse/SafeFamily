@@ -1,0 +1,21 @@
+# Fallback for deploy/monitoring/docker-compose.display-export.yml when the
+# export folder cannot be mounted into a container (e.g. snap Docker): run the
+# same export script on the host. Grafana and grafana-renderer still run in
+# Docker. Settings in /etc/safefamily/display-export.env (root-only: it holds
+# the Grafana password). Edit the path if the checkout is not /srv/SafeFamily.
+#   sudo cp deploy/systemd/safefamily-display-export.* /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now safefamily-display-export.timer
+[Unit]
+Description=SafeFamily status picture for the P4 display
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Write as the user the share is mounted for (uid= in /etc/fstab).
+User=1000
+Group=1000
+EnvironmentFile=/etc/safefamily/display-export.env
+Environment=GRAFANA_URL=http://127.0.0.1:3000
+ExecStart=/bin/sh /srv/SafeFamily/deploy/monitoring/display-export/export.sh --once
+TimeoutStartSec=3min
