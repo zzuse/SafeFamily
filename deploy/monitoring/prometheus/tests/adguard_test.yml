@@ -1,0 +1,59 @@
+# Unit tests for the adguard alerts. Run from the repository root:
+#   docker run --rm -v "$PWD/deploy/monitoring/prometheus:/etc/prometheus:ro" --entrypoint promtool \
+#       prom/prometheus:v3.5.0 test rules /etc/prometheus/tests/adguard_test.yml
+rule_files:
+  - ../alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  # AdGuard stops answering at 10m: a 3-minute blip is fine, 5 minutes is not.
+  - interval: 1m
+    input_series:
+      - series: 'safefamily_adguard_up{instance="host:9100", job="node"}'
+        values: '1x9 0x3 1x5 0x10'
+    alert_rule_test:
+      - eval_time: 13m
+        alertname: AdGuardDown
+        exp_alerts: []
+      - eval_time: 25m
+        alertname: AdGuardDown
+        exp_alerts:
+          - exp_labels: {severity: critical, instance: "host:9100", job: node}
+            exp_annotations:
+              summary: AdGuard Home is not answering, or its login failed
+              description: "DNS filtering and SafeFamily's blocking may not work. Check: journalctl -u safefamily-adguard.service -n 20"
+
+  # Protection switched off for 20 minutes.
+  - interval: 1m
+    input_series:
+      - series: 'safefamily_adguard_protection_enabled{instance="host:9100", job="node"}'
+        values: '1x5 0x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: AdGuardProtectionDisabled
+        exp_alerts: []
+      - eval_time: 22m
+        alertname: AdGuardProtectionDisabled
+        exp_alerts:
+          - exp_labels: {severity: warning, instance: "host:9100", job: node}
+            exp_annotations:
+              summary: AdGuard protection is switched off
+              description: No filtering or blocked services apply, so YouTube and the other blocks are off. Re-enable it in the AdGuard web UI.
+
+  # The timer stops: the last check timestamp freezes at 5m (300s).
+  - interval: 1m
+    input_series:
+      - series: 'safefamily_adguard_last_check_timestamp_seconds{instance="host:9100", job="node"}'
+        values: '0+60x5 300x30'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: AdGuardCheckStale
+        exp_alerts: []
+      - eval_time: 21m
+        alertname: AdGuardCheckStale
+        exp_alerts:
+          - exp_labels: {severity: warning, instance: "host:9100", job: node}
+            exp_annotations:
+              summary: The AdGuard check has not run for over 10 minutes
+              description: "Check: systemctl status safefamily-adguard.timer safefamily-adguard.service"

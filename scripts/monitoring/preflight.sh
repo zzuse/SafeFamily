@@ -420,6 +420,33 @@ for r in json.load(sys.stdin)["data"]["result"]:
     done
 fi
 
+adguard_env=/etc/safefamily/adguard.env
+if [[ -e "$adguard_env" ]]; then
+    section "AdGuard check"
+    mode="$(stat -c '%a %U' "$adguard_env" 2>/dev/null)"
+    if [[ "$mode" == "600 root" ]]; then
+        pass "$adguard_env is root-only"
+    else
+        fail "$adguard_env is '$mode', but it holds the AdGuard password" "sudo chown root: $adguard_env && sudo chmod 600 $adguard_env"
+    fi
+    prom="$NODE_EXPORTER_TEXTFILE_DIR/safefamily_adguard.prom"
+    last="$(sed -n 's/^safefamily_adguard_last_check_timestamp_seconds //p' "$prom" 2>/dev/null)"
+    if [[ -z "$last" ]]; then
+        fail "no AdGuard metrics yet in $prom" \
+             "sudo systemctl enable --now safefamily-adguard.timer; journalctl -u safefamily-adguard.service -n 20"
+    elif (( $(date +%s) - last > 300 )); then
+        fail "the AdGuard check last ran $(( ($(date +%s) - last) / 60 )) minutes ago" "systemctl status safefamily-adguard.timer"
+    elif grep -q '^safefamily_adguard_up 1' "$prom"; then
+        pass "AdGuard answers with the configured login"
+        while read -r domain value; do
+            info "$domain is $([[ "$value" == 1 ]] && echo BLOCKED || echo allowed) right now"
+        done < <(sed -n 's/^safefamily_adguard_domain_blocked{domain="\([^"]*\)"} \(.*\)$/\1 \2/p' "$prom")
+    else
+        fail "AdGuard does not answer, or rejects the login" \
+             "check ADGUARD_HOSTPORT/USERNAME/PASSWORD in $adguard_env; journalctl -u safefamily-adguard.service -n 5"
+    fi
+fi
+
 section "TLS certificate and outbound mail"
 cert=/etc/ssl/certs/safefamily.crt
 if [[ -r "$cert" ]] && command -v openssl >/dev/null; then

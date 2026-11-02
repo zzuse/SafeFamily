@@ -1,0 +1,16 @@
+# AdGuard Home health and "is YouTube blocked" metrics for Grafana. Install
+# (edit the path first if the checkout is not /srv/SafeFamily):
+#   sudo cp deploy/systemd/safefamily-adguard.* /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now safefamily-adguard.timer
+[Unit]
+Description=SafeFamily AdGuard check
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Holds the AdGuard login: root-only (chmod 600).
+EnvironmentFile=/etc/safefamily/adguard.env
+ExecStart=/usr/bin/python3 /srv/SafeFamily/scripts/monitoring/adguard_check.py
+TimeoutStartSec=2min
+Nice=10

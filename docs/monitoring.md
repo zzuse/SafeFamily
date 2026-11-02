@@ -140,6 +140,9 @@ Alertmanager (critical alerts repeat every 3h, warnings every 12h, and a
 | DatabaseBackupFailed | the last backup run failed | same |
 | MetricsFileUnreadable | node-exporter cannot read a `.prom` file | `docker logs safefamily_node_exporter` |
 | ScrapeTargetDown | an exporter is unreachable for 5 min | `docker compose ps` |
+| AdGuardDown | the AdGuard API does not answer or rejects the login for 5 min | `journalctl -u safefamily-adguard.service -n 20` |
+| AdGuardProtectionDisabled | AdGuard protection is off for 15 min | re-enable it in the AdGuard web UI |
+| AdGuardCheckStale | the AdGuard check has not run for 10 min | `systemctl status safefamily-adguard.timer` |
 | NginxStatusUnavailable | nginx-exporter cannot read nginx's status page | `docker compose up -d --force-recreate proxy` |
 | HostMemoryLow / HostHighLoad | < 10% RAM available / load > 1.5× CPUs | `top`, `docker stats` |
 | NetworkMountUnreachable | a Samba/NFS share stops answering for 5 min | `ls <mount>`; `sudo dmesg \| grep -iE 'cifs\|smb\|nfs' \| tail` |
@@ -269,6 +272,50 @@ Pick the row that fits; none of them needs edits to the tracked config files.
 After adding scrape or rule files: `docker compose restart prometheus`, then
 check Prometheus's targets page (<http://127.0.0.1:9090/targets>) or rerun
 `scripts/monitoring/preflight.sh`.
+
+### AdGuard Home and "is YouTube blocked?"
+
+`scripts/monitoring/adguard_check.py` runs on the host every minute
+(`safefamily-adguard.timer`), logs in to the AdGuard API and writes metrics
+for the **AdGuard** row in Grafana: AdGuard up, protection on, 24h query
+and blocked counts, and for each domain in `ADGUARD_WATCH_DOMAINS` whether
+AdGuard would block it right now. "Blocked" comes from AdGuard's own
+`check_host` answer, so it is right however the block is made: a blocked
+service (how SafeFamily blocks YouTube), a filter rule or parental control.
+The **Blocking timeline** panel shows when each domain was blocked or allowed,
+which is how you check that the SafeFamily schedule does what you expect.
+
+```bash
+sudo install -m 600 deploy/monitoring/adguard.env.example /etc/safefamily/adguard.env
+sudo nano /etc/safefamily/adguard.env      # same ADGUARD_* values as the app's .env
+sudo cp deploy/systemd/safefamily-adguard.* /etc/systemd/system/
+sudo sed -i 's#/srv/SafeFamily#'"$PWD"'#' /etc/systemd/system/safefamily-adguard.service
+sudo systemctl daemon-reload && sudo systemctl enable --now safefamily-adguard.timer
+journalctl -u safefamily-adguard.service -n 5     # "youtube.com: FilteredBlockedService" or "NotFilteredNotFound"
+docker compose restart prometheus && docker compose up -d grafana
+```
+
+The password lives only in that root-only file (preflight checks its
+permissions), never in Prometheus or Grafana.
+
+YouTube being allowed is normal at the times your schedule allows it, so
+there is no built-in alert for it. To be told when it is allowed outside
+those times, add a rule in `prometheus/rules.d/`, for example
+`rules.d/youtube.yml` (Prometheus times are UTC: adjust the hours):
+
+```yaml
+groups:
+  - name: youtube-schedule
+    rules:
+      - alert: YouTubeAllowedAtNight
+        # 21:00-06:00 UTC
+        expr: safefamily_adguard_domain_blocked{domain="youtube.com"} == 0 and on() (hour() >= 21 or hour() < 6)
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: YouTube is not blocked although it is night
+```
 
 ### Samba share mounted on the host
 

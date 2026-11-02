@@ -96,6 +96,11 @@ expected on the first run; Phase 2 fixes them.
    arrives (check spam). It auto-resolves in about 5 minutes and a "RESOLVED"
    mail follows. No mail: `docker logs safefamily_alertmanager | grep -i notify`.
 
+6b. - [ ] **Optional: AdGuard and "is YouTube blocked"**: follow "AdGuard Home"
+   in [monitoring.md](monitoring.md#4-adding-more-monitoring-sources).
+   Check: Grafana's AdGuard row shows UP / ON, and preflight's "AdGuard check"
+   section passes.
+
 ---
 
 ## Phase 2: Weekly encrypted backups (20 min)
