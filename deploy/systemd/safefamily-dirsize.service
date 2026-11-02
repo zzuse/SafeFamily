@@ -9,5 +9,7 @@ Description=SafeFamily directory size metrics
 Type=oneshot
 EnvironmentFile=-/etc/safefamily/backup.env
 ExecStart=/srv/SafeFamily/scripts/monitoring/dir_sizes.sh
+# A hung network share must not keep this running forever.
+TimeoutStartSec=5min
 Nice=19
 IOSchedulingClass=idle

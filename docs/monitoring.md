@@ -142,7 +142,8 @@ Alertmanager (critical alerts repeat every 3h, warnings every 12h, and a
 | ScrapeTargetDown | an exporter is unreachable for 5 min | `docker compose ps` |
 | HostMemoryLow / HostHighLoad | < 10% RAM available / load > 1.5× CPUs | `top`, `docker stats` |
 | NetworkMountUnreachable | a Samba/NFS share stops answering for 5 min | `ls <mount>`; `sudo dmesg \| grep -iE 'cifs\|smb\|nfs' \| tail` |
-| NetworkMountMissing | a share mounted in the last 7 days is gone | `sudo mount <mount>` or `sudo mount -a` |
+| NetworkMountMissing | a share mounted in the last 7 days is gone for 20 min | `sudo mount <mount>` or `sudo mount -a` |
+| WatchedMountDown | a `WATCH_MOUNTS` share failed two checks (15 min apart) | `findmnt <mount>`; `ls <mount>` |
 
 Test the mail path once after setup:
 
@@ -276,11 +277,30 @@ covered by `DiskSpaceLow`/`DiskSpaceCritical`. On top of that,
 `NetworkMountUnreachable` and `NetworkMountMissing` (section 2) fire for any
 `cifs`/`smb3`/`nfs` mount; nothing to configure.
 
+**Automounted shares (`x-systemd.automount` in fstab)** are not mounted at
+boot: systemd only puts an `autofs` placeholder there and mounts the share
+the first time something opens the folder. node-exporter ignores `autofs`, so
+until then the share is invisible to Grafana and the alerts. List it in
+`WATCH_MOUNTS` in `/etc/safefamily/backup.env`; `dir_sizes.sh` (every 15
+minutes, and 2 minutes after boot) then opens it, which mounts it, and
+records whether it answered (`WatchedMountDown` alert):
+
+```bash
+echo 'WATCH_MOUNTS=/mnt/nas' | sudo tee -a /etc/safefamily/backup.env    # your mount point(s), space separated
+sudo systemctl start safefamily-dirsize.service
+findmnt /mnt/nas                       # now shows a cifs line, not only autofs
+```
+
 Check that the share is being collected (replace `/mnt/nas`):
 
 ```bash
 curl -s localhost:9100/metrics | grep 'node_filesystem_avail_bytes' | grep -E 'cifs|smb3'
+grep -v '^#' /var/lib/node_exporter/textfile/safefamily_mounts.prom   # 1 = OK
 ```
+
+Do not add `x-systemd.idle-timeout=` to an automounted share you monitor:
+it unmounts the share when idle, which looks like a lost share
+(`NetworkMountMissing`).
 
 - **No line for the share**: older node-exporter versions (e.g. Ubuntu
   22.04's 1.3.1) skip some mount points by default. See the active filter
@@ -291,7 +311,8 @@ curl -s localhost:9100/metrics | grep 'node_filesystem_avail_bytes' | grep -E 'c
   1.5+: `--collector.filesystem.mount-points-exclude='^/(dev|proc|run|sys)($|/)'`)
   and `sudo systemctl restart prometheus-node-exporter`.
 - **Mount it so a dead server cannot hang the host**: in `/etc/fstab` use
-  `nofail,_netdev,x-systemd.automount,x-systemd.mount-timeout=30`, and a
+  `nofail,_netdev,x-systemd.automount,x-systemd.mount-timeout=30` (then add
+  it to `WATCH_MOUNTS`, see above), and a
   `credentials=/root/.smbcredentials` file (mode 600) instead of a password
   in fstab.
 - Do not add the share to `DIR_SIZES_EXTRA` for `dir_sizes.sh`: `du` over the

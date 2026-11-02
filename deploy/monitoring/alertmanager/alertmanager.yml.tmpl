@@ -30,6 +30,10 @@ inhibit_rules:
   # When the site is down because a container is down, only mail about the container.
   - source_matchers: [alertname="ContainerDown"]
     target_matchers: [alertname=~"WebsiteDown|WebsiteSlow|ScrapeTargetDown"]
+  # One mail per broken share: the explicit watch wins over the general alerts.
+  - source_matchers: [alertname="WatchedMountDown"]
+    target_matchers: [alertname=~"NetworkMountUnreachable|NetworkMountMissing"]
+    equal: [mountpoint]
   # An unreachable share can also drop out of the filesystem list.
   - source_matchers: [alertname="NetworkMountUnreachable"]
     target_matchers: [alertname="NetworkMountMissing"]

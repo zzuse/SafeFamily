@@ -182,13 +182,26 @@ groups:
           description: "The file server is down, unreachable or rejected the credentials. Check: ls {{ $labels.mountpoint }}; sudo dmesg | grep -iE 'cifs|smb|nfs' | tail"
 
       - alert: NetworkMountMissing
-        # Mounted at some point in the last 7 days, not mounted now.
+        # Mounted at some point in the last 7 days, not mounted now. The
+        # 20m allows for a reboot (an automounted share comes back when
+        # dir_sizes.sh wakes it with WATCH_MOUNTS).
         expr: |
           max_over_time(node_filesystem_size_bytes{fstype=~"cifs|smb3|nfs|nfs4"}[7d])
             unless on (instance, mountpoint) node_filesystem_size_bytes{fstype=~"cifs|smb3|nfs|nfs4"}
-        for: 5m
+        for: 20m
         labels:
           severity: warning
         annotations:
           summary: "Network share {{ $labels.mountpoint }} is no longer mounted"
           description: "Remount with: sudo mount {{ $labels.mountpoint }} (or sudo mount -a). This alert stops on its own after 7 days unmounted."
+
+      - alert: WatchedMountDown
+        # Mount points listed in WATCH_MOUNTS (backup.env), checked by
+        # dir_sizes.sh every 15 minutes: two failed checks in a row.
+        expr: safefamily_mount_ok == 0
+        for: 20m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Watched share {{ $labels.mountpoint }} is not mounted or not answering"
+          description: "Check: findmnt {{ $labels.mountpoint }}; ls {{ $labels.mountpoint }}; sudo systemctl status $(systemd-escape -p --suffix=automount {{ $labels.mountpoint }})"
