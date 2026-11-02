@@ -167,3 +167,28 @@ groups:
         annotations:
           summary: node-exporter cannot read a .prom file in its textfile directory
           description: "Backup and directory-size metrics go missing. Check: docker logs safefamily_node_exporter | grep textfile"
+
+  # Samba/NFS shares mounted on the host (node-exporter reports them like any
+  # other filesystem, so DiskSpaceLow & co. cover them too).
+  - name: network_mounts
+    rules:
+      - alert: NetworkMountUnreachable
+        expr: node_filesystem_device_error{fstype=~"cifs|smb3|nfs|nfs4"} == 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Network share {{ $labels.mountpoint }} is not responding"
+          description: "The file server is down, unreachable or rejected the credentials. Check: ls {{ $labels.mountpoint }}; sudo dmesg | grep -iE 'cifs|smb|nfs' | tail"
+
+      - alert: NetworkMountMissing
+        # Mounted at some point in the last 7 days, not mounted now.
+        expr: |
+          max_over_time(node_filesystem_size_bytes{fstype=~"cifs|smb3|nfs|nfs4"}[7d])
+            unless on (instance, mountpoint) node_filesystem_size_bytes{fstype=~"cifs|smb3|nfs|nfs4"}
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Network share {{ $labels.mountpoint }} is no longer mounted"
+          description: "Remount with: sudo mount {{ $labels.mountpoint }} (or sudo mount -a). This alert stops on its own after 7 days unmounted."

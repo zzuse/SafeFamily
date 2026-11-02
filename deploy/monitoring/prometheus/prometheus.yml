@@ -4,6 +4,12 @@ global:
 
 rule_files:
   - /etc/prometheus/alerts.yml
+  # Your own alert rules: drop *.yml files into rules.d/ (see its README).
+  - /etc/prometheus/rules.d/*.yml
+
+# Your own scrape targets: drop *.yml files into scrape.d/ (see its README).
+scrape_config_files:
+  - /etc/prometheus/scrape.d/*.yml
 
 alerting:
   alertmanagers:

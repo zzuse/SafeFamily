@@ -30,6 +30,10 @@ inhibit_rules:
   # When the site is down because a container is down, only mail about the container.
   - source_matchers: [alertname="ContainerDown"]
     target_matchers: [alertname=~"WebsiteDown|WebsiteSlow|ScrapeTargetDown"]
+  # An unreachable share can also drop out of the filesystem list.
+  - source_matchers: [alertname="NetworkMountUnreachable"]
+    target_matchers: [alertname="NetworkMountMissing"]
+    equal: [mountpoint]
   - source_matchers: [alertname="DiskSpaceCritical"]
     target_matchers: [alertname=~"DiskSpaceLow|DiskWillFillIn24h"]
     equal: [mountpoint]

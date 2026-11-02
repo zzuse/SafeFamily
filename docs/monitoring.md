@@ -141,6 +141,8 @@ Alertmanager (critical alerts repeat every 3h, warnings every 12h, and a
 | MetricsFileUnreadable | node-exporter cannot read a `.prom` file | `docker logs safefamily_node_exporter` |
 | ScrapeTargetDown | an exporter is unreachable for 5 min | `docker compose ps` |
 | HostMemoryLow / HostHighLoad | < 10% RAM available / load > 1.5× CPUs | `top`, `docker stats` |
+| NetworkMountUnreachable | a Samba/NFS share stops answering for 5 min | `ls <mount>`; `sudo dmesg \| grep -iE 'cifs\|smb\|nfs' \| tail` |
+| NetworkMountMissing | a share mounted in the last 7 days is gone | `sudo mount <mount>` or `sudo mount -a` |
 
 Test the mail path once after setup:
 
@@ -248,3 +250,59 @@ docker compose start app
 
 On a brand-new host, bring up `db` first (`docker compose up -d db`), then
 restore with `--into-live`.
+
+## 4. Adding more monitoring sources
+
+Pick the row that fits; none of them needs edits to the tracked config files.
+
+| You want to watch | Do this |
+|---|---|
+| A disk, USB drive or **Samba/NFS share mounted on the host** | Nothing: node-exporter reports every mounted filesystem. See below. |
+| Another website or URL | Add it to `targets` of the `website` job in `prometheus/prometheus.yml`, or a blackbox job in `scrape.d/` |
+| Anything that has a Prometheus exporter (router, NAS, another server, a database) | Run the exporter, then add a scrape file in `deploy/monitoring/prometheus/scrape.d/` (README there) |
+| A custom check (a script, a file's age, a share being writable) | Write a script that prints metrics into `/var/lib/node_exporter/textfile/<name>.prom` from a timer, like `scripts/monitoring/dir_sizes.sh` does |
+| An alert on any of these | Add a rule file in `deploy/monitoring/prometheus/rules.d/` (README there) |
+| A Grafana panel | Build it in Grafana (dashboard → Make editable → Save as a new dashboard), or drop a dashboard JSON into `grafana/dashboards/` |
+
+After adding scrape or rule files: `docker compose restart prometheus`, then
+check Prometheus's targets page (<http://127.0.0.1:9090/targets>) or rerun
+`scripts/monitoring/preflight.sh`.
+
+### Samba share mounted on the host
+
+node-exporter (on the host, see "Snap Docker" above) measures the share like
+any filesystem, so it already appears in **Free space by mount** and is
+covered by `DiskSpaceLow`/`DiskSpaceCritical`. On top of that,
+`NetworkMountUnreachable` and `NetworkMountMissing` (section 2) fire for any
+`cifs`/`smb3`/`nfs` mount; nothing to configure.
+
+Check that the share is being collected (replace `/mnt/nas`):
+
+```bash
+curl -s localhost:9100/metrics | grep 'node_filesystem_avail_bytes' | grep -E 'cifs|smb3'
+```
+
+- **No line for the share**: older node-exporter versions (e.g. Ubuntu
+  22.04's 1.3.1) skip some mount points by default. See the active filter
+  with `prometheus-node-exporter --help 2>&1 | grep -A1 'mount-points'`; if
+  your mount point matches it, add to `ARGS` in
+  `/etc/default/prometheus-node-exporter`
+  (1.3.x: `--collector.filesystem.ignored-mount-points='^/(dev|proc|run|sys)($|/)'`,
+  1.5+: `--collector.filesystem.mount-points-exclude='^/(dev|proc|run|sys)($|/)'`)
+  and `sudo systemctl restart prometheus-node-exporter`.
+- **Mount it so a dead server cannot hang the host**: in `/etc/fstab` use
+  `nofail,_netdev,x-systemd.automount,x-systemd.mount-timeout=30`, and a
+  `credentials=/root/.smbcredentials` file (mode 600) instead of a password
+  in fstab.
+- Do not add the share to `DIR_SIZES_EXTRA` for `dir_sizes.sh`: `du` over the
+  network every 15 minutes is slow and loads the file server.
+- To alert at a different threshold for one share, copy the example in
+  `prometheus/rules.d/README.md`.
+
+Validate rule changes, including the unit tests for the share alerts:
+
+```bash
+P='docker run --rm -v '"$PWD"'/deploy/monitoring/prometheus:/etc/prometheus:ro --entrypoint promtool prom/prometheus:v3.5.0'
+$P check config /etc/prometheus/prometheus.yml
+$P test rules /etc/prometheus/tests/network_mounts_test.yml
+```
