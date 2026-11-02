@@ -8,7 +8,7 @@
 # partial file and old files never pile up. A failed run leaves the last good
 # picture in place; the display's STALE banner then shows it is old.
 #
-#   GRAFANA_URL               http://grafana:3000
+#   GRAFANA_URL               http://grafana:3000/grafana (Grafana's sub path)
 #   GRAFANA_USER / GRAFANA_PASSWORD   a Grafana login (default admin user)
 #   DISPLAY_DASHBOARD_UID     safefamily-display
 #   DISPLAY_WIDTH / DISPLAY_HEIGHT    1280 / 800
@@ -21,7 +21,7 @@
 #   EXPORT_DIR                export folder inside the container (/export)
 set -u
 
-GRAFANA_URL="${GRAFANA_URL:-http://grafana:3000}"
+GRAFANA_URL="${GRAFANA_URL:-http://grafana:3000/grafana}"
 UID_="${DISPLAY_DASHBOARD_UID:-safefamily-display}"
 WIDTH="${DISPLAY_WIDTH:-1280}"
 HEIGHT="${DISPLAY_HEIGHT:-800}"

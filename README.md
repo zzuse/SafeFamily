@@ -298,7 +298,7 @@ age-encrypted weekly database backup are described in
 ```bash
 # .env: GRAFANA_ADMIN_PASSWORD=... and
 # COMPOSE_FILE=docker-compose.yml:deploy/monitoring/docker-compose.monitoring.yml
-docker compose up -d                      # Grafana on http://127.0.0.1:3000
+docker compose up -d                      # Grafana on https://<site>/grafana/ (LAN only)
 sudo systemctl start safefamily-backup    # after the one-time setup in the doc
 ```
 

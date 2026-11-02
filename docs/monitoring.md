@@ -17,7 +17,7 @@ troubleshooting, follow [operations-checklist.md](operations-checklist.md);
                                    Prometheus ──► Alertmanager ──► email (Gmail SMTP)
                                          │
                                          ▼
-                                     Grafana (127.0.0.1:3000)
+                                     Grafana (https://<site>/grafana/, LAN only)
 ```
 
 | Question | Answered by |
@@ -58,11 +58,33 @@ docker compose up -d                 # starts the new services, recreates proxy 
 docker compose ps                    # all safefamily_* should be "Up"
 ```
 
-Open Grafana at <http://127.0.0.1:3000> (from another machine:
-`ssh -L 3000:127.0.0.1:3000 server`), log in as `admin`, and open
+Open Grafana at **<https://zzuse.duckdns.org/grafana/>** from any device on
+your home network (nginx answers 403 to everything else, see "Grafana from
+the LAN" below), or at <http://127.0.0.1:3000/grafana/> on the server itself
+(from elsewhere: `ssh -L 3000:127.0.0.1:3000 server`). Log in as `admin`, and open
 **Dashboards → SafeFamily → SafeFamily Overview**. (`GRAFANA_ADMIN_PASSWORD`
 only sets the password on Grafana's first start; change it later in the UI.) Prometheus itself is at
 <http://127.0.0.1:9090> (`/alerts` shows every rule and its state).
+
+### Grafana from the LAN
+
+nginx (`deploy/nginx/nginx.docker.conf`, `location /grafana/`) passes
+`/grafana/` to Grafana only for home-network addresses (`10.0.0.0/8`,
+`192.168.0.0/16`) and answers **403** to everything else, so it stays closed
+to the internet although the site is public; Grafana's own login comes on
+top. After pulling this change: `docker compose up -d` (Grafana now serves
+from `/grafana/`) and `docker compose up -d --force-recreate proxy` (new
+nginx config). Check from a phone on mobile data that
+`https://zzuse.duckdns.org/grafana/` gives 403.
+
+- If your LAN uses another range (e.g. `172.16.x.x`), add an `allow` line for
+  it in that location. Do not add `172.16.0.0/12` just to make it work:
+  that is also Docker's own range, so it can let outside traffic through.
+- If your laptop gets 403 at home, see which address nginx saw:
+  `docker compose logs --tail 5 proxy` (first field of each line). The router
+  (`10.0.0.1`) appearing there is fine: that is its loopback NAT.
+- Set `GRAFANA_ROOT_URL` in `.env` if the site name is not `zzuse.duckdns.org`.
+- `GRAFANA_BIND` (direct port 3000) can stay at `127.0.0.1`.
 
 For deeper views, import community dashboards in Grafana (Dashboards → New →
 Import → ID): **1860** Node Exporter Full, **14282** cAdvisor, **9628**
@@ -425,7 +447,7 @@ puts it in a folder the ESP32-P4 display reads:
    ls -l /home/zzuse/code/esphome-config/grafana-export/
    ```
    To look at the picture without the display:
-   <http://127.0.0.1:3000/d/safefamily-display?kiosk> in a browser.
+   <https://zzuse.duckdns.org/grafana/d/safefamily-display?kiosk> in a browser.
 
 The exporter refuses to write while the folder is not a `cifs` mount ("not
 writing: /export is 'ext4', expected cifs"), so pictures never land hidden in

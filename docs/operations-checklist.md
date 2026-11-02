@@ -82,8 +82,9 @@ expected on the first run; Phase 2 fixes them.
 4. - [ ] **Wait 2 minutes, then re-run preflight**: `sudo scripts/monitoring/preflight.sh`
    Check: the "Running stack" section shows every scrape target `PASS`.
 
-5. - [ ] **Open Grafana**: from your laptop, `ssh -L 3000:127.0.0.1:3000 <server>`,
-   then <http://127.0.0.1:3000>, user `admin`.
+5. - [ ] **Open Grafana**: from a device on your home network,
+   <https://zzuse.duckdns.org/grafana/> (after `docker compose up -d --force-recreate proxy`),
+   user `admin`. From elsewhere: `ssh -L 3000:127.0.0.1:3000 <server>`, then <http://127.0.0.1:3000/grafana/>.
    Check: Dashboards → SafeFamily → SafeFamily Overview shows Website UP,
    Database UP, App containers 3, and the disk and container graphs have lines.
 

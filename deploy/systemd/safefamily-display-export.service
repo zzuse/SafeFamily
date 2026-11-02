@@ -16,6 +16,6 @@ Type=oneshot
 User=1000
 Group=1000
 EnvironmentFile=/etc/safefamily/display-export.env
-Environment=GRAFANA_URL=http://127.0.0.1:3000
+Environment=GRAFANA_URL=http://127.0.0.1:3000/grafana
 ExecStart=/bin/sh /srv/SafeFamily/deploy/monitoring/display-export/export.sh --once
 TimeoutStartSec=3min
