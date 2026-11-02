@@ -41,6 +41,7 @@ services:
       GRAFANA_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set in .env}
       DISPLAY_TZ: ${DISPLAY_TZ:-}
       DISPLAY_INTERVAL: ${DISPLAY_INTERVAL:-300}
+      DISPLAY_RETRY: ${DISPLAY_RETRY:-60}
       DISPLAY_FILE: ${DISPLAY_FILE:-grafana-status.png}
       # Refuse to write into the bare folder when the share is not mounted.
       DISPLAY_EXPORT_REQUIRE_FSTYPE: ${DISPLAY_EXPORT_REQUIRE_FSTYPE-cifs}

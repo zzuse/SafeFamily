@@ -13,7 +13,8 @@
 #   DISPLAY_DASHBOARD_UID     safefamily-display
 #   DISPLAY_WIDTH / DISPLAY_HEIGHT    1280 / 800
 #   DISPLAY_TZ                time zone for the timeline, e.g. America/Toronto
-#   DISPLAY_INTERVAL          seconds between exports (300)
+#   DISPLAY_INTERVAL          seconds between exports (300); after a failed
+#                             export it retries after DISPLAY_RETRY (60) instead
 #   DISPLAY_FILE              file name in the export folder (grafana-status.png)
 #   DISPLAY_EXPORT_REQUIRE_FSTYPE  only write when the export folder is this
 #                             filesystem type, e.g. cifs; "" = any
@@ -25,6 +26,7 @@ UID_="${DISPLAY_DASHBOARD_UID:-safefamily-display}"
 WIDTH="${DISPLAY_WIDTH:-1280}"
 HEIGHT="${DISPLAY_HEIGHT:-800}"
 INTERVAL="${DISPLAY_INTERVAL:-300}"
+RETRY="${DISPLAY_RETRY:-60}"
 FILE="${DISPLAY_FILE:-grafana-status.png}"
 DIR="${EXPORT_DIR:-/export}"
 REQUIRE_FSTYPE="${DISPLAY_EXPORT_REQUIRE_FSTYPE-cifs}"
@@ -74,11 +76,27 @@ export_once() {
     mv -f "$TMP" "$DIR/$FILE" && log "wrote $DIR/$FILE ($size, $(wc -c < "$DIR/$FILE") bytes)"
 }
 
+# Grafana answers /api/health once it is ready (no login needed).
+wait_for_grafana() {
+    tries=0
+    until curl -fsS --max-time 5 -o /dev/null "$GRAFANA_URL/api/health" 2> /dev/null; do
+        tries=$((tries + 1))
+        [ "$tries" -eq 1 ] && log "waiting for Grafana at $GRAFANA_URL"
+        [ "$tries" -ge 60 ] && { log "Grafana still not ready after 5 minutes, trying anyway"; return 0; }
+        sleep 5
+    done
+}
+
 if [ "${1:-}" = "--once" ]; then
     export_once
     exit $?
 fi
+wait_for_grafana
 while :; do
-    export_once || true
-    sleep "$INTERVAL"
+    if export_once; then
+        sleep "$INTERVAL"
+    else
+        # Retry soon so one failure does not make the display go STALE.
+        sleep "$RETRY"
+    fi
 done
