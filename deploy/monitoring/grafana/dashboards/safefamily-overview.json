@@ -1651,7 +1651,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Whether AdGuard would block each watched domain right now (ADGUARD_WATCH_DOMAINS).",
+      "description": "Whether each watched service (ADGUARD_WATCH_SERVICES, the list SafeFamily switches) or domain (ADGUARD_WATCH_DOMAINS) is blocked right now.",
       "gridPos": {
         "h": 4,
         "w": 8,
@@ -1664,8 +1664,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "safefamily_adguard_domain_blocked",
-          "legendFormat": "{{domain}}",
+          "expr": "label_replace(safefamily_adguard_service_blocked, \"name\", \"$1 (service)\", \"service\", \"(.+)\") or label_replace(safefamily_adguard_domain_blocked, \"name\", \"$1\", \"domain\", \"(.+)\")",
+          "legendFormat": "{{name}}",
           "refId": "A"
         }
       ],
@@ -1853,8 +1853,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "safefamily_adguard_domain_blocked",
-          "legendFormat": "{{domain}}",
+          "expr": "label_replace(safefamily_adguard_service_blocked, \"name\", \"$1 (service)\", \"service\", \"(.+)\") or label_replace(safefamily_adguard_domain_blocked, \"name\", \"$1\", \"domain\", \"(.+)\")",
+          "legendFormat": "{{name}}",
           "refId": "A"
         }
       ],

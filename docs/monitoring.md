@@ -278,10 +278,18 @@ check Prometheus's targets page (<http://127.0.0.1:9090/targets>) or rerun
 `scripts/monitoring/adguard_check.py` runs on the host every minute
 (`safefamily-adguard.timer`), logs in to the AdGuard API and writes metrics
 for the **AdGuard** row in Grafana: AdGuard up, protection on, 24h query
-and blocked counts, and for each domain in `ADGUARD_WATCH_DOMAINS` whether
-AdGuard would block it right now. "Blocked" comes from AdGuard's own
-`check_host` answer, so it is right however the block is made: a blocked
-service (how SafeFamily blocks YouTube), a filter rule or parental control.
+and blocked counts, and two kinds of "blocked right now":
+
+- **Services** (`ADGUARD_WATCH_SERVICES`, default `youtube`): whether the id
+  is in AdGuard's blocked-services list, the list SafeFamily switches. Fast
+  and local; this is the reliable YouTube signal.
+- **Domains** (`ADGUARD_WATCH_DOMAINS`, default `youtube.com`): AdGuard's
+  `check_host` verdict, which also covers filter rules and parental control.
+  On a busy router, or when Safe Browsing / Parental Control cannot reach
+  AdGuard's servers (for example while SafeFamily has stopped all traffic),
+  it can take longer than `ADGUARD_TIMEOUT` (30 s); the journal then says
+  `check_host ... failed: timed out`. Raise the timeout, or set
+  `ADGUARD_WATCH_DOMAINS=""` and rely on the service check.
 The **Blocking timeline** panel shows when each domain was blocked or allowed,
 which is how you check that the SafeFamily schedule does what you expect.
 
@@ -291,7 +299,7 @@ sudo nano /etc/safefamily/adguard.env      # same ADGUARD_* values as the app's 
 sudo cp deploy/systemd/safefamily-adguard.* /etc/systemd/system/
 sudo sed -i 's#/srv/SafeFamily#'"$PWD"'#' /etc/systemd/system/safefamily-adguard.service
 sudo systemctl daemon-reload && sudo systemctl enable --now safefamily-adguard.timer
-journalctl -u safefamily-adguard.service -n 5     # "youtube.com: FilteredBlockedService" or "NotFilteredNotFound"
+journalctl -u safefamily-adguard.service -n 5     # "service youtube: blocked" / "allowed"
 docker compose restart prometheus && docker compose up -d grafana
 ```
 
@@ -309,7 +317,7 @@ groups:
     rules:
       - alert: YouTubeAllowedAtNight
         # 21:00-06:00 UTC
-        expr: safefamily_adguard_domain_blocked{domain="youtube.com"} == 0 and on() (hour() >= 21 or hour() < 6)
+        expr: safefamily_adguard_service_blocked{service="youtube"} == 0 and on() (hour() >= 21 or hour() < 6)
         for: 15m
         labels:
           severity: warning

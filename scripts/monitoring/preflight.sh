@@ -440,7 +440,12 @@ if [[ -e "$adguard_env" ]]; then
         pass "AdGuard answers with the configured login"
         while read -r domain value; do
             info "$domain is $([[ "$value" == 1 ]] && echo BLOCKED || echo allowed) right now"
-        done < <(sed -n 's/^safefamily_adguard_domain_blocked{domain="\([^"]*\)"} \(.*\)$/\1 \2/p' "$prom")
+        done < <(sed -n -e 's/^safefamily_adguard_service_blocked{service="\([^"]*\)"} \(.*\)$/service:\1 \2/p' \
+                        -e 's/^safefamily_adguard_domain_blocked{domain="\([^"]*\)"} \(.*\)$/\1 \2/p' "$prom")
+        if grep -q '^safefamily_adguard_domain_check_ok{.*} 0' "$prom"; then
+            warn "AdGuard's check_host timed out or failed for a watched domain" \
+                 "raise ADGUARD_TIMEOUT in $adguard_env, or set ADGUARD_WATCH_DOMAINS=\"\" and rely on ADGUARD_WATCH_SERVICES"
+        fi
     else
         fail "AdGuard does not answer, or rejects the login" \
              "check ADGUARD_HOSTPORT/USERNAME/PASSWORD in $adguard_env; journalctl -u safefamily-adguard.service -n 5"
