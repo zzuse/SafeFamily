@@ -1,0 +1,51 @@
+# Export the "SafeFamily Display" dashboard as a 1280x800 PNG for the ESP32-P4
+# display, into a folder the display reads (a writable Samba share). Add it
+# after the monitoring overlay(s) in COMPOSE_FILE:
+#
+#   COMPOSE_FILE=docker-compose.yml:deploy/monitoring/docker-compose.monitoring.yml:deploy/monitoring/docker-compose.host-node-exporter.yml:deploy/monitoring/docker-compose.display-export.yml
+#
+# and set DISPLAY_EXPORT_DIR in .env. The exporter container is in the
+# "display-export" profile: add COMPOSE_PROFILES=display-export to .env to run
+# it, or leave that out and run the same script on the host
+# (deploy/systemd/safefamily-display-export.*). See docs/monitoring.md
+# "Status picture for the P4 display".
+
+services:
+  # Grafana's official headless-Chromium renderer; Grafana calls it for
+  # /render URLs. Internal only.
+  grafana-renderer:
+    image: grafana/grafana-image-renderer:v4.0.17
+    container_name: safefamily_grafana_renderer
+    restart: always
+    environment:
+      TZ: ${DISPLAY_TZ:-UTC}
+
+  grafana:
+    environment:
+      GF_RENDERING_SERVER_URL: http://grafana-renderer:8081/render
+      GF_RENDERING_CALLBACK_URL: http://grafana:3000/grafana/
+
+  display-export:
+    profiles: ["display-export"]
+    image: curlimages/curl:8.11.1
+    container_name: safefamily_display_export
+    restart: always
+    depends_on:
+      - grafana
+      - grafana-renderer
+    # The share is mounted with uid=/gid= options, so only that user may write.
+    user: "${DISPLAY_EXPORT_UID:-1000}:${DISPLAY_EXPORT_GID:-1000}"
+    entrypoint: ["/bin/sh", "/display-export/export.sh"]
+    environment:
+      GRAFANA_URL: http://grafana:3000/grafana
+      GRAFANA_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GRAFANA_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set in .env}
+      DISPLAY_TZ: ${DISPLAY_TZ:-}
+      DISPLAY_INTERVAL: ${DISPLAY_INTERVAL:-300}
+      DISPLAY_RETRY: ${DISPLAY_RETRY:-60}
+      DISPLAY_FILE: ${DISPLAY_FILE:-grafana-status.png}
+      # Refuse to write into the bare folder when the share is not mounted.
+      DISPLAY_EXPORT_REQUIRE_FSTYPE: ${DISPLAY_EXPORT_REQUIRE_FSTYPE-cifs}
+    volumes:
+      - ./deploy/monitoring/display-export:/display-export:ro
+      - ${DISPLAY_EXPORT_DIR:?set DISPLAY_EXPORT_DIR in .env to the folder the P4 display reads}:/export

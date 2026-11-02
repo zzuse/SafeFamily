@@ -1,0 +1,230 @@
+# Operations checklist: monitoring and encrypted backups
+
+A step-by-step list to set up, verify and run the monitoring stack and the
+weekly encrypted database backup on the SafeFamily server. Background and the
+alert reference are in [monitoring.md](monitoring.md).
+
+Each step has a **check** that tells you it worked. If a check fails, stop and
+fix it before going on; the preflight script prints the fix for most problems.
+
+Paths assume the checkout is at `/srv/SafeFamily`; substitute yours.
+
+---
+
+## Phase 0: Requirements (15 min)
+
+Run the preflight first. It only reads, never changes anything. Run it from
+the repository root; `sudo` lets it check root-only files, and `--deep` also
+test-mounts the host folders the exporters need (it pulls the node-exporter
+and cadvisor images the first time):
+
+```bash
+cd /srv/SafeFamily && git pull
+sudo scripts/monitoring/preflight.sh --deep    # or: sudo bash ./scripts/monitoring/preflight.sh --deep
+```
+
+Before Phase 2 it reports "backups are not set up yet" as a warning, not a
+failure, so you can do monitoring first.
+
+- [ ] **Summary shows 0 failures.** Warnings are fine if you understand them
+      (see table). Re-run after every fix.
+
+| Requirement | Why | If preflight complains |
+|---|---|---|
+| Linux host (not macOS/Windows Docker Desktop) | exporters must see the real disks and containers | run the stack on the Linux server |
+| Docker Engine 24+ (tested on 29.9) | cadvisor, compose features | upgrade Docker |
+| Docker Compose **v2** plugin, 2.20+ (tested on 5.6) | overlay file, `COMPOSE_FILE` | `sudo apt install docker-compose-plugin`; legacy `docker-compose` v1 is not supported |
+| Snap-installed Docker | confinement may hide the real `/` and block mounts | `--deep` tests them; if they fail, node-exporter runs on the host (monitoring.md "Snap Docker") |
+| Docker root dir not `/var/lib/docker` (snap) | cadvisor and `dir_sizes.sh` read it | set `DOCKER_ROOT_DIR=` as printed |
+| containerd socket not at `/run/containerd/containerd.sock` (snap Docker, any image store) | cadvisor needs it to name containers | set `CONTAINERD_SOCKET=` as printed |
+| 2 GiB+ RAM; 15%+ disk free **after** Prometheus's history (5 GB by default) | `DiskSpaceLow` fires under 15% free | preflight prints the largest `PROMETHEUS_RETENTION_SIZE` that fits, or free space first |
+| Ports 3000, 9090 free on 127.0.0.1 | Grafana, Prometheus | free them or change the host port in the overlay |
+| Real (not self-signed) TLS certificate | website probe verifies it | Let's Encrypt, or `insecure_skip_verify` (see monitoring.md) |
+| Outbound TCP 587 to smtp.gmail.com | alert emails | open the firewall, or set `ALERT_SMTP_SMARTHOST` |
+| `age` installed | backup encryption | `sudo apt install age` |
+| systemd running | weekly timers | use the cron lines in monitoring.md |
+
+The backup-related failures (recipients file, directories, timers) are
+expected on the first run; Phase 2 fixes them.
+
+---
+
+## Phase 1: Monitoring (20 min)
+
+1. - [ ] **Add to `.env`** (edit it yourself; values per Phase 0). Use these
+   exact names: the Grafana password is `GRAFANA_ADMIN_PASSWORD`, not
+   Grafana's internal `GF_SECURITY_ADMIN_PASSWORD` (the compose file maps one
+   to the other).
+   ```bash
+   GRAFANA_ADMIN_PASSWORD=<long random password>
+   COMPOSE_FILE=docker-compose.yml:deploy/monitoring/docker-compose.monitoring.yml
+   # only if preflight printed them:
+   # DOCKER_ROOT_DIR=...
+   # CONTAINERD_SOCKET=...
+   # PROMETHEUS_RETENTION_SIZE=1GB     (if preflight warns about disk space)
+   # ALERT_EMAIL_TO=you@example.com    (default: MAIL_ACCOUNT)
+   ```
+   Check: `docker compose config --services` lists `prometheus` and `grafana`.
+
+2. - [ ] **Create the metrics directory**:
+   `sudo mkdir -p /var/lib/node_exporter/textfile`
+
+3. - [ ] **Start everything**:
+   ```bash
+   docker compose up -d
+   docker compose up -d --force-recreate proxy   # load the new nginx status page
+   ```
+   The nginx config is mounted as a single file, so a running `proxy` keeps
+   the old copy until it is recreated (a few seconds of downtime; `nginx -s
+   reload` is not enough).
+   Check: `docker compose ps` shows 11 `safefamily_*` containers `Up`.
+
+4. - [ ] **Wait 2 minutes, then re-run preflight**: `sudo scripts/monitoring/preflight.sh`
+   Check: the "Running stack" section shows every scrape target `PASS`.
+
+5. - [ ] **Open Grafana**: from a device on your home network,
+   <https://zzuse.duckdns.org/grafana/> (after `docker compose up -d --force-recreate proxy`),
+   user `admin`. From elsewhere: `ssh -L 3000:127.0.0.1:3000 <server>`, then <http://127.0.0.1:3000/grafana/>.
+   Check: Dashboards → SafeFamily → SafeFamily Overview shows Website UP,
+   Database UP, App containers 3, and the disk and container graphs have lines.
+
+6. - [ ] **Send a test alert email**:
+   ```bash
+   docker exec safefamily_alertmanager amtool alert add TestAlert severity=warning \
+       --annotation='summary="SafeFamily alert test"' --alertmanager.url=http://localhost:9093
+   ```
+   Check: within about 2 minutes, an email "[SafeFamily FIRING] TestAlert"
+   arrives (check spam). It auto-resolves in about 5 minutes and a "RESOLVED"
+   mail follows. No mail: `docker logs safefamily_alertmanager | grep -i notify`.
+
+6b. - [ ] **Optional: AdGuard and "is YouTube blocked"**: follow "AdGuard Home"
+   in [monitoring.md](monitoring.md#4-adding-more-monitoring-sources).
+   Check: Grafana's AdGuard row shows UP / ON, and preflight's "AdGuard check"
+   section passes.
+
+6c. - [ ] **Optional: status picture for the P4 display**: follow section 5 of
+   [monitoring.md](monitoring.md#5-status-picture-for-the-p4-display).
+   Check: `docker logs safefamily_display_export --tail 1` says `wrote ...
+   (1280x800, ...)` and the file's time updates every 5 minutes.
+
+---
+
+## Phase 2: Weekly encrypted backups (20 min)
+
+7. - [ ] **Make the key pair on your laptop, not the server**:
+   ```bash
+   age-keygen -o safefamily-backup-key.txt     # prints "Public key: age1..."
+   ```
+   Check: you saved the private key file in **two** places off the server
+   (password manager + USB stick/paper). Losing it makes every backup
+   unreadable.
+
+8. - [ ] **Install the public key and config on the server**:
+   ```bash
+   sudo mkdir -p /etc/safefamily /var/backups/safefamily
+   echo 'age1...your public key...' | sudo tee /etc/safefamily/backup-recipients.txt
+   sudo cp deploy/monitoring/backup.env.example /etc/safefamily/backup.env
+   sudo chmod 600 /etc/safefamily/backup.env
+   sudo nano /etc/safefamily/backup.env      # SAFEFAMILY_DIR, DOCKER_ROOT_DIR if needed
+   # echo 'BACKUP_GROUP=<your login group>' | sudo tee -a /etc/safefamily/backup.env
+   ```
+   Defaults: weekly backups, keep 8 weekly + 6 monthly. Backups are
+   root-only unless you set `BACKUP_GROUP=<your login group>` (see `id -gn`)
+   in `backup.env`; do that so you (and your offsite-copy script) can copy
+   them without sudo. They are encrypted, so this is safe.
+
+9. - [ ] **Install the timers** (fix `ExecStart=` first if the checkout is not `/srv/SafeFamily`):
+   ```bash
+   sudo cp deploy/systemd/safefamily-backup.* deploy/systemd/safefamily-dirsize.* /etc/systemd/system/
+   sudo sed -i 's#/srv/SafeFamily#'"$PWD"'#' /etc/systemd/system/safefamily-{backup,dirsize}.service
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now safefamily-backup.timer safefamily-dirsize.timer
+   ```
+   Check: `systemctl list-timers 'safefamily-*'` shows the backup's next run on a Sunday.
+
+10. - [ ] **Run the first backup now**: `sudo systemctl start safefamily-backup.service`
+    Check: `journalctl -u safefamily-backup.service -n 10` ends with `done in Ns`,
+    and `sudo ls -l /var/backups/safefamily/weekly/` shows one `.dump.age` file.
+    Within a minute, Grafana's "Last DB backup" tile shows a few minutes.
+
+11. - [ ] **Restore drill** (proves the key and the backup both work). On your laptop
+    (needs `BACKUP_GROUP` from step 8; otherwise first copy the file somewhere
+    readable on the server: `sudo install -m 644 /var/backups/safefamily/weekly/<file> /tmp/`):
+    ```bash
+    ssh <server> ls /var/backups/safefamily/weekly/          # find the newest <stamp>
+    scp <server>:/var/backups/safefamily/weekly/safefamily-<stamp>.dump.age .
+    age -d -i safefamily-backup-key.txt safefamily-<stamp>.dump.age \
+        | ssh <server> 'cd /srv/SafeFamily && scripts/db_restore.sh -'
+    ```
+    Check: it prints row counts for every table, matching what you expect
+    (users, todo_list, notes, ...). Then clean up:
+    `ssh <server> 'cd /srv/SafeFamily && scripts/db_restore.sh --drop-test'`
+
+12. - [ ] **Offsite copy**: add `/var/backups/safefamily/` to your existing backup
+    script (it is already encrypted).
+    Check: the newest `.dump.age` file shows up at the destination.
+
+13. - [ ] **Final preflight**: `sudo scripts/monitoring/preflight.sh --deep`
+    Check: 0 failures.
+
+---
+
+## Routine operations
+
+| When | Do | Check |
+|---|---|---|
+| Any alert email | follow "First thing to check" in [monitoring.md](monitoring.md#2-alerts) | a RESOLVED mail arrives |
+| Weekly (2 min) | glance at the Grafana dashboard | tiles green, "Last DB backup" < 8 days |
+| Monthly (5 min) | confirm the offsite copy has the latest backup; `df -h` | newest file present; disks < 85% |
+| Every 3 months (15 min) | restore drill (step 11) | row counts look right |
+| After upgrading Docker, snap refresh, or OS | `sudo scripts/monitoring/preflight.sh --deep` | 0 failures; container panels still have data |
+| After `git pull` that touches `deploy/monitoring/` | `docker compose up -d`, plus `docker compose restart prometheus alertmanager` for changed rules | preflight "Running stack" all PASS |
+| After `git pull` that touches `deploy/nginx/` | `docker compose up -d --force-recreate proxy` | site loads; nginx panels have data |
+| Yearly | check the private key copies still open: `age -d -i <key> <recent backup> > /dev/null` | no error |
+| Certificate renewal | nothing; the TLS alert warns 14 days ahead | `TLSCertificateExpiringSoon` resolves |
+
+Useful commands:
+
+```bash
+docker compose ps                                  # everything up?
+docker compose logs --tail=50 <service>            # e.g. prometheus, alertmanager, cadvisor
+systemctl list-timers 'safefamily-*'               # next backup
+journalctl -u safefamily-backup.service -n 30      # last backup log
+sudo ls -lh /var/backups/safefamily/{weekly,monthly}
+sudo systemctl start safefamily-backup.service     # extra backup now (e.g. before an upgrade)
+```
+
+---
+
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `docker compose` errors `... must be set in .env` | missing `MAIL_ACCOUNT`, `MAIL_PASSWORD` or `GRAFANA_ADMIN_PASSWORD` (note: not `GF_SECURITY_ADMIN_PASSWORD`) | add it to `.env` under that exact name |
+| "App containers running" No data, container panels empty, `ContainerDown` firing | cadvisor cannot name containers (usually the containerd socket) | `sudo scripts/monitoring/preflight.sh` shows cadvisor's error and the fix; then `docker compose up -d cadvisor` |
+| `--deep` says containers see a different `/`; Grafana disk tiles and "Last DB backup" empty | snap Docker confinement | run node-exporter on the host: "Snap Docker" in monitoring.md (apt package + `docker-compose.host-node-exporter.yml`) |
+| `--deep`: only the textfile dir mount FAILs | snap Docker refuses `/var/lib/node_exporter/textfile` | host mode as above, or `/var/snap/docker/common/node_exporter_textfile` in both `.env` and `/etc/safefamily/backup.env` |
+| Share under `/home`: node-exporter shows `device_error="permission denied"` | the home folder is 750; node-exporter runs as user `prometheus` | `sudo setfacl -m u:prometheus:x /home/<you>` (pass-through only); preflight names the folder |
+| Host mode: `node` scrape target down | ufw blocks containers from host port 9100 | `sudo ufw allow from 172.16.0.0/12 to any port 9100 proto tcp` |
+| Requests/s and Connections panels empty, `NginxStatusUnavailable` | `proxy` still runs the old nginx config | `docker compose up -d --force-recreate proxy` |
+| Website tile DOWN but the site works | self-signed cert, or the `server_name` in blackbox.yml differs from nginx | see Phase 0 table |
+| No alert emails | Gmail app password, port 587 blocked | `docker logs safefamily_alertmanager \| grep -i notify` |
+| "Last DB backup" tile "No data" | backup never ran, or metrics file unreadable | step 10; `MetricsFileUnreadable` alert; `ls -l /var/lib/node_exporter/textfile` |
+| Backup log: `recipients file ... contains a PRIVATE key` | private key copied to the server | replace with the public `age1...` line; delete the private key from the server |
+| Backup log: `container ... is not running` | db container down | `docker compose up -d db`, then step 10 |
+| Grafana password forgotten | set only on first start | `docker exec -it safefamily_grafana grafana cli admin reset-admin-password <new>` |
+
+---
+
+## Turning it off
+
+Monitoring only (the app keeps running):
+
+```bash
+docker compose -f docker-compose.yml -f deploy/monitoring/docker-compose.monitoring.yml \
+    rm -sf prometheus alertmanager grafana node-exporter cadvisor postgres-exporter nginx-exporter blackbox-exporter
+# then remove the COMPOSE_FILE line from .env
+```
+
+Backups: `sudo systemctl disable --now safefamily-backup.timer safefamily-dirsize.timer`.
+Existing backup files stay in `/var/backups/safefamily/`.

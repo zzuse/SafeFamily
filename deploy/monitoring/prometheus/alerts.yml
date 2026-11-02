@@ -1,0 +1,247 @@
+groups:
+  - name: disk
+    rules:
+      - alert: DiskSpaceLow
+        expr: |
+          node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|nsfs"}
+            / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|nsfs"} < 0.15
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk {{ $labels.mountpoint }} has {{ $value | humanizePercentage }} free"
+          description: >-
+            Free space is below 15%. The Postgres volume, app logs and backups
+            all live on host disks; see the "Directory sizes" panel in Grafana.
+
+      - alert: DiskSpaceCritical
+        expr: |
+          node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|nsfs"}
+            / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|nsfs"} < 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk {{ $labels.mountpoint }} is almost full ({{ $value | humanizePercentage }} free)"
+          description: Postgres stops accepting writes when its disk fills up.
+
+      - alert: DiskWillFillIn24h
+        expr: |
+          predict_linear(node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|nsfs"}[6h], 24 * 3600) < 0
+            and node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|nsfs"}
+              / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|nsfs"} < 0.40
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk {{ $labels.mountpoint }} will be full within 24h at the current rate"
+
+  - name: host
+    rules:
+      - alert: HostMemoryLow
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host has only {{ $value | humanizePercentage }} memory available"
+
+      - alert: HostHighLoad
+        expr: node_load15 / count without (cpu, mode) (node_cpu_seconds_total{mode="idle"}) > 1.5
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "15-minute load is {{ $value | humanize }}x the CPU count"
+
+  - name: containers
+    rules:
+      - alert: ContainerDown
+        expr: |
+          absent(container_last_seen{name="safefamily_app"})
+            or absent(container_last_seen{name="safefamily_db"})
+            or absent(container_last_seen{name="safefamily_proxy"})
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Container {{ $labels.name }} is not running"
+          description: "Check with: docker compose ps && docker compose logs --tail=100 {{ $labels.name }}"
+
+      - alert: ContainerHighMemory
+        expr: container_memory_working_set_bytes{name=~"safefamily_(app|db|proxy)"} > 2 * 1024 * 1024 * 1024
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.name }} uses {{ $value | humanize1024 }}B of memory"
+
+      - alert: ScrapeTargetDown
+        expr: up == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus cannot scrape {{ $labels.job }} ({{ $labels.instance }})"
+
+      - alert: NginxStatusUnavailable
+        # The exporter itself is up but cannot read nginx's stub_status page.
+        expr: nginx_up == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: nginx-exporter cannot read nginx's status page
+          description: "Usually nginx runs an old copy of deploy/nginx/nginx.docker.conf: docker compose up -d --force-recreate proxy"
+
+  - name: database
+    rules:
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Postgres is not answering the exporter
+
+      - alert: PostgresTooManyConnections
+        expr: sum(pg_stat_activity_count) / max(pg_settings_max_connections) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Postgres is at {{ $value | humanizePercentage }} of max_connections"
+
+      - alert: PostgresDatabaseGrowingFast
+        expr: delta(pg_database_size_bytes{datname!~"template.*|postgres"}[24h]) > 1024 * 1024 * 1024
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database {{ $labels.datname }} grew by {{ $value | humanize1024 }}B in 24h"
+          description: Usually the logs or media tables. Check disk headroom.
+
+  - name: website
+    rules:
+      - alert: WebsiteDown
+        expr: probe_success{job="website"} == 0
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} is failing (HTTP status or TLS check)"
+          description: "Last HTTP status: check probe_http_status_code in Grafana; then docker compose logs proxy app."
+
+      - alert: WebsiteSlow
+        expr: probe_duration_seconds{job="website"} > 3
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} takes {{ $value | humanize }}s to load"
+
+      - alert: TLSCertificateExpiringSoon
+        expr: probe_ssl_earliest_cert_expiry{job="website"} - time() < 14 * 24 * 3600
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "TLS certificate expires in {{ $value | humanizeDuration }}"
+
+  - name: backup
+    rules:
+      - alert: DatabaseBackupMissing
+        expr: |
+          time() - safefamily_backup_last_success_timestamp_seconds > 8 * 24 * 3600
+            or absent(safefamily_backup_last_success_timestamp_seconds)
+        for: 1h
+        labels:
+          severity: critical
+        annotations:
+          summary: No successful encrypted database backup in the last 8 days
+          description: "Check: systemctl status safefamily-backup.service and journalctl -u safefamily-backup.service"
+
+      - alert: DatabaseBackupFailed
+        expr: safefamily_backup_last_run_success == 0
+        labels:
+          severity: critical
+        annotations:
+          summary: The last database backup run failed
+          description: "See: journalctl -u safefamily-backup.service"
+
+      - alert: MetricsFileUnreadable
+        expr: node_textfile_scrape_error == 1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: node-exporter cannot read a .prom file in its textfile directory
+          description: "Backup and directory-size metrics go missing. Check: docker logs safefamily_node_exporter | grep textfile"
+
+  # Samba/NFS shares mounted on the host (node-exporter reports them like any
+  # other filesystem, so DiskSpaceLow & co. cover them too).
+  - name: network_mounts
+    rules:
+      - alert: NetworkMountUnreachable
+        expr: node_filesystem_device_error{fstype=~"cifs|smb3|nfs|nfs4"} == 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Network share {{ $labels.mountpoint }} is not responding"
+          description: "The file server is down, unreachable or rejected the credentials. Check: ls {{ $labels.mountpoint }}; sudo dmesg | grep -iE 'cifs|smb|nfs' | tail"
+
+      - alert: NetworkMountMissing
+        # Mounted at some point in the last 7 days, not mounted now. The
+        # 20m allows for a reboot (an automounted share comes back when
+        # dir_sizes.sh wakes it with WATCH_MOUNTS).
+        expr: |
+          max_over_time(node_filesystem_size_bytes{fstype=~"cifs|smb3|nfs|nfs4"}[7d])
+            unless on (instance, mountpoint) node_filesystem_size_bytes{fstype=~"cifs|smb3|nfs|nfs4"}
+        for: 20m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Network share {{ $labels.mountpoint }} is no longer mounted"
+          description: "Remount with: sudo mount {{ $labels.mountpoint }} (or sudo mount -a). This alert stops on its own after 7 days unmounted."
+
+      - alert: WatchedMountDown
+        # Mount points listed in WATCH_MOUNTS (backup.env), checked by
+        # dir_sizes.sh every 15 minutes: two failed checks in a row.
+        expr: safefamily_mount_ok == 0
+        for: 20m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Watched share {{ $labels.mountpoint }} is not mounted or not answering"
+          description: "Check: findmnt {{ $labels.mountpoint }}; ls {{ $labels.mountpoint }}; sudo systemctl status $(systemd-escape -p --suffix=automount {{ $labels.mountpoint }})"
+
+  # From scripts/monitoring/adguard_check.py (safefamily-adguard.timer, every minute).
+  - name: adguard
+    rules:
+      - alert: AdGuardDown
+        expr: safefamily_adguard_up == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: AdGuard Home is not answering, or its login failed
+          description: "DNS filtering and SafeFamily's blocking may not work. Check: journalctl -u safefamily-adguard.service -n 20"
+
+      - alert: AdGuardProtectionDisabled
+        expr: safefamily_adguard_protection_enabled == 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: AdGuard protection is switched off
+          description: No filtering or blocked services apply, so YouTube and the other blocks are off. Re-enable it in the AdGuard web UI.
+
+      - alert: AdGuardCheckStale
+        expr: time() - safefamily_adguard_last_check_timestamp_seconds > 600
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: The AdGuard check has not run for over 10 minutes
+          description: "Check: systemctl status safefamily-adguard.timer safefamily-adguard.service"

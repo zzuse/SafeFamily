@@ -52,6 +52,15 @@ pytest -q tests/test_misc_routes.py::test_notes_media_public_note_for_other_user
 ruff check .
 ```
 
+### Monitoring and backups
+Monitoring overlay: `deploy/monitoring/docker-compose.monitoring.yml` (Prometheus, Alertmanager, Grafana, exporters). Encrypted backups: `scripts/db_backup.sh` / `scripts/db_restore.sh` (age, public-key). See `docs/monitoring.md` and `docs/operations-checklist.md`; `scripts/monitoring/preflight.sh` checks host requirements. Validate rule changes with:
+```bash
+docker run --rm -v "$PWD/deploy/monitoring/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.5.0 check config /etc/prometheus/prometheus.yml
+docker run --rm -v "$PWD/deploy/monitoring/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.5.0 test rules /etc/prometheus/tests/network_mounts_test.yml
+docker run --rm -v "$PWD/deploy/monitoring/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.5.0 test rules /etc/prometheus/tests/adguard_test.yml
+```
+The P4 display dashboard (`grafana/dashboards/safefamily-display.json`) is generated from the overview's panels by `deploy/monitoring/display-export/make_display_dashboard.py`; edit the overview panels or the script's LAYOUT, not the JSON. User extensions go in `deploy/monitoring/prometheus/scrape.d/` and `rules.d/` (loaded by glob), not in edits to `prometheus.yml`/`alerts.yml`.
+
 ### Run log analysis CLI
 ```bash
 python -m safe_family.cli.analyze --range last_5min
