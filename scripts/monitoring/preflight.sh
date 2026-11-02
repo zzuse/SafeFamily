@@ -605,6 +605,27 @@ for t in json.load(sys.stdin)["data"]["activeTargets"]:
     else
         fail "could not read scrape targets from Prometheus"
     fi
+    # nginx-exporter is "up" even when it cannot reach nginx's status page;
+    # nginx_up says whether it actually got data.
+    nginx_up="$(curl -fsS --max-time 5 --get http://127.0.0.1:9090/api/v1/query \
+        --data-urlencode 'query=nginx_up' 2>/dev/null \
+        | python3 -c 'import json,sys; r=json.load(sys.stdin)["data"]["result"]; print(r[0]["value"][1] if r else "")' 2>/dev/null)"
+    if [[ "$nginx_up" == "1" ]]; then
+        pass "nginx status page answers (Requests/s and Connections panels have data)"
+    else
+        # The config is a single-file bind mount: after git pull the container
+        # keeps the old file until it is recreated (a reload is not enough).
+        host_has="$(grep -c 'stub_status' deploy/nginx/nginx.docker.conf 2>/dev/null)"
+        cont_has="$(docker exec safefamily_proxy grep -c 'stub_status' /etc/nginx/conf.d/default.conf 2>/dev/null)"
+        if [[ "${host_has:-0}" != "0" && "${cont_has:-0}" == "0" ]]; then
+            fail "nginx is running an old copy of deploy/nginx/nginx.docker.conf (no status page): nginx panels empty" \
+                 "docker compose up -d --force-recreate proxy   (a reload does not pick up the new file)"
+        else
+            fail "nginx-exporter gets no data from http://proxy:8080/stub_status" \
+                 "docker compose logs --tail=20 nginx-exporter proxy"
+        fi
+    fi
+
     # cadvisor can be up yet unable to tell which container is which (its
     # Docker integration failed); then the container panels and the
     # ContainerDown alert have nothing to go on.

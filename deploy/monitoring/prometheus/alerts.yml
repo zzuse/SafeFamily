@@ -84,6 +84,16 @@ groups:
         annotations:
           summary: "Prometheus cannot scrape {{ $labels.job }} ({{ $labels.instance }})"
 
+      - alert: NginxStatusUnavailable
+        # The exporter itself is up but cannot read nginx's stub_status page.
+        expr: nginx_up == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: nginx-exporter cannot read nginx's status page
+          description: "Usually nginx runs an old copy of deploy/nginx/nginx.docker.conf: docker compose up -d --force-recreate proxy"
+
   - name: database
     rules:
       - alert: PostgresDown

@@ -140,6 +140,7 @@ Alertmanager (critical alerts repeat every 3h, warnings every 12h, and a
 | DatabaseBackupFailed | the last backup run failed | same |
 | MetricsFileUnreadable | node-exporter cannot read a `.prom` file | `docker logs safefamily_node_exporter` |
 | ScrapeTargetDown | an exporter is unreachable for 5 min | `docker compose ps` |
+| NginxStatusUnavailable | nginx-exporter cannot read nginx's status page | `docker compose up -d --force-recreate proxy` |
 | HostMemoryLow / HostHighLoad | < 10% RAM available / load > 1.5× CPUs | `top`, `docker stats` |
 | NetworkMountUnreachable | a Samba/NFS share stops answering for 5 min | `ls <mount>`; `sudo dmesg \| grep -iE 'cifs\|smb\|nfs' \| tail` |
 | NetworkMountMissing | a share mounted in the last 7 days is gone for 20 min | `sudo mount <mount>` or `sudo mount -a` |

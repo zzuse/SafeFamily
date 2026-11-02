@@ -69,9 +69,14 @@ expected on the first run; Phase 2 fixes them.
 2. - [ ] **Create the metrics directory**:
    `sudo mkdir -p /var/lib/node_exporter/textfile`
 
-3. - [ ] **Start everything**: `docker compose up -d`
-   (also recreates `proxy` once, to load the internal `stub_status` endpoint;
-   a few seconds of downtime).
+3. - [ ] **Start everything**:
+   ```bash
+   docker compose up -d
+   docker compose up -d --force-recreate proxy   # load the new nginx status page
+   ```
+   The nginx config is mounted as a single file, so a running `proxy` keeps
+   the old copy until it is recreated (a few seconds of downtime; `nginx -s
+   reload` is not enough).
    Check: `docker compose ps` shows 11 `safefamily_*` containers `Up`.
 
 4. - [ ] **Wait 2 minutes, then re-run preflight**: `sudo scripts/monitoring/preflight.sh`
@@ -162,7 +167,8 @@ expected on the first run; Phase 2 fixes them.
 | Monthly (5 min) | confirm the offsite copy has the latest backup; `df -h` | newest file present; disks < 85% |
 | Every 3 months (15 min) | restore drill (step 11) | row counts look right |
 | After upgrading Docker, snap refresh, or OS | `sudo scripts/monitoring/preflight.sh --deep` | 0 failures; container panels still have data |
-| After `git pull` that touches `deploy/monitoring/` | `docker compose up -d` | preflight "Running stack" all PASS |
+| After `git pull` that touches `deploy/monitoring/` | `docker compose up -d`, plus `docker compose restart prometheus alertmanager` for changed rules | preflight "Running stack" all PASS |
+| After `git pull` that touches `deploy/nginx/` | `docker compose up -d --force-recreate proxy` | site loads; nginx panels have data |
 | Yearly | check the private key copies still open: `age -d -i <key> <recent backup> > /dev/null` | no error |
 | Certificate renewal | nothing; the TLS alert warns 14 days ahead | `TLSCertificateExpiringSoon` resolves |
 
@@ -189,6 +195,7 @@ sudo systemctl start safefamily-backup.service     # extra backup now (e.g. befo
 | `--deep`: only the textfile dir mount FAILs | snap Docker refuses `/var/lib/node_exporter/textfile` | host mode as above, or `/var/snap/docker/common/node_exporter_textfile` in both `.env` and `/etc/safefamily/backup.env` |
 | Share under `/home`: node-exporter shows `device_error="permission denied"` | the home folder is 750; node-exporter runs as user `prometheus` | `sudo setfacl -m u:prometheus:x /home/<you>` (pass-through only); preflight names the folder |
 | Host mode: `node` scrape target down | ufw blocks containers from host port 9100 | `sudo ufw allow from 172.16.0.0/12 to any port 9100 proto tcp` |
+| Requests/s and Connections panels empty, `NginxStatusUnavailable` | `proxy` still runs the old nginx config | `docker compose up -d --force-recreate proxy` |
 | Website tile DOWN but the site works | self-signed cert, or the `server_name` in blackbox.yml differs from nginx | see Phase 0 table |
 | No alert emails | Gmail app password, port 587 blocked | `docker logs safefamily_alertmanager \| grep -i notify` |
 | "Last DB backup" tile "No data" | backup never ran, or metrics file unreadable | step 10; `MetricsFileUnreadable` alert; `ls -l /var/lib/node_exporter/textfile` |
