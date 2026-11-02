@@ -36,7 +36,7 @@ failure, so you can do monitoring first.
 | Docker Compose **v2** plugin, 2.20+ (tested on 5.6) | overlay file, `COMPOSE_FILE` | `sudo apt install docker-compose-plugin`; legacy `docker-compose` v1 is not supported |
 | Snap-installed Docker | confinement may hide the real `/` and block mounts | `--deep` tests them; if they fail, node-exporter runs on the host (monitoring.md "Snap Docker") |
 | Docker root dir not `/var/lib/docker` (snap) | cadvisor and `dir_sizes.sh` read it | set `DOCKER_ROOT_DIR=` as printed |
-| containerd image store (Docker 29+ default) | cadvisor needs the containerd socket | set `CONTAINERD_SOCKET=` as printed |
+| containerd socket not at `/run/containerd/containerd.sock` (snap Docker, any image store) | cadvisor needs it to name containers | set `CONTAINERD_SOCKET=` as printed |
 | 2 GiB+ RAM; 15%+ disk free **after** Prometheus's history (5 GB by default) | `DiskSpaceLow` fires under 15% free | preflight prints the largest `PROMETHEUS_RETENTION_SIZE` that fits, or free space first |
 | Ports 3000, 9090 free on 127.0.0.1 | Grafana, Prometheus | free them or change the host port in the overlay |
 | Real (not self-signed) TLS certificate | website probe verifies it | Let's Encrypt, or `insecure_skip_verify` (see monitoring.md) |
@@ -184,7 +184,7 @@ sudo systemctl start safefamily-backup.service     # extra backup now (e.g. befo
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | `docker compose` errors `... must be set in .env` | missing `MAIL_ACCOUNT`, `MAIL_PASSWORD` or `GRAFANA_ADMIN_PASSWORD` (note: not `GF_SECURITY_ADMIN_PASSWORD`) | add it to `.env` under that exact name |
-| Container panels empty, `count(...)` tile shows 0 | cadvisor cannot reach containerd / Docker data | preflight; set `CONTAINERD_SOCKET` / `DOCKER_ROOT_DIR`; `docker compose up -d cadvisor` |
+| "App containers running" No data, container panels empty, `ContainerDown` firing | cadvisor cannot name containers (usually the containerd socket) | `sudo scripts/monitoring/preflight.sh` shows cadvisor's error and the fix; then `docker compose up -d cadvisor` |
 | `--deep` says containers see a different `/`; Grafana disk tiles and "Last DB backup" empty | snap Docker confinement | run node-exporter on the host: "Snap Docker" in monitoring.md (apt package + `docker-compose.host-node-exporter.yml`) |
 | `--deep`: only the textfile dir mount FAILs | snap Docker refuses `/var/lib/node_exporter/textfile` | host mode as above, or `/var/snap/docker/common/node_exporter_textfile` in both `.env` and `/etc/safefamily/backup.env` |
 | Host mode: `node` scrape target down | ufw blocks containers from host port 9100 | `sudo ufw allow from 172.16.0.0/12 to any port 9100 proto tcp` |

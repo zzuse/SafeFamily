@@ -74,8 +74,11 @@ PostgreSQL, **12708** NGINX exporter.
   so it reports DOWN with a self-signed one. Either use a real certificate
   (Let's Encrypt works with duckdns), or add `insecure_skip_verify: true` under
   `tls_config` in `deploy/monitoring/blackbox/blackbox.yml`.
-- **Docker 29+ / containerd image store**: cadvisor asks containerd for
-  container details, at `/run/containerd/containerd.sock` by default. If
+- **<a id="cadvisor-without-container-names"></a>cadvisor without container
+  names** ("App containers running" shows No data, container panels empty,
+  `ContainerDown` firing although everything runs): cadvisor v0.54 asks
+  containerd for container details with **any** image store, classic
+  `overlay2` included, at `/run/containerd/containerd.sock` by default. If
   `docker logs safefamily_cadvisor` says `unable to create containerd client`
   (or the container panels are empty), set `CONTAINERD_SOCKET` in `.env` to the
   real socket; `scripts/monitoring/preflight.sh` finds it and prints the exact

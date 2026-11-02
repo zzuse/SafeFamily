@@ -165,29 +165,39 @@ else
 
         driver="$(docker info -f '{{.Driver}}' 2>/dev/null)"
         if docker info 2>/dev/null | grep -q "io.containerd.snapshotter"; then
-            info "image store: containerd snapshotter ($driver) -> cadvisor must reach containerd"
-            sock=""
-            for candidate in /run/containerd/containerd.sock /run/snap.docker/containerd/containerd.sock \
-                             /run/docker/containerd/containerd.sock /var/snap/docker/common/run/containerd/containerd.sock; do
-                [[ -S "$candidate" ]] && { sock="$candidate"; break; }
-            done
-            if [[ "$sock" == "/run/containerd/containerd.sock" ]]; then
-                pass "containerd socket at /run/containerd/containerd.sock (cadvisor finds it)"
-            elif [[ -n "$sock" && ( "$sock" == /run/* || "$sock" == /var/run/* ) ]]; then
-                if (( compose_ok )) && [[ "$(cfg_value cadvisor command --containerd)" == "$sock" ]]; then
-                    pass "containerd socket at $sock, and CONTAINERD_SOCKET points cadvisor to it"
-                else
-                    warn "containerd socket is at $sock, not where cadvisor looks" "add to .env: CONTAINERD_SOCKET=$sock"
-                fi
-            elif [[ -n "$sock" ]]; then
-                warn "containerd socket is at $sock, outside /run, so cadvisor cannot see it" \
-                     "add under cadvisor.volumes in $overlay: - $(dirname "$sock"):/run/host-containerd:ro and to .env: CONTAINERD_SOCKET=/run/host-containerd/containerd.sock"
-            else
-                warn "containerd socket not found (run with sudo to search root-only paths)" \
-                     "sudo find /run /var/snap -name containerd.sock"
-            fi
+            info "image store: containerd snapshotter ($driver)"
         else
-            pass "image store: classic $driver (cadvisor reads layer metadata directly)"
+            info "image store: classic $driver"
+        fi
+        # cadvisor v0.54's Docker support always talks to containerd, whatever
+        # the image store; without it containers have no names in Grafana.
+        candidates=(/run/containerd/containerd.sock /run/docker/containerd/containerd.sock)
+        # Snap Docker runs its own containerd; prefer it over a system one.
+        if [[ "$root_dir" == /var/snap/* ]]; then
+            candidates=(/run/snap.docker/containerd/containerd.sock
+                        /var/snap/docker/common/run/containerd/containerd.sock "${candidates[@]}")
+        fi
+        sock=""
+        for candidate in "${candidates[@]}"; do
+            [[ -S "$candidate" ]] && { sock="$candidate"; break; }
+        done
+        if [[ "$sock" == "/run/containerd/containerd.sock" ]]; then
+            pass "containerd socket at /run/containerd/containerd.sock (cadvisor finds it)"
+        elif [[ -n "$sock" && ( "$sock" == /run/* || "$sock" == /var/run/* ) ]]; then
+            if (( compose_ok )) && [[ "$(cfg_value cadvisor command --containerd)" == "$sock" ]]; then
+                pass "containerd socket at $sock, and CONTAINERD_SOCKET points cadvisor to it"
+            elif (( compose_ok )); then
+                warn "containerd socket is at $sock, but cadvisor is set to $(cfg_value cadvisor command --containerd)" \
+                     "set in .env: CONTAINERD_SOCKET=$sock, then docker compose up -d cadvisor"
+            else
+                warn "containerd socket is at $sock, not where cadvisor looks" "add to .env: CONTAINERD_SOCKET=$sock"
+            fi
+        elif [[ -n "$sock" ]]; then
+            warn "containerd socket is at $sock, outside /run, so cadvisor cannot see it" \
+                 "add under cadvisor.volumes in $overlay: - $(dirname "$sock"):/run/host-containerd:ro and to .env: CONTAINERD_SOCKET=/run/host-containerd/containerd.sock"
+        else
+            warn "containerd socket not found (run with sudo to search root-only paths)" \
+                 "sudo find /run /var/snap -name containerd.sock"
         fi
         info "cgroup v$(docker info -f '{{.CgroupVersion}}' 2>/dev/null), driver $(docker info -f '{{.CgroupDriver}}' 2>/dev/null)"
     fi
@@ -495,6 +505,34 @@ for t in json.load(sys.stdin)["data"]["activeTargets"]:
         if grep -q "FAIL" <<< "$targets"; then fails=$((fails + 1)); fi
     else
         fail "could not read scrape targets from Prometheus"
+    fi
+    # cadvisor can be up yet unable to tell which container is which (its
+    # Docker integration failed); then the container panels and the
+    # ContainerDown alert have nothing to go on.
+    named="$(curl -fsS --max-time 5 --get http://127.0.0.1:9090/api/v1/query \
+        --data-urlencode 'query=count(container_last_seen{name=~"safefamily_(app|db|proxy)"})' 2>/dev/null \
+        | python3 -c 'import json,sys; r=json.load(sys.stdin)["data"]["result"]; print(r[0]["value"][1] if r else 0)' 2>/dev/null)"
+    if [[ "${named:-0}" == "3" ]]; then
+        pass "cadvisor sees app, db and proxy by name"
+    elif grep -q "PASS  scrape cadvisor" <<< "${targets:-}"; then
+        fail "cadvisor is up but sees ${named:-0} of app/db/proxy by name: container panels empty, ContainerDown fires"
+        # The decisive lines first: why the docker factory failed, or why a
+        # container could not be attached; else any other recent error.
+        cad_all="$(docker logs --tail 500 safefamily_cadvisor 2>&1)"
+        cad_log="$(grep -E 'docker container factory failed|Failed to create existing container' <<< "$cad_all" | tail -n 2)"
+        [[ -n "$cad_log" ]] || cad_log="$(grep -iE 'fail|error|unable' <<< "$cad_all" \
+            | grep -viE 'crio|podman|perf_event|resctrl|product_name|gce\.go' | tail -n 3)"
+        while IFS= read -r line; do [[ -n "$line" ]] && printf '        log: %s\n' "${line:0:220}"; done <<< "$cad_log"
+        if grep -qi containerd <<< "$cad_log"; then
+            hint="set CONTAINERD_SOCKET in .env to the socket preflight finds (Docker section), then docker compose up -d cadvisor"
+        elif grep -qiE 'layerdb|read-write layer|mount-id' <<< "$cad_log"; then
+            hint="cadvisor cannot read Docker's layer data under /rootfs$root_dir: see 'cadvisor without container names' in docs/monitoring.md"
+        elif grep -qi 'docker.sock' <<< "$cad_log"; then
+            hint="cadvisor cannot reach the Docker socket: check the /var/run mount in $overlay"
+        else
+            hint="see 'cadvisor without container names' in docs/monitoring.md"
+        fi
+        printf '        fix: %s\n' "$hint"
     fi
     if ! firing="$(curl -fsS --max-time 5 http://127.0.0.1:9090/api/v1/alerts | python3 -c '
 import json, sys
