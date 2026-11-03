@@ -260,6 +260,33 @@ class AuditMark(db.Model):
         return f"<AuditMark(item_id={self.item_id}, date='{self.mark_date}', value='{self.value}')>"
 
 
+class AuditRemaining(db.Model):
+    """Admin-entered minutes of last week's time left unused, shown on this week's audit.
+
+    One row per (user, week); week_start is the Monday of the week it is shown in.
+    A missing row means 0.
+    """
+
+    __tablename__ = "audit_remaining"
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "week_start", name="uq_audit_remaining_user_week"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(), nullable=False)
+    week_start = db.Column(db.Date, nullable=False)
+    minutes = db.Column(db.Integer, nullable=False, default=0)
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
+
+    def __repr__(self) -> str:
+        """Return a string representation of the AuditRemaining."""
+        return f"<AuditRemaining(user_id='{self.user_id}', week='{self.week_start}', minutes={self.minutes})>"
+
+
 blog_post_tags = db.Table(
     "blog_post_tags",
     db.Column(

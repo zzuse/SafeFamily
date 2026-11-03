@@ -460,8 +460,38 @@ function setupAuditSelects() {
     });
 }
 
+function setupAuditRemaining() {
+    const input = document.querySelector(".sf-audit-remaining-input");
+    if (!input) return;
+    input.addEventListener("change", () => {
+        const previous = input.dataset.value;
+        if (input.value.trim() === "") input.value = "0";
+        fetch("/todo/audit_remaining", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: input.dataset.userId, minutes: input.value })
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    input.value = data.minutes;
+                    input.dataset.value = data.minutes;
+                } else {
+                    input.value = previous;
+                    alert("Remaining time update failed: " + (data.error || "unknown error"));
+                }
+            })
+            .catch(err => {
+                console.error("Remaining time update error:", err);
+                input.value = previous;
+                alert("Error updating remaining time.");
+            });
+    });
+}
+
 setupSplitSlotButtons();
 setupCurrentSubtaskInputs();
 setupPlanDrawer();
 setupHeatmapTooltips();
 setupAuditSelects();
+setupAuditRemaining();

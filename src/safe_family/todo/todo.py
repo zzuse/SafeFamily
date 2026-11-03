@@ -15,7 +15,7 @@ from src.safe_family.core.auth import (
     login_required,
 )
 from src.safe_family.core.extensions import db, get_db_connection, local_tz
-from src.safe_family.core.models import AuditItem, AuditMark, User
+from src.safe_family.core.models import AuditItem, AuditMark, AuditRemaining, User
 from src.safe_family.notifications.notifier import (
     send_discord_notification,
     send_email_notification,
@@ -58,6 +58,8 @@ DEFAULT_STATUS_GRACE_MINUTES = 30
 # Weekly audit matrix: columns run Monday..Sunday of the current week.
 AUDIT_DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 AUDIT_VALUES = {"yes", "no"}
+# Upper bound for the admin-entered "last week not-used time remaining" field.
+AUDIT_REMAINING_MAX_MINUTES = 7 * 24 * 60
 
 
 def generate_time_slots(
@@ -267,7 +269,30 @@ def build_audit_matrix(user_id: str, today: date) -> dict:
         AuditMark.mark_date <= days[-1],
     ).all()
     values = {(mark.item_id, mark.mark_date): mark.value for mark in marks}
+
+    # Last week's 'no' marks per item: a hint for the admin who fills in the
+    # not-used time remaining by hand.
+    last_week_start = week_start - timedelta(days=7)
+    no_marks = AuditMark.query.filter(
+        AuditMark.user_id == str(user_id),
+        AuditMark.mark_date >= last_week_start,
+        AuditMark.mark_date < week_start,
+        AuditMark.value == "no",
+    ).all()
+    no_counts = {}
+    for mark in no_marks:
+        no_counts[mark.item_id] = no_counts.get(mark.item_id, 0) + 1
+    remaining = AuditRemaining.query.filter_by(user_id=str(user_id), week_start=week_start).first()
     return {
+        "remaining_minutes": remaining.minutes if remaining else 0,
+        "last_week": {
+            "start": last_week_start.isoformat(),
+            "end": (week_start - timedelta(days=1)).isoformat(),
+            "no_total": len(no_marks),
+            "no_by_item": [
+                {"name": item.name, "count": no_counts[item.id]} for item in items if item.id in no_counts
+            ],
+        },
         "days": [
             {"label": label, "date": day.isoformat(), "is_today": day == today}
             for label, day in zip(AUDIT_DAY_LABELS, days, strict=True)
@@ -417,6 +442,7 @@ def todo_page():  # noqa: C901, PLR0915 - refactor backlog: split save/view path
         heatmap=heatmap,
         mandatory_subjects=MANDATORY_SUBJECTS,
         audit=build_audit_matrix(selected_user_id, today_date),
+        audit_remaining_max=AUDIT_REMAINING_MAX_MINUTES,
     )
 
 
@@ -771,6 +797,32 @@ def audit_mark():
     db.session.commit()
     logger.info("audit_mark: item=%s user=%s date=%s value=%s", item_id, user_id, mark_date, value or None)
     return jsonify({"success": True, "value": value or None})
+
+
+@todo_bp.post("/todo/audit_remaining")
+@admin_required
+def audit_remaining():
+    """Set this week's "last week not-used time remaining" minutes for a user."""
+    data = request.get_json(silent=True) or {}
+    user_id = str(data.get("user_id") or "")
+    try:
+        minutes = int(str(data.get("minutes", "")).strip() or 0)
+    except ValueError:
+        return jsonify({"success": False, "error": "minutes must be a whole number"}), 400
+    if not 0 <= minutes <= AUDIT_REMAINING_MAX_MINUTES:
+        return jsonify({"success": False, "error": "minutes out of range"}), 400
+    if not user_id or db.session.get(User, user_id) is None:
+        return jsonify({"success": False, "error": "user not found"}), 404
+
+    week_start = current_week_start(datetime.now(local_tz).date())
+    row = AuditRemaining.query.filter_by(user_id=user_id, week_start=week_start).first()
+    if row is None:
+        db.session.add(AuditRemaining(user_id=user_id, week_start=week_start, minutes=minutes))
+    else:
+        row.minutes = minutes
+    db.session.commit()
+    logger.info("audit_remaining: user=%s week=%s minutes=%s", user_id, week_start, minutes)
+    return jsonify({"success": True, "minutes": minutes})
 
 
 @todo_bp.route("/exec_rules/<string:selected_user_id>", methods=["POST"])

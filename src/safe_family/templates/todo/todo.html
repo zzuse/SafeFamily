@@ -661,6 +661,46 @@
         font-weight: 700;
     }
 
+    .sf-audit-remaining {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 8px;
+        margin-bottom: 10px;
+        font-size: 13px;
+        color: var(--sf-ink);
+    }
+
+    .sf-audit-remaining label,
+    .sf-audit-remaining-label {
+        font-weight: 600;
+    }
+
+    .sf-audit-remaining-input {
+        width: 6em;
+        font-family: var(--sf-mono);
+        font-size: 12px;
+        background: var(--sf-surface-3);
+        border: 1px solid var(--sf-border);
+        border-radius: var(--sf-radius-sm);
+        padding: 2px 4px;
+    }
+
+    .sf-audit-remaining-value {
+        font-family: var(--sf-mono);
+        font-weight: 700;
+    }
+
+    .sf-audit-remaining-unit,
+    .sf-audit-remaining-hint {
+        color: var(--sf-ink-dim);
+    }
+
+    .sf-audit-remaining-hint {
+        flex-basis: 100%;
+        font-size: 12px;
+    }
+
     .sf-audit-empty {
         margin: 0;
         color: var(--sf-ink-muted);
@@ -1122,6 +1162,26 @@
                 <span>Weekly audit, tired of remind every time, every field is a 'no', will reduce 10 min of game in the
                     Saturday or Sunday</span>
                 <span class="sf-audit-week">{{ audit.days[0].date }} → {{ audit.days[-1].date }}</span>
+            </div>
+            <div class="sf-audit-remaining">
+                {% if role == 'admin' %}
+                <label for="sf-audit-remaining-input">Last week not-used time remaining</label>
+                <input id="sf-audit-remaining-input" class="sf-audit-remaining-input" type="number" min="0" step="1"
+                    max="{{ audit_remaining_max }}" value="{{ audit.remaining_minutes }}"
+                    data-value="{{ audit.remaining_minutes }}" data-user-id="{{ selected_user_row_id }}">
+                {% else %}
+                <span class="sf-audit-remaining-label">Last week not-used time remaining</span>
+                <span class="sf-audit-remaining-value">{{ audit.remaining_minutes }}</span>
+                {% endif %}
+                <span class="sf-audit-remaining-unit">min</span>
+                {% if role == 'admin' %}
+                <span class="sf-audit-remaining-hint">
+                    Last week ({{ audit.last_week.start }} → {{ audit.last_week.end }}):
+                    {% if audit.last_week.no_total %}
+                    {{ audit.last_week.no_total }} marked no — {% for item in audit.last_week.no_by_item %}{{ item.name }} ({{ item.count }}){% if not loop.last %}, {% endif %}{% endfor %}
+                    {% else %}nothing marked no{% endif %}
+                </span>
+                {% endif %}
             </div>
             {% if audit.rows %}
             <div class="sf-audit-scroll">

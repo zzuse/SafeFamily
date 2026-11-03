@@ -7,7 +7,7 @@ import pytest
 
 from src.safe_family.core import auth
 from src.safe_family.core.extensions import db
-from src.safe_family.core.models import AuditItem, AuditMark, User
+from src.safe_family.core.models import AuditItem, AuditMark, AuditRemaining, User
 from src.safe_family.todo import todo
 
 # Wednesday; the current week runs Mon 2026-09-14 .. Sun 2026-09-20.
@@ -239,3 +239,124 @@ def test_todo_page_shows_empty_audit_message_without_items(client, monkeypatch):
     html = _render_todo(client, monkeypatch, "user", [[]])
 
     assert "No audit items yet." in html
+
+
+def test_build_audit_matrix_remaining_defaults_to_zero_with_no_last_week(seeded):
+    matrix = todo.build_audit_matrix("kid-id", TODAY)
+
+    assert matrix["remaining_minutes"] == 0
+    assert matrix["last_week"] == {
+        "start": "2026-09-07",
+        "end": "2026-09-13",
+        "no_total": 0,
+        "no_by_item": [],
+    }
+
+
+def test_build_audit_matrix_summarizes_last_weeks_no_marks(seeded):
+    db.session.add_all(
+        [
+            AuditMark(item_id=seeded["Math"], user_id="kid-id", mark_date=date(2026, 9, 7), value="no"),
+            AuditMark(item_id=seeded["Math"], user_id="kid-id", mark_date=date(2026, 9, 13), value="no"),
+            AuditMark(item_id=seeded["Piano"], user_id="kid-id", mark_date=date(2026, 9, 10), value="no"),
+            AuditMark(item_id=seeded["Piano"], user_id="kid-id", mark_date=date(2026, 9, 11), value="yes"),
+            # outside last week, or another user: ignored
+            AuditMark(item_id=seeded["Piano"], user_id="kid-id", mark_date=date(2026, 9, 6), value="no"),
+            AuditMark(item_id=seeded["Piano"], user_id="kid-id", mark_date=date(2026, 9, 14), value="no"),
+            AuditMark(item_id=seeded["Math"], user_id="other-id", mark_date=date(2026, 9, 8), value="no"),
+            AuditRemaining(user_id="kid-id", week_start=date(2026, 9, 14), minutes=40),
+            AuditRemaining(user_id="kid-id", week_start=date(2026, 9, 7), minutes=99),
+        ],
+    )
+    db.session.commit()
+
+    matrix = todo.build_audit_matrix("kid-id", TODAY)
+
+    assert matrix["remaining_minutes"] == 40
+    assert matrix["last_week"]["no_total"] == 3
+    assert matrix["last_week"]["no_by_item"] == [
+        {"name": "Piano", "count": 1},
+        {"name": "Math", "count": 2},
+    ]
+
+
+def _post_remaining(client, minutes, user_id="kid-id"):
+    return client.post("/todo/audit_remaining", json={"user_id": user_id, "minutes": minutes})
+
+
+def test_audit_remaining_creates_and_updates_this_weeks_row(client, monkeypatch, seeded):
+    monkeypatch.setattr(todo, "datetime", FixedDatetime)
+    _admin_session(client, monkeypatch)
+
+    resp = _post_remaining(client, "30")
+    assert resp.status_code == 200
+    assert resp.get_json() == {"success": True, "minutes": 30}
+    row = AuditRemaining.query.one()
+    assert (row.user_id, row.week_start, row.minutes) == ("kid-id", date(2026, 9, 14), 30)
+
+    assert _post_remaining(client, 0).get_json() == {"success": True, "minutes": 0}
+    assert AuditRemaining.query.one().minutes == 0
+
+    # a blank field is treated as the default 0
+    assert _post_remaining(client, "").get_json() == {"success": True, "minutes": 0}
+
+
+@pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        (("abc", "kid-id"), (400, "minutes must be a whole number")),
+        (("1.5", "kid-id"), (400, "minutes must be a whole number")),
+        ((-5, "kid-id"), (400, "minutes out of range")),
+        ((todo.AUDIT_REMAINING_MAX_MINUTES + 1, "kid-id"), (400, "minutes out of range")),
+        ((10, ""), (404, "user not found")),
+        ((10, "ghost-id"), (404, "user not found")),
+    ],
+)
+def test_audit_remaining_rejects_bad_input(client, monkeypatch, seeded, body, expected):
+    monkeypatch.setattr(todo, "datetime", FixedDatetime)
+    _admin_session(client, monkeypatch)
+
+    resp = _post_remaining(client, *body)
+
+    assert (resp.status_code, resp.get_json()["error"]) == expected
+    assert AuditRemaining.query.count() == 0
+
+
+def test_audit_remaining_requires_admin(client, monkeypatch, seeded):
+    _user_session(client, monkeypatch)
+
+    resp = _post_remaining(client, 10)
+
+    assert resp.status_code == 302
+    assert AuditRemaining.query.count() == 0
+
+
+def test_todo_page_shows_read_only_remaining_for_user(client, monkeypatch, seeded):
+    db.session.add(AuditRemaining(user_id="kid-id", week_start=date(2026, 9, 14), minutes=25))
+    db.session.commit()
+
+    html = _render_todo(client, monkeypatch, "user", [[]])
+
+    assert "Last week not-used time remaining" in html
+    assert '<span class="sf-audit-remaining-value">25</span>' in html
+    assert '<input id="sf-audit-remaining-input"' not in html
+    assert '<span class="sf-audit-remaining-hint">' not in html
+
+
+def test_todo_page_shows_editable_remaining_and_hint_for_admin(client, monkeypatch, seeded):
+    db.session.add(AuditMark(item_id=seeded["Math"], user_id="kid-id", mark_date=date(2026, 9, 12), value="no"))
+    db.session.commit()
+
+    html = _render_todo(client, monkeypatch, "admin", [[("kid",)], []])
+
+    assert 'class="sf-audit-remaining-input" type="number"' in html
+    assert 'value="0"' in html
+    assert 'data-user-id="kid-id"' in html
+    assert "Last week (2026-09-07 → 2026-09-13)" in html
+    assert "1 marked no — Math (1)" in html
+
+
+def test_todo_page_admin_hint_without_last_week_no_marks(client, monkeypatch, seeded):
+    html = _render_todo(client, monkeypatch, "admin", [[("kid",)], []])
+
+    assert "nothing marked no" in html

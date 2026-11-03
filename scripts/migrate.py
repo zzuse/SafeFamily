@@ -69,6 +69,18 @@ MIGRATIONS = [
     CREATE INDEX IF NOT EXISTS idx_audit_mark_user_date
         ON audit_mark (user_id, mark_date)
     """,
+    # Last week's unused time, entered by an admin at the top of each week's
+    # audit (see AuditRemaining ORM model). A missing row means 0 minutes.
+    """
+    CREATE TABLE IF NOT EXISTS audit_remaining (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR NOT NULL,
+        week_start DATE NOT NULL,
+        minutes INTEGER NOT NULL DEFAULT 0 CHECK (minutes >= 0),
+        updated_at TIMESTAMP,
+        CONSTRAINT uq_audit_remaining_user_week UNIQUE (user_id, week_start)
+    )
+    """,
     # Technical blog (see BlogPost / BlogTag ORM models). The original Markdown
     # is stored as-is; HTML is rendered on read.
     """
