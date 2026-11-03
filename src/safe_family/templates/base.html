@@ -219,6 +219,54 @@
             font-weight: 700;
         }
 
+        /* Phones and narrow windows: brand and user on the first row, the
+           links on their own full-width row that wraps, so the bar never
+           makes the page wider than the screen. */
+        @media (max-width: 900px) {
+            .sf-shell {
+                padding: 0 16px 48px;
+            }
+
+            .sf-topbar {
+                flex-wrap: wrap;
+                row-gap: 10px;
+            }
+
+            .sf-nav {
+                order: 3;
+                width: 100%;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 4px;
+            }
+
+            .sf-nav a {
+                padding: 6px 8px;
+            }
+        }
+
+        /* Small phones: keep the first row to one line. The avatar shows the
+           user's initial, so the name text can go. */
+        @media (max-width: 480px) {
+            .sf-brand-tm,
+            .sf-user-name {
+                display: none;
+            }
+
+            /* Balanced rows (4 + 3) instead of one link left alone. */
+            .sf-nav {
+                display: grid;
+                grid-template-columns: repeat(4, max-content);
+                justify-content: center;
+                gap: 4px 6px;
+            }
+
+            .sf-nav a {
+                padding: 6px 8px;
+                text-align: center;
+            }
+        }
+
         /* ===== flash ===== */
         .flash {
             padding: 10px 14px;
@@ -552,7 +600,7 @@
             <div class="sf-user">
                 {% if session.access_token %}
                 {% if session.role == 'admin' %}<span class="sf-user-badge">GAME MASTER</span>{% endif %}
-                <span>{{ session.user_name or '' }}</span>
+                <span class="sf-user-name">{{ session.user_name or '' }}</span>
                 <div class="sf-avatar">{{ (session.user_name or 'M')[:1]|upper }}</div>
                 {% endif %}
             </div>
