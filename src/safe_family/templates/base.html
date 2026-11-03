@@ -219,6 +219,75 @@
             font-weight: 700;
         }
 
+        .sf-user-logout {
+            padding: 4px 10px;
+            border: 1px solid var(--sf-border-strong);
+            border-radius: 6px;
+            color: var(--sf-ink-muted);
+            text-decoration: none;
+        }
+
+        .sf-user-logout:hover {
+            color: var(--sf-ink);
+            background: var(--sf-surface);
+        }
+
+        /* Phones and narrow windows: brand and user on the first row, the
+           links on their own full-width row that wraps, so the bar never
+           makes the page wider than the screen. */
+        @media (max-width: 900px) {
+            .sf-shell {
+                padding: 0 16px 48px;
+            }
+
+            .sf-topbar {
+                flex-wrap: wrap;
+                row-gap: 10px;
+            }
+
+            .sf-nav {
+                order: 3;
+                width: 100%;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 4px;
+            }
+
+            .sf-nav a {
+                padding: 6px 8px;
+            }
+        }
+
+        /* Small phones: keep the first row to one line. The avatar shows the
+           user's initial and, for the admin, a ring in place of the badge. */
+        @media (max-width: 480px) {
+            .sf-brand-tm,
+            .sf-user-name,
+            .sf-user-badge {
+                display: none;
+            }
+
+            .sf-avatar.is-admin {
+                box-shadow: 0 0 0 2px var(--sf-bg), 0 0 0 4px var(--sf-accent);
+            }
+
+            .sf-nav {
+                gap: 2px;
+            }
+
+            .sf-nav a {
+                padding: 6px 7px;
+            }
+        }
+
+        /* Smallest phones (320px): tighter links keep the menu on one row. */
+        @media (max-width: 340px) {
+            .sf-nav a {
+                padding: 6px 4px;
+                font-size: 12px;
+            }
+        }
+
         /* ===== flash ===== */
         .flash {
             padding: 10px 14px;
@@ -542,8 +611,7 @@
                 <a href="{{ url_for('schedule_rules.schedule_rules') }}"
                     class="{% if request.endpoint == 'schedule_rules.schedule_rules' %}active{% endif %}">Schedule</a>
                 <a href="{{ url_for('index.calc_guide') }}"
-                    class="{% if request.endpoint == 'index.calc_guide' %}active{% endif %}">Sheet</a>
-                <a href="{{ url_for('auth.session_logout') }}">Logout</a>
+                    class="{% if request.endpoint in ('index.calc_guide', 'index.recipes', 'index.recipe_detail') %}active{% endif %}">Sheet</a>
                 {% else %}
                 <a href="{{ url_for('auth.show_login_form') }}">Login</a>
                 <a href="{{ url_for('auth.session_register') }}">Register</a>
@@ -551,9 +619,11 @@
             </nav>
             <div class="sf-user">
                 {% if session.access_token %}
-                {% if session.role == 'admin' %}<span class="sf-user-badge">GAME MASTER</span>{% endif %}
-                <span>{{ session.user_name or '' }}</span>
-                <div class="sf-avatar">{{ (session.user_name or 'M')[:1]|upper }}</div>
+                {% if nav_user and nav_user.is_admin %}<span class="sf-user-badge">GAME MASTER</span>{% endif %}
+                {% if nav_user %}<span class="sf-user-name">{{ nav_user.name }}</span>{% endif %}
+                <div class="sf-avatar{% if nav_user and nav_user.is_admin %} is-admin{% endif %}"
+                    title="{{ nav_user.name if nav_user else '' }}">{{ nav_user.initial if nav_user else '?' }}</div>
+                <a class="sf-user-logout" href="{{ url_for('auth.session_logout') }}">Logout</a>
                 {% endif %}
             </div>
         </header>

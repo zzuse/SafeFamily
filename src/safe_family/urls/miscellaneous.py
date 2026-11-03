@@ -2,12 +2,13 @@
 
 from datetime import datetime
 
-from flask import Blueprint, flash, redirect, render_template, request
+from flask import Blueprint, abort, flash, redirect, render_template, request
 
 from config.settings import settings
 from src.safe_family.core.auth import get_current_username, login_required
 from src.safe_family.core.extensions import db
 from src.safe_family.core.models import CountdownConfig
+from src.safe_family.urls.recipes_data import RECIPES
 
 root_bp = Blueprint("index", __name__)
 
@@ -39,6 +40,26 @@ def calc_guide():
     This route renders a landing page linking to the available calculators.
     """
     return render_template("miscellaneous/calc_guide.html")
+
+
+@root_bp.route("/recipes")
+@login_required
+def recipes():
+    """Render the recipe list.
+
+    Recipes are static data in recipes_data.py, edited by hand.
+    """
+    return render_template("miscellaneous/recipes.html", recipes=RECIPES)
+
+
+@root_bp.route("/recipes/<slug>")
+@login_required
+def recipe_detail(slug: str):
+    """Render one recipe with its ingredients and steps."""
+    recipe = next((r for r in RECIPES if r["slug"] == slug), None)
+    if recipe is None:
+        abort(404)
+    return render_template("miscellaneous/recipe_detail.html", recipe=recipe)
 
 
 @root_bp.route("/yaw_calc")
