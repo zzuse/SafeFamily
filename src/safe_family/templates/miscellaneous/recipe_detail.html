@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="recipe-page">
+    <div class="recipe-toolbar">
+        <a href="{{ url_for('index.recipes') }}" class="recipe-back">&laquo; All recipes</a>
+    </div>
+
+    <article class="card recipe-detail">
+        <div class="recipe-hero">
+            {% if recipe.image %}
+            <img class="recipe-hero-img" src="{{ url_for('static', filename='recipes/' ~ recipe.image) }}"
+                alt="{{ recipe.title }}">
+            {% endif %}
+            <div class="recipe-hero-text">
+                <h1 class="recipe-title">{{ recipe.title }}</h1>
+                {% if recipe.summary %}<p class="recipe-summary">{{ recipe.summary }}</p>{% endif %}
+                <div class="recipe-meta">
+                    {% if recipe.time %}<span>⏱ {{ recipe.time }}</span>{% endif %}
+                    {% if recipe.servings %}<span>🍽 {{ recipe.servings }} servings</span>{% endif %}
+                </div>
+                {% if recipe.tags %}
+                <div class="recipe-tags">
+                    {% for tag in recipe.tags %}<span class="recipe-tag">{{ tag }}</span>{% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="recipe-columns">
+            <div>
+                <h2 class="recipe-section-title">Ingredients</h2>
+                <ul class="recipe-ingredients">
+                    {% for item in recipe.ingredients %}
+                    <li><label><input type="checkbox"> <span>{{ item }}</span></label></li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div>
+                <h2 class="recipe-section-title">Steps</h2>
+                <ol class="recipe-steps">
+                    {% for step in recipe.steps %}
+                    <li>{{ step }}</li>
+                    {% endfor %}
+                </ol>
+                {% if recipe.notes %}
+                <p class="recipe-notes"><strong>Tip:</strong> {{ recipe.notes }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </article>
+</section>
+{% endblock %}

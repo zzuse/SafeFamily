@@ -55,6 +55,8 @@ def test_calc_guide_renders_when_logged_in(client, monkeypatch):
     assert resp.status_code == 200
     assert b"Yaw Calculator" in resp.data
     assert b"Store Accounting Tool" in resp.data
+    assert b"Recipe Book" in resp.data
+    assert b"/recipes" in resp.data
 
 
 def test_yaw_calc_renders_when_logged_in(client, monkeypatch):

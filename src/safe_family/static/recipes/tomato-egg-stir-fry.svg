@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Tomato and egg stir-fry on a plate">
+  <rect width="400" height="300" fill="#f6ead8"/>
+  <ellipse cx="200" cy="162" rx="150" ry="110" fill="#ffffff" stroke="#e4d6bf" stroke-width="4"/>
+  <ellipse cx="200" cy="162" rx="118" ry="84" fill="#fbf6ee"/>
+  <!-- sauce -->
+  <path d="M110 165c10-42 62-62 98-58 46 4 86 26 84 60-2 36-48 60-96 58-50-2-96-22-86-60z" fill="#e0532f" opacity="0.85"/>
+  <!-- egg curds -->
+  <path d="M132 150c8-14 30-16 38-4 6 10-4 22-18 22s-26-6-20-18z" fill="#f7c948"/>
+  <path d="M196 128c12-10 34-6 36 8 2 12-12 20-26 18s-20-16-10-26z" fill="#f9d45c"/>
+  <path d="M238 168c10-12 32-10 36 2 4 14-10 22-24 20s-20-12-12-22z" fill="#f7c948"/>
+  <path d="M168 186c8-10 28-10 32 2 3 10-8 18-20 17s-19-10-12-19z" fill="#fadb6e"/>
+  <!-- tomato wedges -->
+  <path d="M178 152c4-14 22-18 28-6l-12 18z" fill="#c8361d"/>
+  <path d="M214 176c10-8 26-2 26 10l-20 4z" fill="#c8361d"/>
+  <path d="M146 176c6-10 22-8 24 2l-16 8z" fill="#b92f18"/>
+  <!-- green onion -->
+  <g fill="#4f9d3a">
+    <rect x="160" y="138" width="9" height="5" rx="2" transform="rotate(-20 160 138)"/>
+    <rect x="222" y="150" width="9" height="5" rx="2" transform="rotate(25 222 150)"/>
+    <rect x="190" y="170" width="9" height="5" rx="2" transform="rotate(-10 190 170)"/>
+    <rect x="252" y="142" width="9" height="5" rx="2" transform="rotate(15 252 142)"/>
+    <rect x="140" y="160" width="9" height="5" rx="2" transform="rotate(35 140 160)"/>
+  </g>
+  <!-- chopsticks -->
+  <g stroke="#8a5a2b" stroke-width="7" stroke-linecap="round">
+    <line x1="318" y1="40" x2="250" y2="118"/>
+    <line x1="340" y1="52" x2="262" y2="124"/>
+  </g>
+</svg>

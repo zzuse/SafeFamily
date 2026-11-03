@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="recipe-page">
+    <div class="recipe-toolbar">
+        <h1 class="card-header" style="margin: 0;">Recipes</h1>
+        <a href="{{ url_for('index.calc_guide') }}" class="recipe-back">&laquo; Sheet</a>
+    </div>
+
+    {% if recipes %}
+    <div class="recipe-grid">
+        {% for recipe in recipes %}
+        <a class="recipe-card" href="{{ url_for('index.recipe_detail', slug=recipe.slug) }}">
+            {% if recipe.image %}
+            <img class="recipe-card-img" src="{{ url_for('static', filename='recipes/' ~ recipe.image) }}"
+                alt="{{ recipe.title }}" loading="lazy">
+            {% else %}
+            <div class="recipe-card-img recipe-card-img--empty" aria-hidden="true">🍽️</div>
+            {% endif %}
+            <div class="recipe-card-body">
+                <h2 class="recipe-card-title">{{ recipe.title }}</h2>
+                {% if recipe.summary %}<p class="recipe-card-summary">{{ recipe.summary }}</p>{% endif %}
+                <div class="recipe-meta">
+                    {% if recipe.time %}<span>⏱ {{ recipe.time }}</span>{% endif %}
+                    {% if recipe.servings %}<span>🍽 {{ recipe.servings }} servings</span>{% endif %}
+                    <span>{{ recipe.ingredients | length }} ingredients</span>
+                </div>
+                {% if recipe.tags %}
+                <div class="recipe-tags">
+                    {% for tag in recipe.tags %}<span class="recipe-tag">{{ tag }}</span>{% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="note">No recipes yet. Add one in src/safe_family/urls/recipes_data.py.</div>
+    {% endif %}
+</section>
+{% endblock %}
