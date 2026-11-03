@@ -2,13 +2,14 @@
 
 from datetime import timedelta
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, session
+from sqlalchemy.exc import SQLAlchemyError
 
 from config.logging import setup_logging
 from config.settings import settings
 from src.safe_family.api.routes import api_bp
 from src.safe_family.auto_git.auto_git import auto_git_bp
-from src.safe_family.core.auth import auth_bp
+from src.safe_family.core.auth import auth_bp, get_current_username
 from src.safe_family.core.extensions import db, jwt, mail
 from src.safe_family.core.models import User
 from src.safe_family.rules.scheduler import schedule_rules_bp
@@ -36,6 +37,26 @@ def _require_strong_secret(name: str, value: str | None) -> None:
             'Generate one with: python -c "import secrets; print(secrets.token_urlsafe(64))"'
         )
         raise RuntimeError(msg)
+
+
+def inject_nav_user() -> dict:
+    """Give the top bar the logged-in user's name, initial and admin flag."""
+    if not session.get("access_token"):
+        return {"nav_user": None}
+    try:
+        user = get_current_username()
+    except SQLAlchemyError:
+        return {"nav_user": None}
+    if user is None:
+        return {"nav_user": None}
+    name = (user.username or "").strip()
+    return {
+        "nav_user": {
+            "name": name,
+            "initial": name[:1].upper() or "?",
+            "is_admin": user.role == "admin",
+        },
+    }
 
 
 def create_app():
@@ -71,6 +92,8 @@ def create_app():
     def inject_motto() -> dict:
         """Inject the app motto into all templates."""
         return {"motto": settings.APP_MOTTO}
+
+    app.context_processor(inject_nav_user)
 
     app.register_blueprint(root_bp)
     app.register_blueprint(notes_bp)
