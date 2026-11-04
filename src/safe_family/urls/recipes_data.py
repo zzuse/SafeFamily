@@ -53,7 +53,7 @@ RECIPES = [
         "notes": "长时间焖煮时,需要保证五花肉在最下面,豆角在中间,面条在最上面.且时刻检查五花肉没有被烤糊",
     },
     {
-        "slug": "Dough-Drop-and-Assorted-Vegetable-Soup",
+        "slug": "dough-drop-and-assorted-vegetable-soup",
         "title": "Dough Drop and Assorted Vegetable Soup (疙瘩汤)",
         "summary": "疙瘩汤传统做法保留面粉中的维生素B族,符合原汤化原食饮食理念,且因面食类易消化,素汤适合消化功能较弱者作为晚餐食用,也可作为早餐食用.疙瘩汤的做法有很多种,常见的有鸡蛋疙瘩汤,番茄疙瘩汤,豆腐疙瘩汤,酸菜疙瘩汤等.",
         "image": "gedatang.jpeg",
