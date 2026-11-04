@@ -1174,14 +1174,13 @@
                 <span class="sf-audit-remaining-value">{{ audit.remaining_minutes }}</span>
                 {% endif %}
                 <span class="sf-audit-remaining-unit">min</span>
-                {% if role == 'admin' %}
                 <span class="sf-audit-remaining-hint">
                     Last week ({{ audit.last_week.start }} → {{ audit.last_week.end }}):
                     {% if audit.last_week.no_total %}
-                    {{ audit.last_week.no_total }} marked no — {% for item in audit.last_week.no_by_item %}{{ item.name }} ({{ item.count }}){% if not loop.last %}, {% endif %}{% endfor %}
+                    {{ audit.last_week.no_total }} marked no — {% for item in audit.last_week.no_by_item %}{{ item.name
+                    }} ({{ item.count }}){% if not loop.last %}, {% endif %}{% endfor %}
                     {% else %}nothing marked no{% endif %}
                 </span>
-                {% endif %}
             </div>
             {% if audit.rows %}
             <div class="sf-audit-scroll">

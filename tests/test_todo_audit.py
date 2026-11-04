@@ -340,7 +340,8 @@ def test_todo_page_shows_read_only_remaining_for_user(client, monkeypatch, seede
     assert "Last week not-used time remaining" in html
     assert '<span class="sf-audit-remaining-value">25</span>' in html
     assert '<input id="sf-audit-remaining-input"' not in html
-    assert '<span class="sf-audit-remaining-hint">' not in html
+    assert '<span class="sf-audit-remaining-hint">' in html
+    assert "nothing marked no" in html
 
 
 def test_todo_page_shows_editable_remaining_and_hint_for_admin(client, monkeypatch, seeded):

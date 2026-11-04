@@ -270,7 +270,7 @@ def build_audit_matrix(user_id: str, today: date) -> dict:
     ).all()
     values = {(mark.item_id, mark.mark_date): mark.value for mark in marks}
 
-    # Last week's 'no' marks per item: a hint for the admin who fills in the
+    # Last week's 'no' marks per item: shown to everyone, and a hint for the admin who fills in the
     # not-used time remaining by hand.
     last_week_start = week_start - timedelta(days=7)
     no_marks = AuditMark.query.filter(
