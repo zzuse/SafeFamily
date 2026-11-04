@@ -58,7 +58,9 @@ Monitoring overlay: `deploy/monitoring/docker-compose.monitoring.yml` (Prometheu
 docker run --rm -v "$PWD/deploy/monitoring/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.5.0 check config /etc/prometheus/prometheus.yml
 docker run --rm -v "$PWD/deploy/monitoring/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.5.0 test rules /etc/prometheus/tests/network_mounts_test.yml
 docker run --rm -v "$PWD/deploy/monitoring/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.5.0 test rules /etc/prometheus/tests/adguard_test.yml
+docker run --rm -v "$PWD/deploy/monitoring/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.5.0 test rules /etc/prometheus/tests/containers_test.yml
 ```
+`container_last_seen` (cadvisor) carries explicit timestamps, so Prometheus keeps a removed container's series for 5 minutes: count containers by distinct `name` and filter on `time() - container_last_seen < 120`, never `count(container_last_seen)`.
 The P4 display dashboard (`grafana/dashboards/safefamily-display.json`) is generated from the overview's panels by `deploy/monitoring/display-export/make_display_dashboard.py`; edit the overview panels or the script's LAYOUT, not the JSON. User extensions go in `deploy/monitoring/prometheus/scrape.d/` and `rules.d/` (loaded by glob), not in edits to `prometheus.yml`/`alerts.yml`.
 
 ### Run log analysis CLI

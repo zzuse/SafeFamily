@@ -150,7 +150,7 @@ Alertmanager (critical alerts repeat every 3h, warnings every 12h, and a
 |---|---|---|
 | DiskSpaceLow / DiskSpaceCritical | a filesystem is under 15% / 5% free | "Directory sizes" panel; prune per README "Prune Cache" |
 | DiskWillFillIn24h | the 6h trend reaches 0 within a day | same, plus `PostgresDatabaseGrowingFast` |
-| ContainerDown | app, db or proxy not running for 2 min | `docker compose ps`, `docker compose logs --tail=100 <svc>` |
+| ContainerDown | cadvisor has not seen app, db or proxy for 2 min, for another 2 min | `docker compose ps`, `docker compose logs --tail=100 <svc>` |
 | ContainerHighMemory | a container uses > 2 GiB for 15 min | `docker stats` |
 | PostgresDown | the exporter cannot query Postgres | `docker compose logs db` |
 | PostgresTooManyConnections | > 80% of `max_connections` | Gunicorn workers × pool size |

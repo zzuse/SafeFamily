@@ -1,0 +1,79 @@
+# Unit tests for ContainerDown and the "App containers running" tile query.
+# container_last_seen's value is the last time cadvisor saw the container (in
+# seconds); '0+60xN' at a 1m interval means "seen right now" at every step.
+# Run from the repository root:
+#   docker run --rm -v "$PWD/deploy/monitoring/prometheus:/etc/prometheus:ro" --entrypoint promtool \
+#       prom/prometheus:v3.5.0 test rules /etc/prometheus/tests/containers_test.yml
+rule_files:
+  - ../alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  # app is recreated at 10m: the old container's series lingers (frozen at
+  # 600s) next to the new one. Still 3 containers, no alert.
+  - interval: 1m
+    input_series:
+      - series: 'container_last_seen{name="safefamily_app", id="/docker/old"}'
+        values: '0+60x10 600x5'
+      - series: 'container_last_seen{name="safefamily_app", id="/docker/new"}'
+        values: '_x10 600+60x20'
+      - series: 'container_last_seen{name="safefamily_db", id="/docker/db"}'
+        values: '0+60x30'
+      - series: 'container_last_seen{name="safefamily_proxy", id="/docker/proxy"}'
+        values: '0+60x30'
+    promql_expr_test:
+      - expr: count(container_last_seen{name=~"safefamily_(app|db|proxy)"})
+        eval_time: 12m
+        exp_samples:
+          - value: 4   # the old tile query
+      - expr: count(count by (name) (time() - container_last_seen{name=~"safefamily_(app|db|proxy)"} < 120))
+        eval_time: 12m
+        exp_samples:
+          - value: 3   # the fixed tile query
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: ContainerDown
+        exp_alerts: []
+
+  # proxy stops at 5m; cadvisor's last value (300s) lingers for minutes.
+  - interval: 1m
+    input_series:
+      - series: 'container_last_seen{name="safefamily_app", id="/docker/app"}'
+        values: '0+60x20'
+      - series: 'container_last_seen{name="safefamily_db", id="/docker/db"}'
+        values: '0+60x20'
+      - series: 'container_last_seen{name="safefamily_proxy", id="/docker/proxy"}'
+        values: '0+60x5 300x15'
+    promql_expr_test:
+      - expr: count(count by (name) (time() - container_last_seen{name=~"safefamily_(app|db|proxy)"} < 120))
+        eval_time: 8m
+        exp_samples:
+          - value: 2
+    alert_rule_test:
+      - eval_time: 7m
+        alertname: ContainerDown
+        exp_alerts: []
+      - eval_time: 10m
+        alertname: ContainerDown
+        exp_alerts:
+          - exp_labels: {severity: critical, name: safefamily_proxy}
+            exp_annotations:
+              summary: "Container safefamily_proxy is not running"
+              description: "Check with: docker compose ps && docker compose logs --tail=100 safefamily_proxy"
+
+  # db never reported at all.
+  - interval: 1m
+    input_series:
+      - series: 'container_last_seen{name="safefamily_app", id="/docker/app"}'
+        values: '0+60x10'
+      - series: 'container_last_seen{name="safefamily_proxy", id="/docker/proxy"}'
+        values: '0+60x10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ContainerDown
+        exp_alerts:
+          - exp_labels: {severity: critical, name: safefamily_db}
+            exp_annotations:
+              summary: "Container safefamily_db is not running"
+              description: "Check with: docker compose ps && docker compose logs --tail=100 safefamily_db"

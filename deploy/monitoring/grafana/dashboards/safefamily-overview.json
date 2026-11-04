@@ -185,7 +185,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "app, db and proxy: 3 means all running.",
+      "description": "app, db and proxy seen by cadvisor in the last 2 minutes, each name counted once: 3 means all running.",
       "gridPos": {
         "h": 4,
         "w": 3,
@@ -198,7 +198,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "count(container_last_seen{name=~\"safefamily_(app|db|proxy)\"})",
+          "expr": "count(count by (name) (time() - container_last_seen{name=~\"safefamily_(app|db|proxy)\"} < 120))",
           "legendFormat": "",
           "refId": "A"
         }

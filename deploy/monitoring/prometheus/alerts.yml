@@ -57,10 +57,18 @@ groups:
   - name: containers
     rules:
       - alert: ContainerDown
+        # One series per expected container, minus those cadvisor saw in the
+        # last 2 minutes. container_last_seen carries cadvisor's own
+        # timestamps, so Prometheus keeps a removed container's series for
+        # 5 minutes; checking its value (the last-seen time) avoids that lag.
         expr: |
-          absent(container_last_seen{name="safefamily_app"})
-            or absent(container_last_seen{name="safefamily_db"})
-            or absent(container_last_seen{name="safefamily_proxy"})
+          (
+              label_replace(vector(1), "name", "safefamily_app", "", "")
+            or label_replace(vector(1), "name", "safefamily_db", "", "")
+            or label_replace(vector(1), "name", "safefamily_proxy", "", "")
+          )
+          unless on (name)
+          (time() - container_last_seen{name=~"safefamily_(app|db|proxy)"} < 120)
         for: 2m
         labels:
           severity: critical

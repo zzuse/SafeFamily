@@ -664,7 +664,7 @@ for t in json.load(sys.stdin)["data"]["activeTargets"]:
     # Docker integration failed); then the container panels and the
     # ContainerDown alert have nothing to go on.
     named="$(curl -fsS --max-time 5 --get http://127.0.0.1:9090/api/v1/query \
-        --data-urlencode 'query=count(container_last_seen{name=~"safefamily_(app|db|proxy)"})' 2>/dev/null \
+        --data-urlencode 'query=count(count by (name) (time() - container_last_seen{name=~"safefamily_(app|db|proxy)"} < 120))' 2>/dev/null \
         | python3 -c 'import json,sys; r=json.load(sys.stdin)["data"]["result"]; print(r[0]["value"][1] if r else 0)' 2>/dev/null)"
     if [[ "${named:-0}" == "3" ]]; then
         pass "cadvisor sees app, db and proxy by name"

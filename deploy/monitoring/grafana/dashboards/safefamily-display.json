@@ -189,7 +189,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "count(container_last_seen{name=~\"safefamily_(app|db|proxy)\"})",
+          "expr": "count(count by (name) (time() - container_last_seen{name=~\"safefamily_(app|db|proxy)\"} < 120))",
           "legendFormat": "",
           "refId": "A"
         }
