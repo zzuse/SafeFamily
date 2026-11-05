@@ -118,6 +118,33 @@ MIGRATIONS = [
         PRIMARY KEY (post_id, tag_id)
     )
     """,
+    # Lotto ticket-number training photos (see LottoPhoto ORM model).
+    """
+    CREATE TABLE IF NOT EXISTS lotto_photos (
+        id VARCHAR PRIMARY KEY,
+        user_id VARCHAR NOT NULL,
+        filename VARCHAR NOT NULL,
+        content_type VARCHAR NOT NULL,
+        checksum VARCHAR NOT NULL,
+        data BYTEA NOT NULL,
+        rotation INTEGER NOT NULL DEFAULT 0,
+        boxes_json TEXT NOT NULL DEFAULT '[]',
+        split VARCHAR(8) NOT NULL DEFAULT 'train',
+        skipped BOOLEAN NOT NULL DEFAULT FALSE,
+        labeled_at TIMESTAMP,
+        created_at TIMESTAMP NOT NULL,
+        updated_at TIMESTAMP NOT NULL
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS ix_lotto_photos_user_id ON lotto_photos (user_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS ix_lotto_photos_checksum ON lotto_photos (checksum)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS ix_lotto_photos_created_at ON lotto_photos (created_at)
+    """,
 ]
 
 

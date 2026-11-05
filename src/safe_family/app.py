@@ -12,6 +12,7 @@ from src.safe_family.auto_git.auto_git import auto_git_bp
 from src.safe_family.core.auth import auth_bp, get_current_username
 from src.safe_family.core.extensions import db, jwt, mail
 from src.safe_family.core.models import User
+from src.safe_family.lotto.lotto import lotto_bp
 from src.safe_family.rules.scheduler import schedule_rules_bp
 from src.safe_family.todo.todo import todo_bp
 from src.safe_family.urls.analyzer import analyze_bp
@@ -98,6 +99,7 @@ def create_app():
     app.register_blueprint(root_bp)
     app.register_blueprint(notes_bp)
     app.register_blueprint(blog_bp)
+    app.register_blueprint(lotto_bp)
     app.register_blueprint(receiver_bp)
     app.register_blueprint(analyze_bp)
     app.register_blueprint(api_bp, url_prefix="/api")

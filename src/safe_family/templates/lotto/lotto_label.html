@@ -1,0 +1,371 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="lotto-page">
+    <div class="lotto-toolbar">
+        <a href="{{ url_for('lotto.lotto_home') }}" class="lotto-dim">&laquo; All photos</a>
+        <div class="lotto-dim">
+            {{ photo.filename }} · {{ created_local.strftime("%Y-%m-%d %H:%M") if created_local }}
+            {% if photo.skipped %}· <b>skipped</b>{% elif photo.labeled_at %}· <b>labeled</b>{% endif %}
+        </div>
+    </div>
+
+    <ol class="lotto-howto">
+        <li><b>Rotate</b> until the numbers read upright.</li>
+        <li><b>Drag</b> a tight box around each ticket number (just the number, a little margin). <b>Tap</b> to stamp a
+            box the same size as the last one. Drag a box to move it, drag its corner to resize.</li>
+        <li><b>Type</b> each number exactly as printed, leading zeros included (e.g. <code>007</code>). Check the zoomed
+            preview, not the big photo.</li>
+        <li><b>Save &amp; next</b>. Can't read a number? Delete that box. Is the photo useless? Skip it.</li>
+    </ol>
+
+    <div class="lotto-editor">
+        <div class="card lotto-stage-card">
+            <div class="lotto-row">
+                <button type="button" class="btn btn-secondary lotto-btn" id="rot-left" title="Rotate left">⟲ 90°</button>
+                <button type="button" class="btn btn-secondary lotto-btn" id="rot-right" title="Rotate right">⟳ 90°</button>
+                <label class="lotto-dim">Zoom
+                    <input type="range" id="zoom" min="1" max="4" step="0.5" value="1">
+                </label>
+                <label class="lotto-dim"><input type="checkbox" id="pan-mode"> Pan (scroll instead of draw)</label>
+            </div>
+            <div class="lotto-stage" id="stage">
+                <canvas id="canvas"></canvas>
+            </div>
+            <div class="lotto-dim" id="img-status">Loading image…</div>
+        </div>
+
+        <form method="POST" class="card lotto-side" id="label-form">
+            <input type="hidden" name="rotation" id="f-rotation" value="{{ photo.rotation }}">
+            <input type="hidden" name="boxes" id="f-boxes">
+            <div class="lotto-step">Numbers on this photo</div>
+            <div id="box-list" class="lotto-box-list"></div>
+            <div class="lotto-help" id="box-empty">No boxes yet: drag on the photo around a ticket number.</div>
+
+            <label class="lotto-dim">Dataset split
+                <select name="split">
+                    {% for s in splits %}
+                    <option value="{{ s }}" {% if photo.split == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <p class="lotto-help">Picked automatically (70/15/15). <b>test</b> photos are never trained on, so they give an
+                honest accuracy score. Leave it alone unless you know why.</p>
+
+            <div class="lotto-row">
+                <button type="submit" name="action" value="save_next" class="btn btn-primary lotto-btn">Save &amp; next ⏎</button>
+                <button type="submit" name="action" value="save" class="btn btn-secondary lotto-btn">Save</button>
+                {% if photo.skipped %}
+                <button type="submit" name="action" value="unskip" class="btn btn-secondary lotto-btn">Un-skip</button>
+                {% else %}
+                <button type="submit" name="action" value="skip" class="btn btn-secondary lotto-btn">Skip photo</button>
+                {% endif %}
+            </div>
+            {% if next_todo_id %}
+            <a class="lotto-dim" href="{{ url_for('lotto.lotto_label', photo_id=next_todo_id) }}">Go to next unlabeled without saving &raquo;</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <form action="{{ url_for('lotto.lotto_delete', photo_id=photo.id) }}" method="POST"
+        onsubmit="return confirm('Delete this photo for good? (Skip keeps it but leaves it out of training.)');">
+        <button type="submit" class="btn btn-danger lotto-btn">🗑️ Delete photo</button>
+    </form>
+</section>
+
+<script id="boxes-data" type="application/json">{{ boxes | tojson }}</script>
+<script>
+(function () {
+    'use strict';
+    const MAX_SIDE = 2000;      // canvas resolution cap (keeps phones fast)
+    const HANDLE = 14;          // corner handle size in CSS px
+    const LOW_CONF = 0.9;
+
+    const img = new Image();
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const stage = document.getElementById('stage');
+    const list = document.getElementById('box-list');
+    const empty = document.getElementById('box-empty');
+    const status = document.getElementById('img-status');
+    const fRotation = document.getElementById('f-rotation');
+    const fBoxes = document.getElementById('f-boxes');
+    const form = document.getElementById('label-form');
+    const panMode = document.getElementById('pan-mode');
+    const zoom = document.getElementById('zoom');
+
+    let rotation = parseInt(fRotation.value, 10) || 0;
+    // Boxes in 0-1 fractions of the ROTATED image.
+    let boxes = JSON.parse(document.getElementById('boxes-data').textContent || '[]').map(b => ({
+        x: b.x, y: b.y, w: b.w, h: b.h,
+        // Pre-fill from a model prediction; the human still reviews it.
+        label: b.label || b.pred || '',
+        pred: b.pred || '', conf: (typeof b.conf === 'number') ? b.conf : null,
+    }));
+    let selected = boxes.length ? 0 : -1;
+    let lastSize = boxes.length ? { w: boxes[boxes.length - 1].w, h: boxes[boxes.length - 1].h } : { w: 0.08, h: 0.04 };
+    const src = document.createElement('canvas');   // rotated, full-res copy used for previews
+
+    function rotatedSize() {
+        const swap = rotation % 180 !== 0;
+        return swap ? [img.naturalHeight, img.naturalWidth] : [img.naturalWidth, img.naturalHeight];
+    }
+
+    function renderSource() {
+        const [w, h] = rotatedSize();
+        const scale = Math.min(1, MAX_SIDE / Math.max(w, h));
+        src.width = Math.round(w * scale);
+        src.height = Math.round(h * scale);
+        const s = src.getContext('2d');
+        s.save();
+        s.translate(src.width / 2, src.height / 2);
+        s.rotate(rotation * Math.PI / 180);
+        const dw = img.naturalWidth * scale, dh = img.naturalHeight * scale;
+        s.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+        s.restore();
+        canvas.width = src.width;
+        canvas.height = src.height;
+        applyZoom();
+    }
+
+    function applyZoom() {
+        canvas.style.width = (parseFloat(zoom.value) * 100) + '%';
+    }
+
+    function draw() {
+        ctx.drawImage(src, 0, 0);
+        const lw = Math.max(2, canvas.width / 500);
+        ctx.font = `${Math.max(14, canvas.width / 60)}px monospace`;
+        boxes.forEach((b, i) => {
+            const x = b.x * canvas.width, y = b.y * canvas.height;
+            const w = b.w * canvas.width, h = b.h * canvas.height;
+            const isSel = i === selected;
+            ctx.lineWidth = isSel ? lw * 1.8 : lw;
+            ctx.strokeStyle = isSel ? '#ff7a2e' : (b.label ? '#4ade80' : '#facc15');
+            ctx.strokeRect(x, y, w, h);
+            ctx.fillStyle = ctx.strokeStyle;
+            ctx.fillText(`${i + 1}${b.label ? ': ' + b.label : ''}`, x, Math.max(12, y - 4));
+            if (isSel) {
+                const hs = handleSize();
+                ctx.fillRect(x + w - hs / 2, y + h - hs / 2, hs, hs);
+            }
+        });
+    }
+
+    function handleSize() {
+        return HANDLE * (canvas.width / canvas.getBoundingClientRect().width);
+    }
+
+    function renderList() {
+        list.innerHTML = '';
+        empty.hidden = boxes.length > 0;
+        boxes.forEach((b, i) => {
+            const row = document.createElement('div');
+            row.className = 'lotto-box-row' + (i === selected ? ' is-selected' : '');
+            const prev = document.createElement('canvas');
+            prev.className = 'lotto-crop';
+            const sx = b.x * src.width, sy = b.y * src.height, sw = b.w * src.width, sh = b.h * src.height;
+            const scale = Math.min(4, 220 / Math.max(sw, 1), 70 / Math.max(sh, 1));
+            prev.width = Math.max(1, Math.round(sw * scale));
+            prev.height = Math.max(1, Math.round(sh * scale));
+            prev.getContext('2d').drawImage(src, sx, sy, sw, sh, 0, 0, prev.width, prev.height);
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.inputMode = 'numeric';
+            input.autocomplete = 'off';
+            input.value = b.label;
+            input.placeholder = 'number';
+            input.className = 'lotto-label-input';
+            if (b.pred && b.label === b.pred && b.conf !== null && b.conf < LOW_CONF) input.classList.add('is-unsure');
+            input.addEventListener('focus', () => { selected = i; draw(); markSelected(); });
+            input.addEventListener('input', () => {
+                b.label = input.value.replace(/\s+/g, '').toUpperCase();
+                input.classList.remove('is-unsure');
+                draw();
+            });
+            input.addEventListener('keydown', (e) => {
+                if (e.key !== 'Enter') return;
+                e.preventDefault();
+                const inputs = list.querySelectorAll('input');
+                if (i + 1 < inputs.length) inputs[i + 1].focus();
+                else submitWith('save_next');
+            });
+
+            const meta = document.createElement('div');
+            meta.className = 'lotto-dim';
+            meta.textContent = `#${i + 1}` + (b.pred ? ` · model: ${b.pred}${b.conf !== null ? ' (' + Math.round(b.conf * 100) + '%)' : ''}` : '');
+
+            const del = document.createElement('button');
+            del.type = 'button';
+            del.className = 'btn btn-secondary lotto-btn lotto-del';
+            del.textContent = '✕';
+            del.title = 'Delete box';
+            del.addEventListener('click', () => {
+                boxes.splice(i, 1);
+                selected = Math.min(selected, boxes.length - 1);
+                refresh();
+            });
+
+            const col = document.createElement('div');
+            col.className = 'lotto-box-col';
+            col.append(meta, input);
+            row.append(prev, col, del);
+            list.append(row);
+        });
+    }
+
+    function markSelected() {
+        list.querySelectorAll('.lotto-box-row').forEach((r, i) => r.classList.toggle('is-selected', i === selected));
+    }
+
+    function refresh() { draw(); renderList(); }
+
+    function toFrac(e) {
+        const r = canvas.getBoundingClientRect();
+        return {
+            x: Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1),
+            y: Math.min(Math.max((e.clientY - r.top) / r.height, 0), 1),
+        };
+    }
+
+    function hit(p) {
+        const hsx = handleSize() / canvas.width, hsy = handleSize() / canvas.height;
+        if (selected >= 0) {
+            const b = boxes[selected];
+            if (Math.abs(p.x - (b.x + b.w)) < hsx && Math.abs(p.y - (b.y + b.h)) < hsy) return { i: selected, mode: 'resize' };
+        }
+        for (let i = boxes.length - 1; i >= 0; i--) {
+            const b = boxes[i];
+            if (p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h) return { i, mode: 'move' };
+        }
+        return null;
+    }
+
+    let drag = null;
+    canvas.addEventListener('pointerdown', (e) => {
+        if (panMode.checked || !img.naturalWidth) return;
+        e.preventDefault();
+        canvas.setPointerCapture(e.pointerId);
+        const p = toFrac(e);
+        const h = hit(p);
+        if (h) {
+            selected = h.i;
+            const b = boxes[h.i];
+            drag = { mode: h.mode, start: p, orig: { ...b } };
+        } else {
+            drag = { mode: 'new', start: p };
+        }
+        draw();
+        markSelected();
+    });
+    canvas.addEventListener('pointermove', (e) => {
+        if (!drag) return;
+        const p = toFrac(e);
+        const dx = p.x - drag.start.x, dy = p.y - drag.start.y;
+        if (drag.mode === 'move') {
+            const b = boxes[selected], o = drag.orig;
+            b.x = Math.min(Math.max(o.x + dx, 0), 1 - o.w);
+            b.y = Math.min(Math.max(o.y + dy, 0), 1 - o.h);
+        } else if (drag.mode === 'resize') {
+            const b = boxes[selected], o = drag.orig;
+            b.w = Math.min(Math.max(o.w + dx, 0.005), 1 - o.x);
+            b.h = Math.min(Math.max(o.h + dy, 0.005), 1 - o.y);
+        } else {
+            drag.rect = {
+                x: Math.min(p.x, drag.start.x), y: Math.min(p.y, drag.start.y),
+                w: Math.abs(dx), h: Math.abs(dy),
+            };
+            draw();
+            const r = drag.rect;
+            ctx.setLineDash([8, 6]);
+            ctx.strokeStyle = '#ff7a2e';
+            ctx.strokeRect(r.x * canvas.width, r.y * canvas.height, r.w * canvas.width, r.h * canvas.height);
+            ctx.setLineDash([]);
+            return;
+        }
+        draw();
+    });
+    canvas.addEventListener('pointerup', (e) => {
+        if (!drag) return;
+        const p = toFrac(e);
+        const moved = Math.hypot((p.x - drag.start.x) * canvas.width, (p.y - drag.start.y) * canvas.height)
+            / (canvas.width / canvas.getBoundingClientRect().width);
+        if (drag.mode === 'new') {
+            let r = drag.rect;
+            if (!r || moved < 6) {
+                // Tap: stamp a box the size of the last one, centred on the tap.
+                r = { x: p.x - lastSize.w / 2, y: p.y - lastSize.h / 2, w: lastSize.w, h: lastSize.h };
+                r.x = Math.min(Math.max(r.x, 0), 1 - r.w);
+                r.y = Math.min(Math.max(r.y, 0), 1 - r.h);
+            }
+            if (r.w > 0.004 && r.h > 0.004) {
+                boxes.push({ ...r, label: '', pred: '', conf: null });
+                selected = boxes.length - 1;
+                lastSize = { w: r.w, h: r.h };
+            }
+            drag = null;
+            refresh();
+            const inputs = list.querySelectorAll('input');
+            if (inputs[selected]) inputs[selected].focus({ preventScroll: true });
+            return;
+        }
+        if (drag.mode === 'resize') lastSize = { w: boxes[selected].w, h: boxes[selected].h };
+        drag = null;
+        refresh();
+    });
+
+    function rotateBoxes(clockwise) {
+        boxes = boxes.map(b => clockwise
+            ? { ...b, x: 1 - b.y - b.h, y: b.x, w: b.h, h: b.w }
+            : { ...b, x: b.y, y: 1 - b.x - b.w, w: b.h, h: b.w });
+        lastSize = { w: lastSize.h, h: lastSize.w };
+    }
+
+    function rotate(clockwise) {
+        rotation = (rotation + (clockwise ? 90 : 270)) % 360;
+        fRotation.value = rotation;
+        rotateBoxes(clockwise);
+        status.textContent = `${img.naturalWidth}×${img.naturalHeight}px · rotation ${rotation}°`;
+        renderSource();
+        refresh();
+    }
+
+    document.getElementById('rot-left').addEventListener('click', () => rotate(false));
+    document.getElementById('rot-right').addEventListener('click', () => rotate(true));
+    zoom.addEventListener('input', applyZoom);
+    panMode.addEventListener('change', () => { canvas.style.touchAction = panMode.checked ? 'auto' : 'none'; });
+
+    function serialize() {
+        fBoxes.value = JSON.stringify(boxes.map(b => {
+            const out = { x: b.x, y: b.y, w: b.w, h: b.h, label: b.label };
+            if (b.pred) { out.pred = b.pred; if (b.conf !== null) out.conf = b.conf; }
+            return out;
+        }));
+    }
+
+    function submitWith(action) {
+        const btn = form.querySelector(`button[value="${action}"]`);
+        if (btn) form.requestSubmit(btn);
+    }
+
+    form.addEventListener('submit', serialize);
+    document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+        if ((e.key === 'Delete' || e.key === 'Backspace') && selected >= 0) {
+            boxes.splice(selected, 1);
+            selected = Math.min(selected, boxes.length - 1);
+            refresh();
+        }
+    });
+
+    img.onload = () => {
+        status.textContent = `${img.naturalWidth}×${img.naturalHeight}px · rotation ${rotation}°`;
+        renderSource();
+        refresh();
+    };
+    img.onerror = () => { status.textContent = 'Could not load the image (HEIC? Upload a JPEG instead).'; };
+    img.src = "{{ url_for('lotto.lotto_image', photo_id=photo.id) }}";
+})();
+</script>
+{% endblock %}
