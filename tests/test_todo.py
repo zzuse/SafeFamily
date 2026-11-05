@@ -10,7 +10,7 @@ from src.safe_family.todo import todo
 
 def _freeze_time(monkeypatch, hour, minute):
     """Pin todo.datetime.now() to a fixed local time for deterministic tests."""
-    frozen = local_tz.localize(datetime(2026, 7, 11, hour, minute))
+    frozen = datetime(2026, 7, 11, hour, minute, tzinfo=local_tz)
 
     class FrozenDatetime(datetime):
         @classmethod

@@ -2,9 +2,9 @@
 
 import json
 import logging
+from zoneinfo import ZoneInfo
 
 import psycopg2
-import pytz
 from flask_jwt_extended import JWTManager
 from flask_mail import Mail
 from flask_sqlalchemy import SQLAlchemy
@@ -16,7 +16,9 @@ logger = logging.getLogger(__name__)
 db = SQLAlchemy()
 jwt = JWTManager()
 mail = Mail()
-local_tz = pytz.timezone(TIMEZONE)
+# zoneinfo reads the OS tz database (kept current by the base image) rather than
+# pytz's bundled snapshot, which lags real-world rule changes.
+local_tz = ZoneInfo(TIMEZONE)
 
 
 def get_db_connection():

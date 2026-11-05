@@ -732,7 +732,7 @@ def mark_todo_status():  # noqa: PLR0911 - one early return per validation step
         now = datetime.now(local_tz)
         log_date_naive = datetime.fromisoformat(log_date)
         end_dt_naive = datetime.combine(log_date_naive.date(), end_time)
-        end_dt = local_tz.localize(end_dt_naive)
+        end_dt = end_dt_naive.replace(tzinfo=local_tz)
         if now < end_dt and not is_admin:
             conn.close()
             logger.warning(
@@ -879,8 +879,8 @@ def exec_rules(selected_user_id: str):  # noqa: C901, PLR0911, PLR0912, PLR0915 
             selected_username = u_row[0] if u_row else None
             if selected_username:
                 cur.execute(
-                    "SELECT 1 FROM todo_list WHERE username = %s AND date = CURRENT_DATE LIMIT 1",
-                    (selected_username,),
+                    "SELECT 1 FROM todo_list WHERE username = %s AND date = %s LIMIT 1",
+                    (selected_username, datetime.now(local_tz).date()),
                 )
                 if not cur.fetchone():
                     flash("No tasks for today, cannot disable rules.", "warning")

@@ -275,7 +275,7 @@ def test_exec_rules_disable_all_triggers_schedule(client, monkeypatch):
     # Seq of fetchones in exec_rules:
     # 1. Assigned rule name: ("Rule disable all",)
     # 2. SELECT username FROM users WHERE id = %s: ("user",)
-    # 3. SELECT 1 FROM todo_list WHERE username = %s AND date = CURRENT_DATE: (1,)
+    # 3. SELECT 1 FROM todo_list WHERE username = %s AND date = <today>: (1,)
     cursor = SeqCursor(fetchone_values=[("Rule disable all",), ("user",), (1,)])
     conn = SeqConnection(cursor)
     monkeypatch.setattr(todo, "RULE_EXEC_LOCK", DummyLock())
