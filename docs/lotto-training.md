@@ -114,7 +114,7 @@ numbers-per-photo. The three milestones count labeled **numbers (boxes)**:
 | Milestone | Numbers | What you do there |
 |---|---|---|
 | Baseline check | 60 | Test off-the-shelf OCR (step 3b). It may already be good enough. |
-| First trained model | 300 | Train (3c), then pre-label with predictions (4). |
+| First trained model | 300 | Train (3c), expect ~80–95%, then pre-label with predictions (4). |
 | Solid model | 1,000 | ~99% per number is realistic for printed digits. |
 
 At **2 photos a day**:
@@ -170,7 +170,11 @@ How to read the result:
 * Look at the misses it prints. If the *label* is wrong, fix it on the website.
   This happens more often than you'd expect. If one digit pair is always
   confused (`1`↔`7`, `0`↔`8`), add more photos with those digits.
-* Expected roughly: 300 numbers → 90–97%, 1,000 numbers → 98–99.5%.
+* Expected roughly: 300 numbers → 80–95%, 1,000 numbers → 98–99.5%.
+  (A test run on 258 synthetic training numbers reached 83% on test.)
+* **The first 20–30 epochs look stuck**: loss hovers around 1.5 and val stays
+  near 0%. That is normal for CTC models. Accuracy then climbs quickly. Don't
+  cut training short. Keep the default 150 epochs.
 
 What the model is: a small **CRNN with CTC loss**, about 1M parameters. A CNN
 reads the 32×128 grayscale crop as 32 vertical slices, a BiLSTM reads them
