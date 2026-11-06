@@ -31,7 +31,9 @@ def _login(app, client, user_id):
         sess["access_token"] = token
 
 
-def _make_photo(user_id, *, boxes=(), labeled=False, skipped=False, split="train", data=JPEG, created=None):  # noqa: PLR0913
+def _make_photo(  # noqa: PLR0913
+    user_id, *, boxes=(), labeled=False, skipped=False, split="train", data=JPEG, created=None, model=None,
+):
     now = created or datetime(2026, 11, 1, 10, 0, 0)
     photo = LottoPhoto(
         user_id=user_id,
@@ -41,6 +43,7 @@ def _make_photo(user_id, *, boxes=(), labeled=False, skipped=False, split="train
         data=data,
         rotation=0,
         boxes_json=json.dumps(list(boxes)),
+        model_json=None if model is None else json.dumps(model),
         split=split,
         skipped=skipped,
         labeled_at=now if labeled else None,
@@ -141,19 +144,36 @@ def test_is_fully_labeled():
     assert lotto.is_fully_labeled([BOX])
 
 
-def _row(*, split="train", skipped=False, labeled=True, n=1):
+def _row(*, split="train", skipped=False, labeled=True, values=("5",), model=None):
     return SimpleNamespace(
         split=split,
         skipped=skipped,
         labeled_at=datetime(2026, 1, 1) if labeled else None,
-        boxes_json=json.dumps([BOX] * n),
+        boxes_json=json.dumps([{**BOX, "label": v} for v in values]),
+        model_json=None if model is None else json.dumps([{**BOX, "text": v} for v in model]),
     )
 
 
-def test_compute_progress_counts_and_eta():
+def test_tally_and_format():
+    boxes = [{"label": "10"}, {"label": "5"}, {"label": "5"}, {"label": ""}, {"label": "X"}, "junk"]
+    counts = lotto.tally(boxes)
+    assert list(counts.items()) == [("5", 2), ("10", 1), ("X", 1)]
+    assert lotto.format_tally(counts) == "$5×2 · $10×1 · X×1"  # noqa: RUF001
+    assert lotto.compare_counts({"5": 3, "10": 1}, {"5": 2, "20": 1}) == 3
+
+
+def test_load_model_boxes():
+    assert lotto.load_model_boxes(SimpleNamespace(model_json=None)) is None
+    assert lotto.load_model_boxes(SimpleNamespace(model_json="{bad")) is None
+    assert lotto.load_model_boxes(SimpleNamespace(model_json='{"a": 1}')) is None
+    assert lotto.load_model_boxes(SimpleNamespace(model_json="[]")) == []
+
+
+def test_compute_progress_counts_backlog_and_eta():
     rows = [
-        _row(n=4),
-        _row(split="test", n=2),
+        _row(values=("5", "5", "10", "50"), model=("5", "5", "10", "50")),
+        _row(split="test", values=("5", "20"), model=("5",)),
+        _row(labeled=False),
         _row(labeled=False),
         _row(skipped=True),
     ]
@@ -161,45 +181,80 @@ def test_compute_progress_counts_and_eta():
     assert progress["labeled_boxes"] == 6
     assert progress["split_boxes"] == {"train": 4, "val": 0, "test": 2}
     assert progress["labeled_photos"] == 2
-    assert progress["todo_photos"] == 1
+    assert progress["todo_photos"] == 2
     assert progress["skipped_photos"] == 1
     assert progress["boxes_per_photo"] == 3.0
+    assert progress["value_counts"] == {"5": 3, "10": 1, "20": 1, "50": 1}
+    assert progress["rare_values"] == ["5", "10", "20", "50"]
+    assert progress["model_checked"] == 2
+    assert progress["model_exact"] == 1
+    assert progress["model_off_by"] == 0.5
     first = progress["milestones"][0]
-    # 60 - 6 = 54 numbers left at 3 numbers/photo * 2 photos/day = 9 days.
-    assert first["remaining"] == 54
-    assert first["days_left"] == 9
-    assert first["percent"] == 10
+    # 10 - 2 labeled = 8 photos: 2 already uploaded, 6 new at 2/day = 3 days.
+    assert first["remaining"] == 8
+    assert first["from_backlog"] == 2
+    assert first["to_take"] == 6
+    assert first["days_left"] == 3
+    assert first["percent"] == 20
     assert not first["done"]
 
 
-def test_compute_progress_empty_assumes_one_number_per_photo():
-    progress = lotto.compute_progress([], photos_per_day=2)
-    assert progress["boxes_per_photo"] == 1.0
-    assert progress["milestones"][0]["days_left"] == 30
+def test_compute_progress_backlog_covers_goal():
+    progress = lotto.compute_progress([_row(labeled=False)] * 12, photos_per_day=2)
+    first = progress["milestones"][0]
+    assert first["from_backlog"] == 10
+    assert first["to_take"] == 0
+    assert first["days_left"] == 0
+    assert progress["boxes_per_photo"] == 0
+    assert progress["model_checked"] == 0
 
 
 def test_compute_progress_done_milestone():
-    progress = lotto.compute_progress([_row(n=60)])
+    progress = lotto.compute_progress([_row()] * 10)
     assert progress["milestones"][0]["done"]
     assert progress["milestones"][0]["days_left"] == 0
 
 
-def test_apply_predictions_never_overwrites_labels(notesync_app):
-    photo_id = _make_photo("u1", boxes=[BOX, {**BOX, "label": ""}, {**BOX, "label": ""}])
-    photo = db.session.get(LottoPhoto, photo_id)
-    changed = lotto.apply_predictions(
-        photo,
-        [{"text": "008", "conf": 0.5}, {"text": "9"}, "junk", {"text": ""}],
+def test_clean_model_boxes():
+    assert lotto.clean_model_boxes("nope") == []
+    boxes = lotto.clean_model_boxes(
+        [
+            {"x": 0.1, "y": 0.2, "w": 0.05, "h": 0.04, "text": "$5", "conf": 0.9},
+            {"x": 0.1, "y": 0.2, "w": 0.05, "h": 0.04, "text": "bad!"},
+            {"x": "a", "y": 0, "w": 0.1, "h": 0.1},
+            "junk",
+        ],
     )
-    assert changed
-    boxes = json.loads(photo.boxes_json)
-    assert boxes[0]["label"] == "007"
-    assert boxes[0]["pred"] == "008"
-    assert boxes[0]["conf"] == 0.5
-    assert boxes[1] == {**BOX, "label": "", "pred": "9"}
-    assert "pred" not in boxes[2]
-    assert not lotto.apply_predictions(photo, "nope")
-    assert not lotto.apply_predictions(photo, [{"text": ""}])
+    assert boxes == [
+        {"x": 0.1, "y": 0.2, "w": 0.05, "h": 0.04, "text": "", "conf": 0.9},
+        {"x": 0.1, "y": 0.2, "w": 0.05, "h": 0.04, "text": ""},
+    ]
+    good = lotto.clean_model_boxes([{"x": 0, "y": 0, "w": 0.1, "h": 0.1, "text": "10"}])
+    assert good[0]["text"] == "10"
+
+
+PRED = {"boxes": [{"x": 0.3, "y": 0.3, "w": 0.05, "h": 0.04, "text": "20", "conf": 0.8}, {"x": 0.5, "y": 0.5, "w": 0.05, "h": 0.04, "text": ""}]}
+
+
+def test_apply_predictions_prefills_unlabeled_photo(notesync_app):
+    photo = db.session.get(LottoPhoto, _make_photo("u1", boxes=[{**BOX, "label": ""}]))
+    assert lotto.apply_predictions(photo, PRED)
+    assert json.loads(photo.boxes_json) == [
+        {"x": 0.3, "y": 0.3, "w": 0.05, "h": 0.04, "label": "", "pred": "20", "conf": 0.8},
+        {"x": 0.5, "y": 0.5, "w": 0.05, "h": 0.04, "label": ""},
+    ]
+    assert len(json.loads(photo.model_json)) == 2
+    assert not lotto.apply_predictions(photo, ["old", "format"])
+
+
+def test_apply_predictions_never_overwrites_labels(notesync_app):
+    labeled = db.session.get(LottoPhoto, _make_photo("u1", boxes=[BOX], labeled=True))
+    draft = db.session.get(LottoPhoto, _make_photo("u1", boxes=[BOX, {**BOX, "label": ""}], data=b"d"))
+    for photo in (labeled, draft):
+        before = photo.boxes_json
+        assert lotto.apply_predictions(photo, PRED)
+        assert photo.boxes_json == before
+        assert json.loads(photo.model_json)[0]["text"] == "20"
 
 
 # ---- routes -----------------------------------------------------------------
@@ -218,19 +273,22 @@ def test_lotto_home_renders_progress_and_filters(user_client):
     _make_photo("u2", boxes=[{**BOX, "label": "424242"}], labeled=True, data=b"x")
 
     page = user_client.get("/lotto").get_data(as_text=True)
-    assert "Lotto number trainer" in page
-    assert "Label next (1)" in page
-    assert "~30 day(s) left" in page
+    assert "Lotto ticket counter" in page
+    assert "Label next (1 waiting)" in page
+    # 10 - 1 labeled = 9 photos: 1 waiting + 8 new at 2/day = 4 days.
+    assert "label 1 waiting photo(s)" in page
+    assert "~4 day(s) of new photos" in page
+    assert "$007" in page
 
     labeled = user_client.get("/lotto?status=labeled").get_data(as_text=True)
-    assert "007" in labeled
+    assert "You: 1 · $007×1" in labeled  # noqa: RUF001
     assert "424242" not in labeled
     assert "skipped" in user_client.get("/lotto?status=skipped").get_data(as_text=True)
     assert user_client.get("/lotto?status=all").status_code == 200
 
 
-def test_upload_stores_photos_dedupes_and_reuses_last_boxes(user_client):
-    _make_photo("u1", boxes=[{**BOX, "pred": "1"}], labeled=True, data=b"old")
+def test_upload_stores_photos_and_dedupes(user_client):
+    _make_photo("u1", boxes=[BOX], labeled=True, data=b"old")
     response = user_client.post(
         "/lotto/upload",
         data={
@@ -247,9 +305,27 @@ def test_upload_stores_photos_dedupes_and_reuses_last_boxes(user_client):
     assert response.headers["Location"].endswith(f"/lotto/{new.id}")
     assert new.data == JPEG
     assert new.split in lotto.VALID_SPLITS
-    # Positions copied from the last labeled photo, labels and predictions cleared.
-    assert json.loads(new.boxes_json) == [{"x": 0.1, "y": 0.1, "w": 0.2, "h": 0.1, "label": ""}]
+    # Ticket positions change daily: new photos start without boxes.
+    assert json.loads(new.boxes_json) == []
+    assert new.rotation == 0
     assert LottoPhoto.query.count() == 2
+
+
+def test_home_cards_show_model_comparison(user_client):
+    _make_photo(
+        "u1",
+        boxes=[{**BOX, "label": "5"}, {**BOX, "label": "10"}],
+        labeled=True,
+        model=[{**BOX, "text": "5"}, {**BOX, "text": "10"}],
+    )
+    _make_photo("u1", boxes=[{**BOX, "label": "5"}], labeled=True, data=b"2", model=[])
+    _make_photo("u1", boxes=[{**BOX, "label": ""}], data=b"3")
+    page = user_client.get("/lotto?status=all").get_data(as_text=True)
+    assert "Model: 2 · $5×1 · $10×1" in page  # noqa: RUF001
+    assert "✓" in page
+    assert "off by 1" in page
+    assert "draft · 1 boxes" in page
+    assert "the count was exactly" in page
 
 
 def test_upload_without_files_or_only_duplicates(user_client):
@@ -272,7 +348,7 @@ def test_label_page_and_ownership(user_client):
     other = _make_photo("u2", data=b"x")
     next_id = _make_photo("u1", data=b"y", created=datetime(2026, 11, 3))
     page = user_client.get(f"/lotto/{own}").get_data(as_text=True)
-    assert "Numbers on this photo" in page
+    assert "Value for new boxes" in page
     assert '"label": "007"' in page
     assert f"/lotto/{next_id}" in page
     assert user_client.get(f"/lotto/{other}").status_code == 404
@@ -387,17 +463,17 @@ def test_image_ext():
 
 
 def test_predictions_upload(user_client):
-    photo_id = _make_photo("u1", boxes=[{**BOX, "label": ""}])
-    other = _make_photo("u2", boxes=[{**BOX, "label": ""}], data=b"x")
-    payload = {photo_id: [{"text": "123", "conf": 0.8}], other: [{"text": "1"}], "missing": []}
+    photo_id = _make_photo("u1", boxes=[])
+    other = _make_photo("u2", boxes=[], data=b"x")
+    payload = {photo_id: PRED, other: PRED, "missing": PRED}
     response = user_client.post(
         "/lotto/predictions",
         data={"predictions": (io.BytesIO(json.dumps(payload).encode()), "predictions.json")},
         content_type="multipart/form-data",
     )
     assert response.headers["Location"].endswith("/lotto")
-    assert json.loads(db.session.get(LottoPhoto, photo_id).boxes_json)[0]["pred"] == "123"
-    assert "pred" not in json.loads(db.session.get(LottoPhoto, other).boxes_json)[0]
+    assert json.loads(db.session.get(LottoPhoto, photo_id).boxes_json)[0]["pred"] == "20"
+    assert json.loads(db.session.get(LottoPhoto, other).boxes_json) == []
 
 
 @pytest.mark.parametrize("body", [None, b"\xff\xfe", b"[1, 2]"])

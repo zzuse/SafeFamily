@@ -11,12 +11,13 @@
     </div>
 
     <ol class="lotto-howto">
-        <li><b>Rotate</b> until the numbers read upright.</li>
-        <li><b>Drag</b> a tight box around each ticket number (just the number, a little margin). <b>Tap</b> to stamp a
-            box the same size as the last one. Drag a box to move it, drag its corner to resize.</li>
-        <li><b>Type</b> each number exactly as printed, leading zeros included (e.g. <code>007</code>). Check the zoomed
-            preview, not the big photo.</li>
-        <li><b>Save &amp; next</b>. Can't read a number? Delete that box. Is the photo useless? Skip it.</li>
+        <li><b>Rotate</b> until the tickets read upright.</li>
+        <li>Pick the <b>value</b> ($5, $10, …), then <b>tap the price corner of every ticket</b> of that value: one
+            box per ticket. Drag on an empty spot to draw a box of a new size; later taps reuse that size. Drag a box to
+            move it, drag its corner to resize, Delete removes the selected box.</li>
+        <li>Box every corner you can tell is a separate ticket, even if it is overlapped, under glare or cut off at the
+            edge. Never box prize text like "WIN UP TO $100,000".</li>
+        <li>Check the tally, then <b>Save &amp; next</b>. No time to finish? <b>Save</b> keeps a draft.</li>
     </ol>
 
     <div class="lotto-editor">
@@ -38,9 +39,19 @@
         <form method="POST" class="card lotto-side" id="label-form">
             <input type="hidden" name="rotation" id="f-rotation" value="{{ photo.rotation }}">
             <input type="hidden" name="boxes" id="f-boxes">
-            <div class="lotto-step">Numbers on this photo</div>
-            <div id="box-list" class="lotto-box-list"></div>
-            <div class="lotto-help" id="box-empty">No boxes yet: drag on the photo around a ticket number.</div>
+            <div class="lotto-step">Value for new boxes</div>
+            <div class="lotto-row" id="value-chips">
+                {% for v in ['5', '10', '20', '30', '50'] %}
+                <button type="button" class="btn btn-secondary lotto-btn lotto-chipbtn" data-value="{{ v }}">${{ v }}</button>
+                {% endfor %}
+                <input type="text" id="value-other" class="lotto-other" inputmode="numeric" placeholder="other" size="5">
+            </div>
+            <div class="lotto-tally" id="tally"></div>
+            <details class="lotto-details" id="box-details">
+                <summary>Boxes (<span id="box-count">0</span>): check or fix values</summary>
+                <div id="box-list" class="lotto-box-list"></div>
+            </details>
+            <div class="lotto-help" id="box-empty">No boxes yet: pick a value and tap a ticket's price corner.</div>
 
             <label class="lotto-dim">Dataset split
                 <select name="split">
@@ -103,7 +114,39 @@
         pred: b.pred || '', conf: (typeof b.conf === 'number') ? b.conf : null,
     }));
     let selected = boxes.length ? 0 : -1;
-    let lastSize = boxes.length ? { w: boxes[boxes.length - 1].w, h: boxes[boxes.length - 1].h } : { w: 0.08, h: 0.04 };
+    // True only when the user tapped an existing box: then a value button re-labels it.
+    // After stamping a new box it is false, so switching value never edits that box.
+    let picked = false;
+    let lastSize = boxes.length ? { w: boxes[boxes.length - 1].w, h: boxes[boxes.length - 1].h } : { w: 0.05, h: 0.035 };
+    // Value given to new boxes: the most common one so far, else $5.
+    let currentValue = (() => {
+        const counts = {};
+        boxes.forEach(b => { if (b.label) counts[b.label] = (counts[b.label] || 0) + 1; });
+        return Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0] || '5';
+    })();
+    const chips = document.querySelectorAll('.lotto-chipbtn');
+    const other = document.getElementById('value-other');
+    const tallyEl = document.getElementById('tally');
+    const boxCount = document.getElementById('box-count');
+
+    function cleanValue(v) { return (v || '').replace(/[\s$]+/g, '').toUpperCase(); }
+
+    function setValue(v) {
+        currentValue = cleanValue(v);
+        chips.forEach(c => c.classList.toggle('is-active', c.dataset.value === currentValue));
+        other.value = [...chips].some(c => c.dataset.value === currentValue) ? '' : currentValue;
+    }
+
+    function renderTally() {
+        const counts = {};
+        let missing = 0;
+        boxes.forEach(b => { if (b.label) counts[b.label] = (counts[b.label] || 0) + 1; else missing++; });
+        const keys = Object.keys(counts).sort((a, b) => (parseInt(a, 10) || 1e9) - (parseInt(b, 10) || 1e9));
+        const parts = keys.map(k => `<span class="lotto-value">$${k} <b>${counts[k]}</b></span>`);
+        if (missing) parts.push(`<span class="lotto-value is-rare">no value <b>${missing}</b></span>`);
+        tallyEl.innerHTML = boxes.length ? `<b>${boxes.length} tickets</b> ` + parts.join(' ') : '';
+        boxCount.textContent = boxes.length;
+    }
     const src = document.createElement('canvas');   // rotated, full-res copy used for previews
 
     function rotatedSize() {
@@ -135,7 +178,7 @@
     function draw() {
         ctx.drawImage(src, 0, 0);
         const lw = Math.max(2, canvas.width / 500);
-        ctx.font = `${Math.max(14, canvas.width / 60)}px monospace`;
+        ctx.font = `bold ${Math.max(12, canvas.width / 90)}px monospace`;
         boxes.forEach((b, i) => {
             const x = b.x * canvas.width, y = b.y * canvas.height;
             const w = b.w * canvas.width, h = b.h * canvas.height;
@@ -144,7 +187,7 @@
             ctx.strokeStyle = isSel ? '#ff7a2e' : (b.label ? '#4ade80' : '#facc15');
             ctx.strokeRect(x, y, w, h);
             ctx.fillStyle = ctx.strokeStyle;
-            ctx.fillText(`${i + 1}${b.label ? ': ' + b.label : ''}`, x, Math.max(12, y - 4));
+            ctx.fillText(b.label ? '$' + b.label : '?', x, Math.max(12, y - 4));
             if (isSel) {
                 const hs = handleSize();
                 ctx.fillRect(x + w - hs / 2, y + h - hs / 2, hs, hs);
@@ -178,11 +221,12 @@
             input.placeholder = 'number';
             input.className = 'lotto-label-input';
             if (b.pred && b.label === b.pred && b.conf !== null && b.conf < LOW_CONF) input.classList.add('is-unsure');
-            input.addEventListener('focus', () => { selected = i; draw(); markSelected(); });
+            input.addEventListener('focus', () => { selected = i; picked = true; draw(); markSelected(); });
             input.addEventListener('input', () => {
-                b.label = input.value.replace(/\s+/g, '').toUpperCase();
+                b.label = cleanValue(input.value);
                 input.classList.remove('is-unsure');
                 draw();
+                renderTally();
             });
             input.addEventListener('keydown', (e) => {
                 if (e.key !== 'Enter') return;
@@ -204,6 +248,7 @@
             del.addEventListener('click', () => {
                 boxes.splice(i, 1);
                 selected = Math.min(selected, boxes.length - 1);
+                picked = false;
                 refresh();
             });
 
@@ -219,7 +264,7 @@
         list.querySelectorAll('.lotto-box-row').forEach((r, i) => r.classList.toggle('is-selected', i === selected));
     }
 
-    function refresh() { draw(); renderList(); }
+    function refresh() { draw(); renderList(); renderTally(); }
 
     function toFrac(e) {
         const r = canvas.getBoundingClientRect();
@@ -251,6 +296,7 @@
         const h = hit(p);
         if (h) {
             selected = h.i;
+            picked = true;
             const b = boxes[h.i];
             drag = { mode: h.mode, start: p, orig: { ...b } };
         } else {
@@ -300,14 +346,13 @@
                 r.y = Math.min(Math.max(r.y, 0), 1 - r.h);
             }
             if (r.w > 0.004 && r.h > 0.004) {
-                boxes.push({ ...r, label: '', pred: '', conf: null });
+                boxes.push({ ...r, label: currentValue, pred: '', conf: null });
                 selected = boxes.length - 1;
+                picked = false;
                 lastSize = { w: r.w, h: r.h };
             }
             drag = null;
             refresh();
-            const inputs = list.querySelectorAll('input');
-            if (inputs[selected]) inputs[selected].focus({ preventScroll: true });
             return;
         }
         if (drag.mode === 'resize') lastSize = { w: boxes[selected].w, h: boxes[selected].h };
@@ -330,6 +375,14 @@
         renderSource();
         refresh();
     }
+
+    chips.forEach(c => c.addEventListener('click', () => {
+        setValue(c.dataset.value);
+        // With a box selected, the chip also fixes that box's value.
+        if (picked && selected >= 0 && boxes[selected]) { boxes[selected].label = currentValue; refresh(); }
+    }));
+    other.addEventListener('change', () => { if (cleanValue(other.value)) setValue(other.value); });
+    setValue(currentValue);
 
     document.getElementById('rot-left').addEventListener('click', () => rotate(false));
     document.getElementById('rot-right').addEventListener('click', () => rotate(true));
@@ -355,6 +408,7 @@
         if ((e.key === 'Delete' || e.key === 'Backspace') && selected >= 0) {
             boxes.splice(selected, 1);
             selected = Math.min(selected, boxes.length - 1);
+            picked = false;
             refresh();
         }
     });

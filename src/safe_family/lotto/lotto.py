@@ -1,13 +1,16 @@
-"""Collect and label photos for the lotto ticket-number recognizer.
+"""Collect and label photos for the lotto ticket counter.
 
-Workflow (see docs/lotto-training.md):
+Goal: count the scratch tickets on display per price ($5, $10, $20, ...).
+Every ticket shows its price in its top-left corner, so each visible corner is
+one ticket. Workflow (see docs/lotto-training.md):
 
-1. Upload photos at /lotto, from a phone or a computer.
-2. Label each one at /lotto/<id>: rotate it upright, draw a box around each
-   ticket number, then type the number.
-3. Download /lotto/export.zip and train on the Mac (scripts/lotto/).
-4. Upload the Mac's predictions.json back to /lotto so that new photos arrive
-   pre-filled and labeling becomes "check and correct".
+1. Upload photos at /lotto whenever you like; they wait in "To label".
+2. Label at /lotto/<id>: tap a box on every price corner and give it the
+   value (5, 10, 20, ...). Labeling can lag weeks behind uploading.
+3. Download /lotto/export.zip and train on the Mac (scripts/lotto/): a corner
+   detector plus a value reader.
+4. Upload the Mac's predictions.json back: unlabeled photos arrive pre-boxed,
+   and labeled ones show the model's count next to yours.
 
 The server only stores and serves data; it does no image processing, so it
 needs no GPU and no extra Python packages.
@@ -45,7 +48,8 @@ lotto_bp = Blueprint("lotto", __name__)
 
 PHOTOS_PER_DAY = 2
 PER_PAGE = 24
-MAX_BOXES = 60
+RARE_VALUE_MIN = 40
+MAX_BOXES = 400
 MAX_LABEL_LEN = 20
 MIN_BOX_SIZE = 0.002
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
@@ -60,27 +64,28 @@ LABEL_RE = re.compile(r"^[0-9A-Z\-]{1,20}$")
 # and camera angle drift over time.
 _SPLIT_CYCLE = ("train",) * 14 + ("val",) * 3 + ("test",) * 3
 
-# Goals counted in labeled numbers (boxes), not photos: one photo of a
-# dispenser can hold many ticket numbers.
+# Goals counted in labeled photos. One photo of the display holds dozens of
+# price corners, so photos (not corners) are what takes calendar time.
 MILESTONES = (
     {
-        "boxes": 60,
+        "photos": 10,
         "title": "Baseline check",
-        "detail": "A first test set. Run off-the-shelf OCR on it on the Mac "
-        "(scripts/lotto/baseline_ocr.py). If it already reads 98%+ correctly, "
-        "you may not need to train a model at all.",
+        "detail": "Score Apple's built-in text recognition on whole photos on the Mac "
+        "(scripts/lotto/baseline_ocr.py --count). If it already counts every value "
+        "right, you may not need to train at all.",
     },
     {
-        "boxes": 300,
-        "title": "First trained model",
-        "detail": "Train the small CRNN on the Mac GPU (scripts/lotto/train_crnn.py). "
-        "Then upload its predictions so labeling becomes checking.",
+        "photos": 25,
+        "title": "First trained models",
+        "detail": "Train the corner detector and the value reader on the Mac GPU "
+        "(train_detector.py, train_crnn.py), then upload predictions.json so new "
+        "photos arrive pre-boxed and labeling becomes checking.",
     },
     {
-        "boxes": 1000,
-        "title": "Solid model",
-        "detail": "Enough variety (games, lighting, angles) for ~99% per-number accuracy. "
-        "Keep adding a few photos a week to catch new ticket designs.",
+        "photos": 80,
+        "title": "Reliable counts",
+        "detail": "Enough lighting, angles and ticket designs, and enough of the rare "
+        "values ($30, $50), for exact counts on most photos.",
     },
 )
 
@@ -194,12 +199,66 @@ def is_fully_labeled(boxes: list[dict]) -> bool:
     return bool(boxes) and all(box.get("label") for box in boxes)
 
 
+def _value_key(value: str) -> tuple[int, int | str]:
+    """Sort numeric values numerically (5 < 10 < 20), anything else after."""
+    return (0, int(value)) if value.isdigit() else (1, value)
+
+
+def tally(boxes: list[dict], key: str = "label") -> dict[str, int]:
+    """Count boxes per value, e.g. {"5": 61, "10": 17}, smallest value first."""
+    counts: dict[str, int] = {}
+    for box in boxes:
+        value = box.get(key) if isinstance(box, dict) else None
+        if value:
+            counts[value] = counts.get(value, 0) + 1
+    return {value: counts[value] for value in sorted(counts, key=_value_key)}
+
+
+def format_tally(counts: dict[str, int]) -> str:
+    """Render a tally as "$5×61 · $10×17" (× is the multiplication sign)."""  # noqa: RUF002
+    return " · ".join(
+        f"${value}×{count}" if value.isdigit() else f"{value}×{count}"  # noqa: RUF001
+        for value, count in counts.items()
+    )
+
+
+def load_model_boxes(photo: LottoPhoto) -> list[dict] | None:
+    """Return the boxes the model proposed for a photo, or None if never run."""
+    if not getattr(photo, "model_json", None):
+        return None
+    try:
+        data = json.loads(photo.model_json)
+    except ValueError:
+        return None
+    return data if isinstance(data, list) else None
+
+
+def compare_counts(human: dict[str, int], model: dict[str, int]) -> int:
+    """Return the total number of tickets the model over- or under-counted."""
+    return sum(abs(human.get(v, 0) - model.get(v, 0)) for v in set(human) | set(model))
+
+
+def _milestone(goal: dict, labeled: int, backlog: int, photos_per_day: int) -> dict:
+    remaining = max(goal["photos"] - labeled, 0)
+    from_backlog = min(remaining, backlog)
+    to_take = remaining - from_backlog
+    return {
+        **goal,
+        "remaining": remaining,
+        "done": remaining == 0,
+        "percent": min(100, round(100 * labeled / goal["photos"])),
+        "from_backlog": from_backlog,
+        "to_take": to_take,
+        "days_left": math.ceil(to_take / photos_per_day),
+    }
+
+
 def compute_progress(photos: list[LottoPhoto], photos_per_day: int = PHOTOS_PER_DAY) -> dict:
-    """Summarize labeling progress and estimate days left for each milestone."""
+    """Summarize labeling progress, the backlog, value counts and model accuracy."""
     split_boxes = dict.fromkeys(VALID_SPLITS, 0)
-    labeled_photos = 0
-    todo_photos = 0
-    skipped_photos = 0
+    values: dict[str, int] = {}
+    labeled_photos = todo_photos = skipped_photos = 0
+    checked = exact = off_by = 0
     for photo in photos:
         if photo.skipped:
             skipped_photos += 1
@@ -208,24 +267,18 @@ def compute_progress(photos: list[LottoPhoto], photos_per_day: int = PHOTOS_PER_
             todo_photos += 1
             continue
         labeled_photos += 1
-        count = sum(1 for box in load_boxes(photo) if box.get("label"))
-        split_boxes[photo.split] = split_boxes.get(photo.split, 0) + count
+        boxes = load_boxes(photo)
+        human = tally(boxes)
+        split_boxes[photo.split] = split_boxes.get(photo.split, 0) + sum(human.values())
+        for value, count in human.items():
+            values[value] = values.get(value, 0) + count
+        model_boxes = load_model_boxes(photo)
+        if model_boxes is not None:
+            error = compare_counts(human, tally(model_boxes, "text"))
+            checked += 1
+            exact += error == 0
+            off_by += error
     labeled_boxes = sum(split_boxes.values())
-    boxes_per_photo = labeled_boxes / labeled_photos if labeled_photos else 1.0
-    boxes_per_day = max(boxes_per_photo, 1.0) * photos_per_day
-
-    milestones = []
-    for goal in MILESTONES:
-        remaining = max(goal["boxes"] - labeled_boxes, 0)
-        milestones.append(
-            {
-                **goal,
-                "remaining": remaining,
-                "done": remaining == 0,
-                "percent": min(100, round(100 * labeled_boxes / goal["boxes"])),
-                "days_left": math.ceil(remaining / boxes_per_day),
-            },
-        )
     return {
         "total_photos": len(photos),
         "labeled_photos": labeled_photos,
@@ -233,34 +286,16 @@ def compute_progress(photos: list[LottoPhoto], photos_per_day: int = PHOTOS_PER_
         "skipped_photos": skipped_photos,
         "labeled_boxes": labeled_boxes,
         "split_boxes": split_boxes,
-        "boxes_per_photo": round(boxes_per_photo, 1),
+        "value_counts": {value: values[value] for value in sorted(values, key=_value_key)},
+        "rare_values": [v for v in sorted(values, key=_value_key) if values[v] < RARE_VALUE_MIN],
+        "rare_min": RARE_VALUE_MIN,
+        "boxes_per_photo": round(labeled_boxes / labeled_photos, 1) if labeled_photos else 0,
         "photos_per_day": photos_per_day,
-        "milestones": milestones,
+        "model_checked": checked,
+        "model_exact": exact,
+        "model_off_by": round(off_by / checked, 1) if checked else 0,
+        "milestones": [_milestone(g, labeled_photos, todo_photos, photos_per_day) for g in MILESTONES],
     }
-
-
-def _template_from_latest(user_id: str) -> tuple[int, str]:
-    """Reuse the latest labeled photo's rotation and box positions (no labels).
-
-    The tickets sit in the same dispenser slots every day, so the boxes
-    usually only need a small nudge instead of being drawn from scratch.
-    """
-    latest = (
-        LottoPhoto.query.filter(
-            LottoPhoto.user_id == user_id,
-            LottoPhoto.labeled_at.isnot(None),
-        )
-        .order_by(LottoPhoto.labeled_at.desc())
-        .first()
-    )
-    if latest is None:
-        return 0, "[]"
-    boxes = [
-        {key: box[key] for key in ("x", "y", "w", "h")} | {"label": ""}
-        for box in load_boxes(latest)
-        if all(key in box for key in ("x", "y", "w", "h"))
-    ]
-    return latest.rotation, json.dumps(boxes)
 
 
 def _next_todo(user_id: str, exclude_id: str | None = None) -> LottoPhoto | None:
@@ -295,6 +330,30 @@ def _require_user():  # noqa: ANN202 - returns a User or a redirect response
     return user, None
 
 
+def _card(row: LottoPhoto) -> dict:
+    """Summarize one photo for the dashboard grid."""
+    boxes = load_boxes(row)
+    human = tally(boxes)
+    model_boxes = load_model_boxes(row)
+    model = tally(model_boxes, "text") if model_boxes is not None else None
+    labeled = row.labeled_at is not None
+    return {
+        "id": row.id,
+        "filename": row.filename,
+        "split": row.split,
+        "skipped": row.skipped,
+        "labeled": labeled,
+        "rotation": row.rotation,
+        "boxes": len(boxes),
+        "tally": format_tally(human),
+        "total": sum(human.values()),
+        "model_tally": format_tally(model) if model is not None else None,
+        "model_total": sum(model.values()) if model is not None else None,
+        "model_error": compare_counts(human, model) if labeled and model is not None else None,
+        "created_local": _local(row.created_at),
+    }
+
+
 @lotto_bp.get("/lotto")
 @login_required
 def lotto_home():
@@ -311,6 +370,7 @@ def lotto_home():
         LottoPhoto.skipped,
         LottoPhoto.labeled_at,
         LottoPhoto.boxes_json,
+        LottoPhoto.model_json,
     ).all()
     progress = compute_progress(all_photos)
 
@@ -322,6 +382,7 @@ def lotto_home():
         LottoPhoto.labeled_at,
         LottoPhoto.rotation,
         LottoPhoto.boxes_json,
+        LottoPhoto.model_json,
         LottoPhoto.created_at,
     )
     if status == "todo":
@@ -337,19 +398,7 @@ def lotto_home():
         per_page=PER_PAGE,
         error_out=False,
     )
-    cards = [
-        {
-            "id": row.id,
-            "filename": row.filename,
-            "split": row.split,
-            "skipped": row.skipped,
-            "labeled": row.labeled_at is not None,
-            "rotation": row.rotation,
-            "labels": [box.get("label") or box.get("pred") or "?" for box in load_boxes(row)],
-            "created_local": _local(row.created_at),
-        }
-        for row in pagination.items
-    ]
+    cards = [_card(row) for row in pagination.items]
     next_todo = _next_todo(user.id)
     return render_template(
         "lotto/lotto.html",
@@ -373,7 +422,6 @@ def lotto_upload():
         flash("Choose at least one photo.", "warning")
         return redirect(url_for("lotto.lotto_home"))
 
-    rotation, boxes_json = _template_from_latest(user.id)
     added, duplicates, rejected = [], 0, 0
     now = _now()
     split = assign_split(datetime.now(local_tz).date())
@@ -394,8 +442,8 @@ def lotto_upload():
             content_type=content_type,
             checksum=checksum,
             data=data,
-            rotation=rotation,
-            boxes_json=boxes_json,
+            rotation=0,
+            boxes_json="[]",
             split=split,
             skipped=False,
             created_at=now,
@@ -470,7 +518,7 @@ def lotto_save(photo_id: str):
     photo.updated_at = _now()
     if is_fully_labeled(boxes):
         photo.labeled_at = photo.labeled_at or photo.updated_at
-        flash(f"Saved {len(boxes)} number(s).", "success")
+        flash(f"Saved {len(boxes)} ticket(s).", "success")
     else:
         photo.labeled_at = None
         flash("Saved as draft: draw at least one box and type every number to finish it.", "warning")
@@ -579,33 +627,52 @@ def lotto_export():
     )
 
 
-def apply_predictions(photo: LottoPhoto, predictions: object) -> bool:
-    """Attach model predictions to a photo's boxes, by box index.
-
-    ``predictions`` is a list like ``[{"text": "023", "conf": 0.97}, ...]``.
-    Human labels are never overwritten. Returns True when something changed.
-    """
-    if not isinstance(predictions, list):
-        return False
-    boxes = load_boxes(photo)
-    changed = False
-    for box, pred in zip(boxes, predictions, strict=False):
-        if not isinstance(pred, dict):
+def clean_model_boxes(raw: object) -> list[dict]:
+    """Validate the boxes a model proposed: geometry plus ``text`` and ``conf``."""
+    if not isinstance(raw, list):
+        return []
+    cleaned = []
+    for item in raw[:MAX_BOXES]:
+        if not isinstance(item, dict):
             continue
-        text = normalize_label(pred.get("text"))
-        if not text:
+        box = _clean_box({key: item.get(key) for key in ("x", "y", "w", "h")} | {"label": ""})
+        if box is None:
             continue
-        box["pred"] = text
-        conf = _as_fraction(pred.get("conf"))
+        text = normalize_label(item.get("text")) or ""
+        out = {key: box[key] for key in ("x", "y", "w", "h")} | {"text": text}
+        conf = _as_fraction(item.get("conf"))
         if conf is not None:
-            box["conf"] = round(conf, 4)
-        else:
-            box.pop("conf", None)
-        changed = True
-    if changed:
-        photo.boxes_json = json.dumps(boxes)
-        photo.updated_at = _now()
-    return changed
+            out["conf"] = round(conf, 4)
+        cleaned.append(out)
+    return cleaned
+
+
+def apply_predictions(photo: LottoPhoto, prediction: object) -> bool:
+    """Store the model's boxes for a photo; pre-fill it if nobody labeled it yet.
+
+    ``prediction`` is ``{"boxes": [{"x", "y", "w", "h", "text", "conf"}, ...]}``.
+    The model's boxes are always kept separately (to compare counts); they
+    replace the photo's own boxes only while the photo is unlabeled and no
+    box has a typed value, so human work is never overwritten. Returns True
+    when something changed.
+    """
+    if not isinstance(prediction, dict):
+        return False
+    boxes = clean_model_boxes(prediction.get("boxes"))
+    photo.model_json = json.dumps(boxes)
+    photo.updated_at = _now()
+    own = load_boxes(photo)
+    if photo.labeled_at is None and not any(box.get("label") for box in own):
+        prefill = []
+        for box in boxes:
+            entry = {key: box[key] for key in ("x", "y", "w", "h")} | {"label": ""}
+            if box["text"]:
+                entry["pred"] = box["text"]
+                if "conf" in box:
+                    entry["conf"] = box["conf"]
+            prefill.append(entry)
+        photo.boxes_json = json.dumps(prefill)
+    return True
 
 
 @lotto_bp.post("/lotto/predictions")
@@ -625,7 +692,7 @@ def lotto_predictions():
         flash("predictions.json is not valid JSON.", "danger")
         return redirect(url_for("lotto.lotto_home"))
     if not isinstance(payload, dict):
-        flash("predictions.json must map photo ids to lists of predictions.", "danger")
+        flash('predictions.json must map photo ids to {"boxes": [...]}.', "danger")
         return redirect(url_for("lotto.lotto_home"))
 
     photos = LottoPhoto.query.filter(

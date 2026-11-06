@@ -3,18 +3,17 @@
 
 <section class="lotto-page">
     <div class="lotto-toolbar">
-        <div class="card-header" style="margin: 0;">Lotto number trainer</div>
+        <div class="card-header" style="margin: 0;">Lotto ticket counter</div>
         {% if next_todo_id %}
-        <a href="{{ url_for('lotto.lotto_label', photo_id=next_todo_id) }}" class="btn btn-primary lotto-btn">🏷️ Label next ({{ progress.todo_photos }})</a>
+        <a href="{{ url_for('lotto.lotto_label', photo_id=next_todo_id) }}" class="btn btn-primary lotto-btn">🏷️ Label next ({{ progress.todo_photos }} waiting)</a>
         {% endif %}
     </div>
 
     <!-- Step 1: collect -->
     <form action="{{ url_for('lotto.lotto_upload') }}" method="POST" enctype="multipart/form-data" class="card lotto-upload">
         <div class="lotto-step">1 · Take or upload photos</div>
-        <p class="lotto-help">Take the photo straight on, fill the frame with the tickets, avoid glare. A bad photo is fine
-            too: real-life variety makes the model stronger. Rotation and cropping happen on the next page; the original is
-            always kept.</p>
+        <p class="lotto-help">One photo of the whole display, full resolution, straight on, as little glare as you can.
+            Upload whenever you like: photos wait in <b>To label</b> until you have time, even for weeks.</p>
         <div class="lotto-row">
             <input type="file" id="lotto-photos" name="photos" accept="image/*" multiple hidden>
             <label for="lotto-photos" class="btn btn-secondary lotto-btn">📷 Choose / take photos</label>
@@ -27,28 +26,49 @@
     <div class="card lotto-progress">
         <div class="lotto-step">Progress</div>
         <div class="lotto-stats">
-            <div><b>{{ progress.labeled_boxes }}</b><span>numbers labeled</span></div>
-            <div><b>{{ progress.labeled_photos }}</b><span>photos done</span></div>
-            <div><b>{{ progress.todo_photos }}</b><span>photos to label</span></div>
-            <div><b>{{ progress.boxes_per_photo }}</b><span>numbers / photo</span></div>
+            <div><b>{{ progress.labeled_photos }}</b><span>photos labeled</span></div>
+            <div><b>{{ progress.todo_photos }}</b><span>waiting to label</span></div>
+            <div><b>{{ progress.labeled_boxes }}</b><span>tickets boxed</span></div>
+            <div><b>{{ progress.boxes_per_photo }}</b><span>tickets / photo</span></div>
         </div>
-        <div class="lotto-help">
-            Split of labeled numbers: train {{ progress.split_boxes.train }} · val {{ progress.split_boxes.val }} · test
-            {{ progress.split_boxes.test }}. Days left assume {{ progress.photos_per_day }} photos a day at
-            {{ progress.boxes_per_photo }} numbers each.
+
+        {% if progress.value_counts %}
+        <div class="lotto-values">
+            {% for value, count in progress.value_counts.items() %}
+            <span class="lotto-value{% if value in progress.rare_values %} is-rare{% endif %}">${{ value }} <b>{{ count }}</b></span>
+            {% endfor %}
         </div>
+        {% if progress.rare_values %}
+        <p class="lotto-help">Values with fewer than {{ progress.rare_min }} boxed tickets (highlighted) are hard for the model.
+            Now and then take an extra close-up photo of that section of the display.</p>
+        {% endif %}
+        {% endif %}
+
+        {% if progress.model_checked %}
+        <p class="lotto-help"><b>Model check:</b> on {{ progress.model_checked }} labeled photo(s), the count was exactly
+            right on {{ progress.model_exact }}; on average it was off by {{ progress.model_off_by }} ticket(s) per photo.</p>
+        {% endif %}
+
         <ol class="lotto-milestones">
             {% for m in progress.milestones %}
             <li class="{% if m.done %}is-done{% endif %}">
                 <div class="lotto-milestone-head">
-                    <span>{{ '✅' if m.done else '⬜' }} {{ m.title }} — {{ m.boxes }} numbers</span>
-                    <span class="lotto-dim">{% if m.done %}reached{% else %}~{{ m.days_left }} day(s) left{% endif %}</span>
+                    <span>{{ '✅' if m.done else '⬜' }} {{ m.title }}: {{ m.photos }} labeled photos</span>
+                    <span class="lotto-dim">
+                        {% if m.done %}reached
+                        {% else %}
+                        {% if m.from_backlog %}label {{ m.from_backlog }} waiting photo(s){% if m.to_take %} + {% endif %}{% endif %}
+                        {% if m.to_take %}~{{ m.days_left }} day(s) of new photos{% endif %}
+                        {% endif %}
+                    </span>
                 </div>
                 <div class="lotto-bar"><div style="width: {{ m.percent }}%"></div></div>
                 <div class="lotto-help">{{ m.detail }}</div>
             </li>
             {% endfor %}
         </ol>
+        <p class="lotto-help">Days assume {{ progress.photos_per_day }} new photos a day. Boxed tickets per split: train
+            {{ progress.split_boxes.train }} · val {{ progress.split_boxes.val }} · test {{ progress.split_boxes.test }}.</p>
     </div>
 
     <!-- Steps 3-4: Mac round trip -->
@@ -65,9 +85,8 @@
             <button type="submit" class="btn btn-secondary lotto-btn">⬆️ Upload</button>
         </form>
         <p class="lotto-help">Commands are in <code>docs/lotto-training.md</code>. In short:
-            <code>python scripts/lotto/prepare_dataset.py lotto-labeled-*.zip</code> →
-            <code>python scripts/lotto/train_crnn.py</code> →
-            <code>python scripts/lotto/predict.py lotto-all-*.zip</code>.</p>
+            <code>prepare_dataset.py lotto-labeled-*.zip</code> → <code>train_detector.py</code> +
+            <code>train_crnn.py</code> → <code>predict.py lotto-all-*.zip</code>.</p>
     </div>
 
     <!-- Step 2: label -->
@@ -89,11 +108,16 @@
                 <span class="lotto-chip lotto-split-{{ card.split }}">{{ card.split }}</span>
                 {% if card.skipped %}<span class="lotto-chip">skipped</span>
                 {% elif card.labeled %}<span class="lotto-chip is-ok">labeled</span>
+                {% elif card.boxes %}<span class="lotto-chip is-todo">draft · {{ card.boxes }} boxes</span>
                 {% else %}<span class="lotto-chip is-todo">to label</span>{% endif %}
                 <span class="lotto-dim">{{ card.created_local.strftime("%m-%d %H:%M") if card.created_local }}</span>
             </div>
-            {% if card.labels %}
-            <div class="lotto-labels">{{ card.labels | join(' · ') }}</div>
+            {% if card.total %}
+            <div class="lotto-labels">You: {{ card.total }} · {{ card.tally }}</div>
+            {% endif %}
+            {% if card.model_tally is not none %}
+            <div class="lotto-labels lotto-dim">Model: {{ card.model_total }}{% if card.model_tally %} · {{ card.model_tally }}{% endif %}
+                {% if card.model_error is not none %}{{ '✓' if card.model_error == 0 else '· off by ' ~ card.model_error }}{% endif %}</div>
             {% endif %}
         </a>
         {% endfor %}

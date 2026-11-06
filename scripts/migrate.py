@@ -145,6 +145,10 @@ MIGRATIONS = [
     """
     CREATE INDEX IF NOT EXISTS ix_lotto_photos_created_at ON lotto_photos (created_at)
     """,
+    # Model output kept apart from human labels (count comparison).
+    """
+    ALTER TABLE lotto_photos ADD COLUMN IF NOT EXISTS model_json TEXT
+    """,
 ]
 
 

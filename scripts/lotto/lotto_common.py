@@ -1,7 +1,7 @@
 """Shared helpers for the lotto training scripts (run on the Mac, not the server).
 
 The website stores untouched originals plus a manifest. These helpers turn
-one manifest entry into upright, cropped ticket-number images exactly the way
+one manifest entry into an upright photo and price-corner crops exactly the way
 the labeling page displays them:
 
 1. apply the EXIF orientation (browsers do this automatically),
