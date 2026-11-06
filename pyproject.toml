@@ -1,6 +1,7 @@
 [tool.ruff]
 # Explicit linter list (was `ALL`, frozen 2026-07-12 at ruff 0.15.20 with a
-# clean `ruff check .`). New linters added by future ruff versions won't
+# clean `ruff check .`; still clean at ruff 0.17.4, the version pinned in CI
+# and pre-commit since 2026-11-06). New linters added by future ruff versions won't
 # auto-enable; add them here deliberately. Framework linters that don't apply
 # (AIR airflow, DJ django, FAST fastapi) and preview-only ones (CPY, DOC)
 # are intentionally left out.
