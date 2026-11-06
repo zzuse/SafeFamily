@@ -101,6 +101,12 @@ Open `/lotto` on your phone, tap **Choose / take photos**, then **Upload**.
 * The ceiling lights make round white reflections on the glass. Tilt the phone
   a little so they don't sit on a row of price corners. A little glare is OK:
   real photos have it, so the model must learn it.
+* **HEIC (iPhone's default format) is converted to JPEG in the browser**
+  before upload, because the training scripts can't read HEIC. iPhone Safari
+  usually sends JPEG anyway. A browser that can't decode HEIC (e.g. Chrome on
+  Windows) drops those photos with a message. The server also checks the file
+  bytes and stores only JPEG, PNG or WebP. If a HEIC is refused, upload from
+  Safari, or set iPhone Settings → Camera → Formats → Most Compatible.
 * The website holds up to 400 boxes per photo (tested with 300: the page stays
   fast on a phone), so a whole-case photo also *works*. It's just slower to
   label and less accurate.

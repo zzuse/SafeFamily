@@ -95,6 +95,31 @@ MILESTONES = (
 )
 
 
+# HEIF/HEIC brands in the ISO-BMFF "ftyp" box (bytes 8-12 of the file).
+_HEIF_BRANDS = {b"heic", b"heix", b"heim", b"heis", b"hevc", b"hevx", b"mif1", b"msf1", b"avif"}
+
+
+def sniff_image_type(data: bytes) -> str | None:
+    """Return the real MIME type of a photo we can train on, from its bytes.
+
+    Only formats plain Pillow opens are accepted (JPEG, PNG, WebP): the Mac
+    scripts must read every stored photo. The browser's declared type is not
+    trusted. Returns None for anything else, including HEIC/HEIF.
+    """
+    if data.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "image/webp"
+    return None
+
+
+def is_heif(data: bytes) -> bool:
+    """Return True for HEIC/HEIF/AVIF photos (iPhone's default format)."""
+    return data[4:8] == b"ftyp" and data[8:12] in _HEIF_BRANDS
+
+
 def _now() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
@@ -415,6 +440,21 @@ def lotto_home():
     )
 
 
+def upload_message(added: int, duplicates: int, heif: int, rejected: int) -> str:
+    """Summarize an upload, explaining why any file was refused."""
+    parts = [f"Uploaded {added} photo(s)."]
+    if duplicates:
+        parts.append(f"{duplicates} duplicate(s) ignored.")
+    if heif:
+        parts.append(
+            f"{heif} HEIC/HEIF photo(s) rejected: this browser couldn't convert them to JPEG. "
+            "Upload from Safari, or set iPhone Settings > Camera > Formats > Most Compatible.",
+        )
+    if rejected:
+        parts.append(f"{rejected} file(s) rejected (not a JPEG, PNG or WebP photo, or over 20 MB).")
+    return " ".join(parts)
+
+
 @lotto_bp.post("/lotto/upload")
 @admin_required
 def lotto_upload():
@@ -427,14 +467,20 @@ def lotto_upload():
         flash("Choose at least one photo.", "warning")
         return redirect(url_for("lotto.lotto_home"))
 
-    added, duplicates, rejected = [], 0, 0
+    added, duplicates, rejected, heif = [], 0, 0, 0
     now = _now()
     split = assign_split(datetime.now(local_tz).date())
     for upload in files:
-        content_type = upload.content_type or ""
         data = upload.read()
-        if not content_type.startswith("image/") or not data or len(data) > MAX_UPLOAD_BYTES:
-            rejected += 1
+        content_type = sniff_image_type(data)
+        if content_type is None or len(data) > MAX_UPLOAD_BYTES:
+            # The upload page converts HEIC to JPEG in the browser; one that
+            # still arrives here (old page, browser without HEIC support) is
+            # refused rather than stored in a format training can't read.
+            if is_heif(data):
+                heif += 1
+            else:
+                rejected += 1
             continue
         checksum = f"sha256:{hashlib.sha256(data).hexdigest()}"
         if LottoPhoto.query.filter_by(user_id=user.id, checksum=checksum).first():
@@ -458,12 +504,7 @@ def lotto_upload():
         added.append(photo)
     db.session.commit()
 
-    parts = [f"Uploaded {len(added)} photo(s)."]
-    if duplicates:
-        parts.append(f"{duplicates} duplicate(s) ignored.")
-    if rejected:
-        parts.append(f"{rejected} file(s) rejected (not an image, or over 20 MB).")
-    flash(" ".join(parts), "success" if added else "warning")
+    flash(upload_message(len(added), duplicates, heif, rejected), "success" if added else "warning")
     if added:
         return redirect(url_for("lotto.lotto_label", photo_id=added[0].id))
     return redirect(url_for("lotto.lotto_home"))

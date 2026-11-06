@@ -328,6 +328,58 @@ def test_home_cards_show_model_comparison(user_client):
     assert "the count was exactly" in page
 
 
+HEIC = b"\x00\x00\x00\x18ftypheic\x00\x00\x00\x00mif1heic" + b"\x00" * 64
+PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
+WEBP = b"RIFF\x10\x00\x00\x00WEBPVP8 " + b"\x00" * 32
+
+
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [(JPEG, "image/jpeg"), (PNG, "image/png"), (WEBP, "image/webp"), (HEIC, None), (b"GIF89a", None), (b"", None)],
+)
+def test_sniff_image_type(data, expected):
+    assert lotto.sniff_image_type(data) == expected
+
+
+def test_is_heif():
+    assert lotto.is_heif(HEIC)
+    assert lotto.is_heif(b"\x00\x00\x00\x1cftypmif1")
+    assert not lotto.is_heif(JPEG)
+    assert not lotto.is_heif(b"\x00\x00\x00\x18ftypisom")  # an MP4 video
+
+
+def test_upload_rejects_heic_and_trusts_bytes_not_declared_type(user_client):
+    response = user_client.post(
+        "/lotto/upload",
+        data={
+            "photos": [
+                (io.BytesIO(HEIC), "IMG_0001.HEIC", "image/heic"),
+                # Declared HEIC but really a PNG (already converted): accepted as PNG.
+                (io.BytesIO(PNG), "IMG_0002.HEIC", "image/heic"),
+                # Declared JPEG but really HEIC: still refused.
+                (io.BytesIO(HEIC + b"x"), "IMG_0003.jpg", "image/jpeg"),
+                (io.BytesIO(b"GIF89a-not-allowed"), "a.gif", "image/gif"),
+            ],
+        },
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+    page = response.get_data(as_text=True)
+    assert "Uploaded 1 photo(s)." in page
+    assert "2 HEIC/HEIF photo(s) rejected" in page
+    assert "1 file(s) rejected (not a JPEG, PNG or WebP photo" in page
+    photo = LottoPhoto.query.one()
+    assert photo.content_type == "image/png"
+    assert photo.data == PNG
+
+
+def test_upload_message():
+    assert lotto.upload_message(2, 0, 0, 0) == "Uploaded 2 photo(s)."
+    message = lotto.upload_message(0, 1, 1, 1)
+    assert "1 duplicate(s) ignored." in message
+    assert "Most Compatible" in message
+
+
 def test_upload_without_files_or_only_duplicates(user_client):
     response = user_client.post("/lotto/upload", data={}, content_type="multipart/form-data")
     assert response.headers["Location"].endswith("/lotto")

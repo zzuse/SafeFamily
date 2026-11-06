@@ -17,11 +17,12 @@
             reflects on the glass. You can pick several photos at once. Upload whenever you like: photos wait in
             <b>To label</b> until you have time, even for weeks.</p>
         <div class="lotto-row">
-            <input type="file" id="lotto-photos" name="photos" accept="image/*" multiple hidden>
+            <input type="file" id="lotto-photos" name="photos" accept="image/*,.heic,.heif" multiple hidden>
             <label for="lotto-photos" class="btn btn-secondary lotto-btn">📷 Choose / take photos</label>
             <span id="lotto-chosen" class="note lotto-chosen">No photos chosen</span>
-            <button type="submit" class="btn btn-primary lotto-btn">Upload</button>
+            <button type="submit" class="btn btn-primary lotto-btn" id="lotto-upload-btn">Upload</button>
         </div>
+        <p class="lotto-help" id="lotto-convert-msg" hidden></p>
     </form>
 
     <!-- Progress -->
@@ -146,8 +147,65 @@
                 chosen.textContent = n === 1 ? input.files[0].name : (n ? `${n} files chosen` : empty);
             });
         };
-        show('lotto-photos', 'lotto-chosen', 'No photos chosen');
         show('lotto-preds', 'lotto-preds-chosen', 'No file chosen');
+
+        // HEIC/HEIF (iPhone's default) can't be read by the training scripts.
+        // Convert to full-quality JPEG in the browser before upload; drop the
+        // file with a message when this browser can't decode HEIC.
+        const photos = document.getElementById('lotto-photos');
+        const chosen = document.getElementById('lotto-chosen');
+        const uploadBtn = document.getElementById('lotto-upload-btn');
+        const msg = document.getElementById('lotto-convert-msg');
+        const MAX_PIXELS = 16000000;   // iOS canvas limit is ~16.7 MP
+        const isHeif = f => /^image\/hei[cf](-sequence)?$/i.test(f.type) || /\.(heic|heif)$/i.test(f.name);
+
+        async function toJpeg(file) {
+            const url = URL.createObjectURL(file);
+            try {
+                const img = new Image();
+                img.src = url;
+                await img.decode();
+                let w = img.naturalWidth, h = img.naturalHeight;
+                const scale = Math.min(1, Math.sqrt(MAX_PIXELS / (w * h)));
+                w = Math.round(w * scale); h = Math.round(h * scale);
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+                if (!blob || blob.size < 1000) throw new Error('encode failed');
+                const name = file.name.replace(/\.(heic|heif)$/i, '') + '.jpg';
+                return new File([blob], name, { type: 'image/jpeg', lastModified: file.lastModified });
+            } finally {
+                URL.revokeObjectURL(url);
+            }
+        }
+
+        photos.addEventListener('change', async () => {
+            const files = [...photos.files];
+            const heif = files.filter(isHeif);
+            msg.hidden = true;
+            if (!heif.length) {
+                chosen.textContent = files.length === 1 ? files[0].name : (files.length ? `${files.length} files chosen` : 'No photos chosen');
+                return;
+            }
+            uploadBtn.disabled = true;
+            chosen.textContent = `Converting ${heif.length} HEIC photo(s) to JPEG…`;
+            const kept = new DataTransfer();
+            const failed = [];
+            for (const f of files) {
+                if (!isHeif(f)) { kept.items.add(f); continue; }
+                try { kept.items.add(await toJpeg(f)); } catch (e) { failed.push(f.name); }
+            }
+            photos.files = kept.files;
+            const n = kept.files.length;
+            chosen.textContent = n ? `${n} photo(s) ready` : 'No photos chosen';
+            if (failed.length) {
+                msg.hidden = false;
+                msg.textContent = `Removed ${failed.length} HEIC photo(s) this browser can't convert (${failed.join(', ')}). ` +
+                    'Upload them from Safari, or set iPhone Settings > Camera > Formats > Most Compatible.';
+            }
+            uploadBtn.disabled = n === 0;
+        });
     })();
 </script>
 {% endblock %}
