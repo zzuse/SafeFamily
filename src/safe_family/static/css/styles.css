@@ -1971,3 +1971,21 @@ td form button {
 .lotto-details .lotto-label-input {
     font-size: 1rem;
 }
+
+.mgmt-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.mgmt-tools .card-header {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.mgmt-tool-link {
+    width: auto;
+    margin: 0;
+    padding: 8px 16px;
+}

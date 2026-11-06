@@ -2,6 +2,11 @@
 {% block content %}
 <div class="dashboard-layout">
     <div class="main-content">
+        <div class="card mgmt-tools">
+            <div class="card-header">Admin tools</div>
+            <a class="btn btn-secondary mgmt-tool-link" href="{{ url_for('lotto.lotto_home') }}">🎟️ Lotto ticket counter</a>
+            <span class="lotto-help">Collect and label display photos, export training data, upload predictions.</span>
+        </div>
         <div class="card">
             <div class="card-header">
                 Suspicious Logs for {{ date }}

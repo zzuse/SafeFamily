@@ -57,8 +57,8 @@ def _make_photo(  # noqa: PLR0913
 
 @pytest.fixture
 def user_client(notesync_app, notesync_client):
-    _make_user("u1", "alice")
-    _login(notesync_app, notesync_client, "u1")
+    _make_user("admin", "alice")
+    _login(notesync_app, notesync_client, "admin")
     return notesync_client
 
 
@@ -237,7 +237,7 @@ PRED = {"boxes": [{"x": 0.3, "y": 0.3, "w": 0.05, "h": 0.04, "text": "20", "conf
 
 
 def test_apply_predictions_prefills_unlabeled_photo(notesync_app):
-    photo = db.session.get(LottoPhoto, _make_photo("u1", boxes=[{**BOX, "label": ""}]))
+    photo = db.session.get(LottoPhoto, _make_photo("admin", boxes=[{**BOX, "label": ""}]))
     assert lotto.apply_predictions(photo, PRED)
     assert json.loads(photo.boxes_json) == [
         {"x": 0.3, "y": 0.3, "w": 0.05, "h": 0.04, "label": "", "pred": "20", "conf": 0.8},
@@ -248,8 +248,8 @@ def test_apply_predictions_prefills_unlabeled_photo(notesync_app):
 
 
 def test_apply_predictions_never_overwrites_labels(notesync_app):
-    labeled = db.session.get(LottoPhoto, _make_photo("u1", boxes=[BOX], labeled=True))
-    draft = db.session.get(LottoPhoto, _make_photo("u1", boxes=[BOX, {**BOX, "label": ""}], data=b"d"))
+    labeled = db.session.get(LottoPhoto, _make_photo("admin", boxes=[BOX], labeled=True))
+    draft = db.session.get(LottoPhoto, _make_photo("admin", boxes=[BOX, {**BOX, "label": ""}], data=b"d"))
     for photo in (labeled, draft):
         before = photo.boxes_json
         assert lotto.apply_predictions(photo, PRED)
@@ -267,9 +267,9 @@ def test_lotto_requires_login(notesync_client):
 
 
 def test_lotto_home_renders_progress_and_filters(user_client):
-    _make_photo("u1", boxes=[BOX], labeled=True)
-    _make_photo("u1", data=b"other", created=datetime(2026, 11, 2))
-    _make_photo("u1", data=b"skipped", skipped=True)
+    _make_photo("admin", boxes=[BOX], labeled=True)
+    _make_photo("admin", data=b"other", created=datetime(2026, 11, 2))
+    _make_photo("admin", data=b"skipped", skipped=True)
     _make_photo("u2", boxes=[{**BOX, "label": "424242"}], labeled=True, data=b"x")
 
     page = user_client.get("/lotto").get_data(as_text=True)
@@ -288,7 +288,7 @@ def test_lotto_home_renders_progress_and_filters(user_client):
 
 
 def test_upload_stores_photos_and_dedupes(user_client):
-    _make_photo("u1", boxes=[BOX], labeled=True, data=b"old")
+    _make_photo("admin", boxes=[BOX], labeled=True, data=b"old")
     response = user_client.post(
         "/lotto/upload",
         data={
@@ -313,13 +313,13 @@ def test_upload_stores_photos_and_dedupes(user_client):
 
 def test_home_cards_show_model_comparison(user_client):
     _make_photo(
-        "u1",
+        "admin",
         boxes=[{**BOX, "label": "5"}, {**BOX, "label": "10"}],
         labeled=True,
         model=[{**BOX, "text": "5"}, {**BOX, "text": "10"}],
     )
-    _make_photo("u1", boxes=[{**BOX, "label": "5"}], labeled=True, data=b"2", model=[])
-    _make_photo("u1", boxes=[{**BOX, "label": ""}], data=b"3")
+    _make_photo("admin", boxes=[{**BOX, "label": "5"}], labeled=True, data=b"2", model=[])
+    _make_photo("admin", boxes=[{**BOX, "label": ""}], data=b"3")
     page = user_client.get("/lotto?status=all").get_data(as_text=True)
     assert "Model: 2 · $5×1 · $10×1" in page  # noqa: RUF001
     assert "✓" in page
@@ -331,7 +331,7 @@ def test_home_cards_show_model_comparison(user_client):
 def test_upload_without_files_or_only_duplicates(user_client):
     response = user_client.post("/lotto/upload", data={}, content_type="multipart/form-data")
     assert response.headers["Location"].endswith("/lotto")
-    _make_photo("u1", data=JPEG)
+    _make_photo("admin", data=JPEG)
     LottoPhoto.query.update({"checksum": "sha256:" + __import__("hashlib").sha256(JPEG).hexdigest()})
     db.session.commit()
     response = user_client.post(
@@ -344,9 +344,9 @@ def test_upload_without_files_or_only_duplicates(user_client):
 
 
 def test_label_page_and_ownership(user_client):
-    own = _make_photo("u1", boxes=[BOX])
+    own = _make_photo("admin", boxes=[BOX])
     other = _make_photo("u2", data=b"x")
-    next_id = _make_photo("u1", data=b"y", created=datetime(2026, 11, 3))
+    next_id = _make_photo("admin", data=b"y", created=datetime(2026, 11, 3))
     page = user_client.get(f"/lotto/{own}").get_data(as_text=True)
     assert "Value for new boxes" in page
     assert all(f'data-value="{v}"' in page for v in lotto.TICKET_VALUES)
@@ -360,8 +360,8 @@ def test_label_page_and_ownership(user_client):
 
 
 def test_save_complete_labels_and_go_next(user_client):
-    first = _make_photo("u1")
-    second = _make_photo("u1", data=b"2", created=datetime(2026, 11, 2))
+    first = _make_photo("admin")
+    second = _make_photo("admin", data=b"2", created=datetime(2026, 11, 2))
     response = user_client.post(
         f"/lotto/{first}",
         data={"rotation": "90", "boxes": json.dumps([BOX]), "split": "test", "action": "save_next"},
@@ -375,7 +375,7 @@ def test_save_complete_labels_and_go_next(user_client):
 
 
 def test_save_last_photo_returns_home(user_client):
-    only = _make_photo("u1")
+    only = _make_photo("admin")
     response = user_client.post(
         f"/lotto/{only}",
         data={"rotation": "0", "boxes": json.dumps([BOX]), "split": "bogus", "action": "save_next"},
@@ -385,7 +385,7 @@ def test_save_last_photo_returns_home(user_client):
 
 
 def test_save_incomplete_is_a_draft(user_client):
-    photo_id = _make_photo("u1", boxes=[BOX], labeled=True)
+    photo_id = _make_photo("admin", boxes=[BOX], labeled=True)
     response = user_client.post(
         f"/lotto/{photo_id}",
         data={"rotation": "0", "boxes": json.dumps([{**BOX, "label": ""}]), "action": "save_next"},
@@ -402,14 +402,14 @@ def test_save_incomplete_is_a_draft(user_client):
     ],
 )
 def test_save_rejects_bad_input(user_client, form):
-    photo_id = _make_photo("u1", boxes=[BOX])
+    photo_id = _make_photo("admin", boxes=[BOX])
     response = user_client.post(f"/lotto/{photo_id}", data={**form, "action": "save"})
     assert response.headers["Location"].endswith(f"/lotto/{photo_id}")
     assert json.loads(db.session.get(LottoPhoto, photo_id).boxes_json) == [BOX]
 
 
 def test_skip_and_unskip(user_client):
-    photo_id = _make_photo("u1")
+    photo_id = _make_photo("admin")
     response = user_client.post(f"/lotto/{photo_id}", data={"action": "skip"})
     assert response.headers["Location"].endswith("/lotto")
     assert db.session.get(LottoPhoto, photo_id).skipped
@@ -419,7 +419,7 @@ def test_skip_and_unskip(user_client):
 
 
 def test_delete(user_client):
-    photo_id = _make_photo("u1")
+    photo_id = _make_photo("admin")
     other = _make_photo("u2", data=b"x")
     assert user_client.post(f"/lotto/{other}/delete").status_code == 404
     response = user_client.post(f"/lotto/{photo_id}/delete")
@@ -428,9 +428,9 @@ def test_delete(user_client):
 
 
 def test_export_labeled_and_all(user_client):
-    done = _make_photo("u1", boxes=[BOX], labeled=True, split="test")
-    todo = _make_photo("u1", data=b"todo")
-    _make_photo("u1", data=b"skip", skipped=True, labeled=True)
+    done = _make_photo("admin", boxes=[BOX], labeled=True, split="test")
+    todo = _make_photo("admin", data=b"todo")
+    _make_photo("admin", data=b"skip", skipped=True, labeled=True)
     _make_photo("u2", data=b"other", labeled=True)
 
     response = user_client.get("/lotto/export.zip")
@@ -464,7 +464,7 @@ def test_image_ext():
 
 
 def test_predictions_upload(user_client):
-    photo_id = _make_photo("u1", boxes=[])
+    photo_id = _make_photo("admin", boxes=[])
     other = _make_photo("u2", boxes=[], data=b"x")
     payload = {photo_id: PRED, other: PRED, "missing": PRED}
     response = user_client.post(
@@ -484,8 +484,29 @@ def test_predictions_upload_rejects_bad_files(user_client, body):
     assert response.headers["Location"].endswith("/lotto")
 
 
+def test_normal_user_cannot_open_lotto(notesync_app, notesync_client):
+    _make_user("u2", "bob")
+    _login(notesync_app, notesync_client, "u2")
+    photo_id = _make_photo("u2")
+    for method, url in [
+        ("get", "/lotto"),
+        ("post", "/lotto/upload"),
+        ("get", f"/lotto/{photo_id}"),
+        ("get", f"/lotto/{photo_id}/image"),
+        ("get", "/lotto/export.zip"),
+        ("post", "/lotto/predictions"),
+    ]:
+        response = getattr(notesync_client, method)(url)
+        assert response.status_code == 302, url
+        assert "/auth/login-ui" in response.headers["Location"]
+    # No Lotto entry in the top navigation for anyone.
+    page = notesync_client.get("/lotto/" + photo_id, follow_redirects=True).get_data(as_text=True)
+    assert ">Lotto</a>" not in page
+
+
 def test_routes_redirect_when_user_missing(notesync_app, notesync_client):
-    _login(notesync_app, notesync_client, "ghost")
+    # Admin token, but no user row: still sent to the login page.
+    _login(notesync_app, notesync_client, "admin")
     for method, url in [
         ("get", "/lotto"),
         ("post", "/lotto/upload"),

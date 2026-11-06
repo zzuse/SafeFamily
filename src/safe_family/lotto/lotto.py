@@ -13,7 +13,8 @@ one ticket. Workflow (see docs/lotto-training.md):
    and labeled ones show the model's count next to yours.
 
 The server only stores and serves data; it does no image processing, so it
-needs no GPU and no extra Python packages.
+needs no GPU and no extra Python packages. Admin-only: linked from the MGMT page,
+not the top navigation.
 """
 
 from __future__ import annotations
@@ -40,7 +41,7 @@ from flask import (
     url_for,
 )
 
-from src.safe_family.core.auth import get_current_username, login_required
+from src.safe_family.core.auth import admin_required, get_current_username
 from src.safe_family.core.extensions import db, local_tz
 from src.safe_family.core.models import LottoPhoto
 
@@ -359,7 +360,7 @@ def _card(row: LottoPhoto) -> dict:
 
 
 @lotto_bp.get("/lotto")
-@login_required
+@admin_required
 def lotto_home():
     """Dashboard: upload form, progress toward each milestone, photo grid."""
     user, response = _require_user()
@@ -415,7 +416,7 @@ def lotto_home():
 
 
 @lotto_bp.post("/lotto/upload")
-@login_required
+@admin_required
 def lotto_upload():
     """Store uploaded photos untouched and queue them for labeling."""
     user, response = _require_user()
@@ -469,7 +470,7 @@ def lotto_upload():
 
 
 @lotto_bp.get("/lotto/<photo_id>")
-@login_required
+@admin_required
 def lotto_label(photo_id: str):
     """Labeling page: rotate, draw boxes, type numbers."""
     user, response = _require_user()
@@ -489,7 +490,7 @@ def lotto_label(photo_id: str):
 
 
 @lotto_bp.post("/lotto/<photo_id>")
-@login_required
+@admin_required
 def lotto_save(photo_id: str):
     """Save rotation, boxes and split; optionally jump to the next photo."""
     user, response = _require_user()
@@ -542,7 +543,7 @@ def _after_save(user_id: str, photo: LottoPhoto, *, go_next: bool) -> Response:
 
 
 @lotto_bp.post("/lotto/<photo_id>/delete")
-@login_required
+@admin_required
 def lotto_delete(photo_id: str):
     """Delete a photo for good (use Skip to keep it but leave it out)."""
     user, response = _require_user()
@@ -556,7 +557,7 @@ def lotto_delete(photo_id: str):
 
 
 @lotto_bp.get("/lotto/<photo_id>/image")
-@login_required
+@admin_required
 def lotto_image(photo_id: str):
     """Serve the original uploaded image."""
     user, response = _require_user()
@@ -592,7 +593,7 @@ def build_manifest_entry(photo: LottoPhoto, file_name: str) -> dict:
 
 
 @lotto_bp.get("/lotto/export.zip")
-@login_required
+@admin_required
 def lotto_export():
     """Download the dataset: original images plus manifest.jsonl.
 
@@ -681,7 +682,7 @@ def apply_predictions(photo: LottoPhoto, prediction: object) -> bool:
 
 
 @lotto_bp.post("/lotto/predictions")
-@login_required
+@admin_required
 def lotto_predictions():
     """Import predictions.json produced by scripts/lotto/predict.py."""
     user, response = _require_user()
