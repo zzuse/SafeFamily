@@ -35,9 +35,11 @@ move one zip file to the Mac and one JSON file back.
    90 per photo, so it gets good quickly even on overlapping, tilted or glary
    corners.
 2. **Value reader** (small CRNN). It reads the digits in each corner crop:
-   "5", "10", "20", "30", "50". It learns **digits**, not whole values. The
-   "5" and "0" of a rare $50 are learned from all the $5, $10, $20 and $30
-   tickets. A new price ($2, $100) needs no new detector.
+   "5", "10", "20", "30", "50". It learns **digits**, not whole values, so
+   a rare $50 borrows its "5" and "0" from the common $5 and $10 tickets. A
+   digit that appears in only one value (the "3" of $30) is the exception:
+   it needs enough $30 examples of its own. A new price ($2, $100) needs no
+   new detector.
 
 Counts per value are a simple tally of the reader's answers.
 
@@ -179,6 +181,11 @@ How to read the results:
   itself when it stops improving.
 * The reader stays stuck near 0% for the first 20–30 epochs, then climbs
   quickly. That's normal. Keep the default 150 epochs.
+* If train_crnn.py prints `WARNING: val has no $30`, the val/test photos
+  contain no ticket of that value, so the scores can't tell you whether it's
+  read right. Label more photos that include it. In a test run with too few
+  $30 examples, every $30 was read as $20 while the other values were 100%
+  right.
 * If the reader confuses two values (`5` ↔ `50`), the crops may be cutting
   off digits: make boxes a bit wider when labeling.
 * If the detector misses corners in one area (e.g. under glare), add photos

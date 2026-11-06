@@ -10,8 +10,9 @@ Usage (after prepare_dataset.py):
 It fine-tunes a small YOLO model that was pretrained on everyday photos, so it
 starts out already knowing edges and shapes. It learns one thing: "this is a
 ticket's price corner". The value ($5, $10, ...) is read afterwards by the
-reader from train_crnn.py, which learns digits, so rare values like $50 come for
-free from the common ones.
+reader from train_crnn.py, which learns digits, so a rare $50 borrows its
+"5" and "0" from the common values (a digit unique to one value, like the
+"3" of $30, still needs its own examples).
 
 Writes lotto_data/models/corner_detector.pt and prints, for every test photo,
 how many corners it found vs. how many you boxed.

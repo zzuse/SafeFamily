@@ -113,6 +113,18 @@ def evaluate(model: CRNN, loader: DataLoader, charset: str, device: torch.device
     return (correct / total if total else 0.0), misses
 
 
+def warn_missing_values(train_rows: list, others: dict[str, list]) -> None:
+    """Warn when val/test lack a value that train has: their score can't judge it."""
+    train_values = {label for _, label in train_rows}
+    for name, rows in others.items():
+        missing = sorted(train_values - {label for _, label in rows}, key=lambda v: (len(v), v))
+        if rows and missing:
+            print(
+                f"WARNING: {name} has no {', '.join('$' + v for v in missing)}: its score can't show whether "
+                "those values are read right. Label more photos with them.",
+            )
+
+
 def main() -> None:  # noqa: PLR0915 - a linear training script reads best top to bottom
     """Train, keep the best checkpoint on val, report on test."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -138,6 +150,7 @@ def main() -> None:  # noqa: PLR0915 - a linear training script reads best top t
         val_rows = train_rows
     charset = "".join(sorted({c for _, label in train_rows + val_rows + test_rows for c in label}))
     print(f"train {len(train_rows)} · val {len(val_rows)} · test {len(test_rows)} · charset {charset!r}")
+    warn_missing_values(train_rows, {"val": val_rows, "test": test_rows})
 
     train_loader = DataLoader(
         CropDataset(train_rows, charset, augment=True, length=max(args.samples_per_epoch, len(train_rows))),
@@ -177,7 +190,9 @@ def main() -> None:  # noqa: PLR0915 - a linear training script reads best top t
             scheduler.step()
             total_loss += loss.item()
         val_acc, _ = evaluate(model, val_loader, charset, device)
-        if val_acc > best_acc:
+        # ">=": on a tie keep the later, longer-trained model. A small val set
+        # can hit 100% early, before rare values in train are learned.
+        if val_acc >= best_acc:
             best_acc, best_epoch = val_acc, epoch
             save_checkpoint(str(best_path), model, charset, {"epoch": epoch, "val_acc": val_acc})
         if epoch == 1 or epoch % 10 == 0 or epoch == args.epochs:

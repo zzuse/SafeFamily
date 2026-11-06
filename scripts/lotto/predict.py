@@ -51,6 +51,12 @@ def read_values(reader, crops: list, device: torch.device) -> list[tuple[str, fl
         return greedy_decode(model(batch), charset)
 
 
+def by_value(item: tuple[str, int]) -> tuple[int, str]:
+    """Sort tally items numerically: $5 before $10."""
+    value = item[0]
+    return (int(value), value) if value.isdigit() else (10**9, value)
+
+
 def main() -> None:
     """Detect, read and tally every photo in the export."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -90,14 +96,14 @@ def main() -> None:
 
             model_tally = Counter(b["text"] or "?" for b in boxes)
             line = f"{entry.id[:8]}  model {len(boxes):3d}: " + ", ".join(
-                f"${v}×{n}" for v, n in sorted(model_tally.items())  # noqa: RUF001
+                f"${v}×{n}" for v, n in sorted(model_tally.items(), key=by_value)  # noqa: RUF001
             )
             if entry.labeled:
                 human = Counter(b["label"] for b in entry.boxes if b.get("label"))
                 checked += 1
                 exact += human == model_tally
                 line += f"   you {sum(human.values()):3d}: " + ", ".join(
-                    f"${v}×{n}" for v, n in sorted(human.items())  # noqa: RUF001
+                    f"${v}×{n}" for v, n in sorted(human.items(), key=by_value)  # noqa: RUF001
                 )
                 line += "  ✓" if human == model_tally else ""
             print(line)
