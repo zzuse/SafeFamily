@@ -12,7 +12,7 @@
 
     <ol class="lotto-howto">
         <li><b>Rotate</b> until the tickets read upright.</li>
-        <li>Pick the <b>value</b> ($5, $10, …), then <b>tap the price corner of every ticket</b> of that value: one
+        <li>Pick the <b>value</b> (button, or type it on the keyboard: <kbd>1</kbd><kbd>0</kbd> = $10), then <b>tap the price corner of every ticket</b> of that value: one
             box per ticket. Drag on an empty spot to draw a box of a new size; later taps reuse that size. Drag a box to
             move it, drag its corner to resize, Delete removes the selected box.</li>
         <li>Box every corner you can tell is a separate ticket, even if it is overlapped, under glare or cut off at the
@@ -41,7 +41,7 @@
             <input type="hidden" name="boxes" id="f-boxes">
             <div class="lotto-step">Value for new boxes</div>
             <div class="lotto-row" id="value-chips">
-                {% for v in ['5', '10', '20', '30', '50'] %}
+                {% for v in ticket_values %}
                 <button type="button" class="btn btn-secondary lotto-btn lotto-chipbtn" data-value="{{ v }}">${{ v }}</button>
                 {% endfor %}
                 <input type="text" id="value-other" class="lotto-other" inputmode="numeric" placeholder="other" size="5">
@@ -382,6 +382,30 @@
         if (picked && selected >= 0 && boxes[selected]) { boxes[selected].label = currentValue; refresh(); }
     }));
     other.addEventListener('change', () => { if (cleanValue(other.value)) setValue(other.value); });
+
+    // Keyboard: type a value's digits (e.g. 1 then 0 for $10) to switch to it.
+    // It applies after a short pause unless no longer value can still match.
+    const known = [...chips].map(c => c.dataset.value);
+    let typed = '';
+    let typedTimer = null;
+    function applyTyped() {
+        clearTimeout(typedTimer);
+        if (typed) {
+            setValue(typed);
+            if (picked && selected >= 0 && boxes[selected]) { boxes[selected].label = currentValue; refresh(); }
+        }
+        typed = '';
+    }
+    document.addEventListener('keydown', (e) => {
+        if (!/^[0-9]$/.test(e.key) || e.ctrlKey || e.metaKey || e.altKey) return;
+        if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
+        e.preventDefault();
+        typed += e.key;
+        clearTimeout(typedTimer);
+        const longer = known.some(v => v.length > typed.length && v.startsWith(typed));
+        if (!longer) applyTyped();
+        else typedTimer = setTimeout(applyTyped, 700);
+    });
     setValue(currentValue);
 
     document.getElementById('rot-left').addEventListener('click', () => rotate(false));

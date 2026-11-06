@@ -46,8 +46,12 @@ from src.safe_family.core.models import LottoPhoto
 
 lotto_bp = Blueprint("lotto", __name__)
 
-PHOTOS_PER_DAY = 2
+# One photo per display tray (4 trays), once a day. Per-tray photos keep the
+# price corners big enough to read; the whole case in one shot does not.
+PHOTOS_PER_DAY = 4
 PER_PAGE = 24
+# Ticket prices sold in the store, same as the Store Accounting tool.
+TICKET_VALUES = ("1", "2", "3", "4", "5", "7", "10", "20", "30", "50", "100")
 RARE_VALUE_MIN = 40
 MAX_BOXES = 400
 MAX_LABEL_LEN = 20
@@ -480,6 +484,7 @@ def lotto_label(photo_id: str):
         created_local=_local(photo.created_at),
         next_todo_id=next_todo.id if next_todo else None,
         splits=VALID_SPLITS,
+        ticket_values=TICKET_VALUES,
     )
 
 

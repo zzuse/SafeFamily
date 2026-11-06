@@ -12,8 +12,10 @@
     <!-- Step 1: collect -->
     <form action="{{ url_for('lotto.lotto_upload') }}" method="POST" enctype="multipart/form-data" class="card lotto-upload">
         <div class="lotto-step">1 · Take or upload photos</div>
-        <p class="lotto-help">One photo of the whole display, full resolution, straight on, as little glare as you can.
-            Upload whenever you like: photos wait in <b>To label</b> until you have time, even for weeks.</p>
+        <p class="lotto-help"><b>One photo per tray</b> (not the whole case: its price corners come out too small),
+            from straight above, the tray filling the frame, full resolution. Tilt the phone a little if a ceiling light
+            reflects on the glass. You can pick several photos at once. Upload whenever you like: photos wait in
+            <b>To label</b> until you have time, even for weeks.</p>
         <div class="lotto-row">
             <input type="file" id="lotto-photos" name="photos" accept="image/*" multiple hidden>
             <label for="lotto-photos" class="btn btn-secondary lotto-btn">📷 Choose / take photos</label>
@@ -67,7 +69,7 @@
             </li>
             {% endfor %}
         </ol>
-        <p class="lotto-help">Days assume {{ progress.photos_per_day }} new photos a day. Boxed tickets per split: train
+        <p class="lotto-help">Days assume {{ progress.photos_per_day }} new tray photos a day. Boxed tickets per split: train
             {{ progress.split_boxes.train }} · val {{ progress.split_boxes.val }} · test {{ progress.split_boxes.test }}.</p>
     </div>
 

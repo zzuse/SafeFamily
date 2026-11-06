@@ -275,9 +275,9 @@ def test_lotto_home_renders_progress_and_filters(user_client):
     page = user_client.get("/lotto").get_data(as_text=True)
     assert "Lotto ticket counter" in page
     assert "Label next (1 waiting)" in page
-    # 10 - 1 labeled = 9 photos: 1 waiting + 8 new at 2/day = 4 days.
+    # 10 - 1 labeled = 9 photos: 1 waiting + 8 new at 4/day = 2 days.
     assert "label 1 waiting photo(s)" in page
-    assert "~4 day(s) of new photos" in page
+    assert "~2 day(s) of new photos" in page
     assert "$007" in page
 
     labeled = user_client.get("/lotto?status=labeled").get_data(as_text=True)
@@ -349,6 +349,7 @@ def test_label_page_and_ownership(user_client):
     next_id = _make_photo("u1", data=b"y", created=datetime(2026, 11, 3))
     page = user_client.get(f"/lotto/{own}").get_data(as_text=True)
     assert "Value for new boxes" in page
+    assert all(f'data-value="{v}"' in page for v in lotto.TICKET_VALUES)
     assert '"label": "007"' in page
     assert f"/lotto/{next_id}" in page
     assert user_client.get(f"/lotto/{other}").status_code == 404

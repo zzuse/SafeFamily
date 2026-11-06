@@ -1,7 +1,8 @@
 # Lotto ticket counter: the full plan
 
-Goal: take one photo of the scratch-ticket display and get **how many tickets
-of each value** are on it ($5: 61, $10: 17, $20: 10, …).
+Goal: photograph the scratch-ticket display and get **how many tickets of
+each value** are on it. Values are the same as in the Store Accounting tool:
+$1, $2, $3, $4, $5, $7, $10, $20, $30, $50, $100.
 
 Every ticket shows its price in its **top-left corner** ("$5" with the game
 number under it). Tickets are fanned out and overlap, but each one keeps its
@@ -32,14 +33,14 @@ move one zip file to the Mac and one JSON file back.
 
 1. **Corner detector** (YOLO, fine-tuned). It finds every price corner in the
    photo and doesn't care about the value. It learns from *every* corner, about
-   90 per photo, so it gets good quickly even on overlapping, tilted or glary
-   corners.
+   60 per tray photo, so it gets good quickly even on overlapping, tilted or
+   glary corners.
 2. **Value reader** (small CRNN). It reads the digits in each corner crop:
-   "5", "10", "20", "30", "50". It learns **digits**, not whole values, so
-   a rare $50 borrows its "5" and "0" from the common $5 and $10 tickets. A
-   digit that appears in only one value (the "3" of $30) is the exception:
-   it needs enough $30 examples of its own. A new price ($2, $100) needs no
-   new detector.
+   "1", "2", … "100". It learns **digits**, not whole values, so a rare $50
+   borrows its "5" and "0" from the common $5 and $10 tickets. Digits that
+   appear in only one or two values (the "4" of $4, the "7" of $7) need
+   enough examples of their own, which the $3/$4 and $1/$2/$7 trays provide.
+   A new price needs no new detector.
 
 Counts per value are a simple tally of the reader's answers.
 
@@ -89,14 +90,20 @@ python -c "import torch; print(torch.backends.mps.is_available())"   # should pr
 
 Open `/lotto` on your phone, tap **Choose / take photos**, then **Upload**.
 
-* **One photo of the whole display**, straight on, at full phone resolution.
-  Don't crop or shrink it: the $5 corners are small. If the display needs two
-  photos (left and right half), don't let them overlap, or the same tickets
-  get counted twice.
-* Each corner's "$5" should be readable when you zoom in. Get closer rather
-  than using digital zoom.
-* Glare from the glass is OK: real photos have it, so the model must learn it.
-  Avoid glare covering whole rows.
+* **One photo per tray, not the whole case.** A full-case photo holds ~250
+  tickets, and each price corner comes out only ~25 px tall, too small to label
+  comfortably and too small for the detector once it scales the photo down. A
+  tray photo makes every corner ~2.5× bigger. Trays are physically separate,
+  so nothing is counted twice: the case total is the sum of the 4 tray photos.
+* Shoot from **straight above**, the tray filling the frame, at full phone
+  resolution. Don't crop or shrink it. Get closer rather than using digital
+  zoom.
+* The ceiling lights make round white reflections on the glass. Tilt the phone
+  a little so they don't sit on a row of price corners. A little glare is OK:
+  real photos have it, so the model must learn it.
+* The website holds up to 400 boxes per photo (tested with 300: the page stays
+  fast on a phone), so a whole-case photo also *works*. It's just slower to
+  label and less accurate.
 * Arrange the display the same way you normally do. The model counts
   **visible** corners. A ticket completely hidden behind another can't be
   counted.
@@ -110,11 +117,13 @@ On the label page:
    price corner of every ticket of that value**. Each tap stamps one box.
    Drag on an empty spot once to set the box size, and later taps reuse it.
    Then switch value and continue.
-3. Fix mistakes: tap a box to select it and press a value button to change
-   it. Drag a box to move it, drag its corner to resize, Delete/Backspace
+   **Keyboard:** type the value's digits to switch (`1` `0` = $10; `1`
+   alone waits a moment in case you mean $10 or $100).
+3. Fix mistakes: tap a box to select it and press a value button (or type the
+   value) to change it. Drag a box to move it, drag its corner to resize, Delete/Backspace
    removes it. The **Boxes** list shows a zoomed crop of every box if you
    want to double-check.
-4. Check the **tally** ("90 tickets · $5 61 · $10 17 · …") against the photo,
+4. Check the **tally** ("62 tickets · $5 41 · $10 21") against the photo,
    then **Save & next**.
 
 Rules that keep the dataset clean:
@@ -133,15 +142,18 @@ a value.
 
 ## How many days?
 
-The dashboard counts **labeled photos**. Each display photo holds about 90
-corners, so photos, not corners, are what take calendar time. At 2 photos a
-day:
+The dashboard counts **labeled photos**. Each tray photo holds about 60
+corners, so photos, not corners, are what take calendar time. At one round of
+4 tray photos a day:
 
 | Milestone | Labeled photos | Days of photos | What you do there |
 |---|---|---|---|
-| Baseline check | 10 | ~5 | Test Apple's OCR on whole photos (3b). It may already count well enough. |
-| First trained models | 25 | ~2 weeks | Train detector + reader (3c, 3d), upload predictions (4) so labeling becomes checking. |
-| Reliable counts | 80 | ~6 weeks | Exact counts on most photos, enough rare $30/$50 examples. |
+| Baseline check | 10 | ~3 | Test Apple's OCR on whole photos (3b). It may already count well enough. |
+| First trained models | 25 | ~1 week | Train detector + reader (3c, 3d), upload predictions (4) so labeling becomes checking. |
+| Reliable counts | 80 | ~3 weeks | Exact counts on most photos, enough rare values ($4, $7, $50, $100). |
+
+Labeling is the slower part: about 60 taps per tray photo, so roughly 3–4
+minutes each by hand, under a minute each once predictions pre-fill them.
 
 **Rare values** set the pace. The dashboard lists boxed tickets per value and
 highlights any value with fewer than 40. If $50 stays rare, now and then take
