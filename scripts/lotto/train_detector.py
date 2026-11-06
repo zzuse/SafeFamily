@@ -37,7 +37,9 @@ def pick_device() -> str:
     return "cpu"
 
 
-def count_check(model: YOLO, data: Path, split: str, imgsz: int, conf: float, device: str) -> None:  # noqa: PLR0913, PLR0917
+def count_check(  # noqa: PLR0913
+    model: YOLO, data: Path, split: str, *, imgsz: int, conf: float, device: str,
+) -> None:
     """Compare found vs. boxed corners per photo of ``split``."""
     images = sorted((data / "yolo" / "images" / split).glob("*.jpg"))
     if not images:
@@ -98,7 +100,7 @@ def main() -> None:
     shutil.copy(best, out)
     print(f"Saved best detector to {out}")
 
-    count_check(YOLO(str(out)), args.data, "test", args.imgsz, args.conf, device)
+    count_check(YOLO(str(out)), args.data, "test", imgsz=args.imgsz, conf=args.conf, device=device)
 
 
 if __name__ == "__main__":

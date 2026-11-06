@@ -30,7 +30,9 @@ from PIL import Image
 SPLITS = ("train", "val", "test")
 
 
-def write_yolo_image(image: Image.Image, boxes: list[dict], stem: str, root: Path, split: str, max_side: int) -> None:  # noqa: PLR0913, PLR0917
+def write_yolo_image(  # noqa: PLR0913
+    image: Image.Image, boxes: list[dict], stem: str, root: Path, *, split: str, max_side: int,
+) -> None:
     """Save an upright photo and its YOLO label file (one class: price corner)."""
     images_dir = root / "images" / split
     labels_dir = root / "labels" / split
@@ -83,7 +85,7 @@ def main() -> None:
             split = entry.split if entry.split in SPLITS else "train"
             boxes = [b for b in entry.boxes if b.get("label")]
             image = load_upright(archive.read(entry.file), entry.rotation)
-            write_yolo_image(image, boxes, entry.id, yolo_dir, split, args.max_side)
+            write_yolo_image(image, boxes, entry.id, yolo_dir, split=split, max_side=args.max_side)
             photos[split] += 1
             out_dir = crops_dir / split
             out_dir.mkdir(parents=True, exist_ok=True)
