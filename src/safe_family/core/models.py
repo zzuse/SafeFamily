@@ -343,3 +343,38 @@ class BlogTag(db.Model):
     user_id = db.Column(db.String(), nullable=False, index=True)
     name = db.Column(db.String(64), nullable=False)
     posts = db.relationship("BlogPost", secondary=blog_post_tags, back_populates="tags")
+
+
+class LottoPhoto(db.Model):
+    """A photo collected for training the lotto ticket counter.
+
+    The original upload is stored untouched; ``rotation`` and ``boxes_json``
+    describe how to turn it into training crops, so a labeling mistake never
+    destroys data. ``boxes_json`` is a JSON list of
+    ``{"x", "y", "w", "h", "label", "pred", "conf"}`` with coordinates as 0-1
+    fractions of the image *after* rotation; ``label`` is the ticket's price
+    value ("5", "10", "20", ...), one box per visible price corner.
+    """
+
+    __tablename__ = "lotto_photos"
+
+    id = db.Column(db.String(), primary_key=True, default=lambda: uuid.uuid4().hex)
+    user_id = db.Column(db.String(), nullable=False, index=True)
+    filename = db.Column(db.String(), nullable=False)
+    content_type = db.Column(db.String(), nullable=False)
+    checksum = db.Column(db.String(), nullable=False, index=True)
+    data = db.Column(db.LargeBinary(), nullable=False)
+    rotation = db.Column(db.Integer(), nullable=False, default=0)
+    boxes_json = db.Column(db.Text(), nullable=False, default="[]")
+    # Latest model output, kept apart from human labels to compare counts:
+    # JSON list of {"x", "y", "w", "h", "text", "conf"}.
+    model_json = db.Column(db.Text(), nullable=True)
+    split = db.Column(db.String(8), nullable=False, default="train")
+    skipped = db.Column(db.Boolean(), nullable=False, default=False)
+    labeled_at = db.Column(db.DateTime(), nullable=True)
+    created_at = db.Column(db.DateTime(), nullable=False, index=True)
+    updated_at = db.Column(db.DateTime(), nullable=False)
+
+    def __repr__(self) -> str:
+        """Return a string representation of the LottoPhoto."""
+        return f"<LottoPhoto(id='{self.id}', split='{self.split}')>"
