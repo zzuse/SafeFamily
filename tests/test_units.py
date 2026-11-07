@@ -17,9 +17,9 @@ def test_generate_time_slots_weekday_half_hour():
         custom_end="",
         today=weekday,
     )
-    assert slots[0] == "18:30 - 19:00"
+    assert slots[0] == "16:30 - 17:00"
     assert slots[-1] == "21:00 - 21:30"
-    assert len(slots) == 6
+    assert len(slots) == 10
 
 
 def test_generate_time_slots_weekend_hour():
@@ -32,8 +32,8 @@ def test_generate_time_slots_weekend_hour():
         today=weekend,
     )
     assert slots[0] == "09:00 - 10:00"
-    assert slots[-1] == "16:00 - 17:00"
-    assert len(slots) == 8
+    assert slots[-1] == "17:00 - 18:00"
+    assert len(slots) == 9
 
 
 def test_generate_time_slots_custom_invalid_falls_back():
@@ -57,7 +57,7 @@ def test_generate_time_slots_custom_bad_format_falls_back():
         custom_end="09:00",
         today=weekday,
     )
-    assert slots[0] == "18:30 - 19:30"
+    assert slots[0] == "16:30 - 17:30"
 
 
 def test_generate_time_slots_custom_end_before_start_falls_back():
@@ -69,7 +69,7 @@ def test_generate_time_slots_custom_end_before_start_falls_back():
         custom_end="09:00",
         today=weekday,
     )
-    assert slots[0] == "18:30 - 19:30"
+    assert slots[0] == "16:30 - 17:30"
 
 
 def test_generate_time_slots_custom_valid():

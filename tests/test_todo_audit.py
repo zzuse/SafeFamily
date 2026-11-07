@@ -219,7 +219,7 @@ def test_todo_page_shows_read_only_audit_for_user(client, monkeypatch, seeded):
 
     html = _render_todo(client, monkeypatch, "user", [[]])
 
-    assert "Weekly audit" in html
+    assert "the weekly audit" in html
     assert "2026-09-14 → 2026-09-20" in html
     assert '<span class="sf-audit-value" data-value="yes">yes</span>' in html
     assert html.count('<span class="sf-audit-value" data-value="">null</span>') == 20
