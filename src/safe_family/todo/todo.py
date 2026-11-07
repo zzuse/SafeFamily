@@ -93,9 +93,9 @@ def generate_time_slots(
     if schedule_mode != "custom":
         if schedule_mode == "holiday" or is_weekend:
             start_hour, start_minute = 9, 0
-            end_hour, end_minute = 17, 0
+            end_hour, end_minute = 18, 0
         else:
-            start_hour, start_minute = 18, 30
+            start_hour, start_minute = 16, 30
             end_hour, end_minute = 21, 30
 
     step = 30 if slot_type == "30" else 60
@@ -282,7 +282,10 @@ def build_audit_matrix(user_id: str, today: date) -> dict:
     no_counts = {}
     for mark in no_marks:
         no_counts[mark.item_id] = no_counts.get(mark.item_id, 0) + 1
-    remaining = AuditRemaining.query.filter_by(user_id=str(user_id), week_start=week_start).first()
+    remaining = AuditRemaining.query.filter_by(
+        user_id=str(user_id),
+        week_start=week_start,
+    ).first()
     return {
         "remaining_minutes": remaining.minutes if remaining else 0,
         "last_week": {
@@ -290,7 +293,9 @@ def build_audit_matrix(user_id: str, today: date) -> dict:
             "end": (week_start - timedelta(days=1)).isoformat(),
             "no_total": len(no_marks),
             "no_by_item": [
-                {"name": item.name, "count": no_counts[item.id]} for item in items if item.id in no_counts
+                {"name": item.name, "count": no_counts[item.id]}
+                for item in items
+                if item.id in no_counts
             ],
         },
         "days": [
@@ -298,7 +303,11 @@ def build_audit_matrix(user_id: str, today: date) -> dict:
             for label, day in zip(AUDIT_DAY_LABELS, days, strict=True)
         ],
         "rows": [
-            {"id": item.id, "name": item.name, "cells": [values.get((item.id, day)) for day in days]}
+            {
+                "id": item.id,
+                "name": item.name,
+                "cells": [values.get((item.id, day)) for day in days],
+            }
             for item in items
         ],
     }
@@ -783,19 +792,39 @@ def audit_mark():
     week_start = current_week_start(datetime.now(local_tz).date())
     if not user_id or not week_start <= mark_date < week_start + timedelta(days=7):
         return jsonify({"success": False, "error": "date outside this week"}), 403
-    if db.session.get(AuditItem, item_id) is None or db.session.get(User, user_id) is None:
+    if (
+        db.session.get(AuditItem, item_id) is None
+        or db.session.get(User, user_id) is None
+    ):
         return jsonify({"success": False, "error": "item or user not found"}), 404
 
-    mark = AuditMark.query.filter_by(item_id=item_id, user_id=user_id, mark_date=mark_date).first()
+    mark = AuditMark.query.filter_by(
+        item_id=item_id,
+        user_id=user_id,
+        mark_date=mark_date,
+    ).first()
     if not value:
         if mark is not None:
             db.session.delete(mark)
     elif mark is None:
-        db.session.add(AuditMark(item_id=item_id, user_id=user_id, mark_date=mark_date, value=value))
+        db.session.add(
+            AuditMark(
+                item_id=item_id,
+                user_id=user_id,
+                mark_date=mark_date,
+                value=value,
+            ),
+        )
     else:
         mark.value = value
     db.session.commit()
-    logger.info("audit_mark: item=%s user=%s date=%s value=%s", item_id, user_id, mark_date, value or None)
+    logger.info(
+        "audit_mark: item=%s user=%s date=%s value=%s",
+        item_id,
+        user_id,
+        mark_date,
+        value or None,
+    )
     return jsonify({"success": True, "value": value or None})
 
 
@@ -808,7 +837,9 @@ def audit_remaining():
     try:
         minutes = int(str(data.get("minutes", "")).strip() or 0)
     except ValueError:
-        return jsonify({"success": False, "error": "minutes must be a whole number"}), 400
+        return jsonify(
+            {"success": False, "error": "minutes must be a whole number"},
+        ), 400
     if not 0 <= minutes <= AUDIT_REMAINING_MAX_MINUTES:
         return jsonify({"success": False, "error": "minutes out of range"}), 400
     if not user_id or db.session.get(User, user_id) is None:
@@ -817,11 +848,18 @@ def audit_remaining():
     week_start = current_week_start(datetime.now(local_tz).date())
     row = AuditRemaining.query.filter_by(user_id=user_id, week_start=week_start).first()
     if row is None:
-        db.session.add(AuditRemaining(user_id=user_id, week_start=week_start, minutes=minutes))
+        db.session.add(
+            AuditRemaining(user_id=user_id, week_start=week_start, minutes=minutes),
+        )
     else:
         row.minutes = minutes
     db.session.commit()
-    logger.info("audit_remaining: user=%s week=%s minutes=%s", user_id, week_start, minutes)
+    logger.info(
+        "audit_remaining: user=%s week=%s minutes=%s",
+        user_id,
+        week_start,
+        minutes,
+    )
     return jsonify({"success": True, "minutes": minutes})
 
 
