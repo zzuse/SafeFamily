@@ -1623,7 +1623,7 @@ td form button {
 }
 
 .lotto-toolbar,
-.lotto-row {
+.lotto-actions {
     display: flex;
     flex-wrap: wrap;
     align-items: center;

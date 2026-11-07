@@ -572,3 +572,17 @@ def test_routes_redirect_when_user_missing(notesync_app, notesync_client):
         response = getattr(notesync_client, method)(url)
         assert response.status_code == 302, url
         assert "/auth/login-ui" in response.headers["Location"]
+
+
+def test_lotto_styles_leave_store_calculator_rows_alone():
+    # The Store Accounting calculator's table rows are <tr class="lotto-row">
+    # (its JS selects them by that class). A stylesheet rule on .lotto-row
+    # (e.g. display: flex) breaks that table, so the lotto pages use
+    # .lotto-actions for their button rows instead.
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent / "src" / "safe_family"
+    css = (root / "static" / "css" / "styles.css").read_text()
+    assert ".lotto-row" not in css
+    calculator = (root / "templates" / "miscellaneous" / "store_calculator.html").read_text()
+    assert 'class="lotto-row' in calculator

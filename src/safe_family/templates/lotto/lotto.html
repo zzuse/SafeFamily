@@ -16,7 +16,7 @@
             from straight above, the tray filling the frame, full resolution. Tilt the phone a little if a ceiling light
             reflects on the glass. You can pick several photos at once. Upload whenever you like: photos wait in
             <b>To label</b> until you have time, even for weeks.</p>
-        <div class="lotto-row">
+        <div class="lotto-actions">
             <input type="file" id="lotto-photos" name="photos" accept="image/*,.heic,.heif" multiple hidden>
             <label for="lotto-photos" class="btn btn-secondary lotto-btn">📷 Choose / take photos</label>
             <span id="lotto-chosen" class="note lotto-chosen">No photos chosen</span>
@@ -77,11 +77,11 @@
     <!-- Steps 3-4: Mac round trip -->
     <div class="card lotto-mac">
         <div class="lotto-step">3 · Train on the Mac &nbsp;·&nbsp; 4 · Bring predictions back</div>
-        <div class="lotto-row">
+        <div class="lotto-actions">
             <a class="btn btn-secondary lotto-btn" href="{{ url_for('lotto.lotto_export', scope='labeled') }}">⬇️ Training set (.zip)</a>
             <a class="btn btn-secondary lotto-btn" href="{{ url_for('lotto.lotto_export', scope='all') }}">⬇️ All photos, to pre-label (.zip)</a>
         </div>
-        <form action="{{ url_for('lotto.lotto_predictions') }}" method="POST" enctype="multipart/form-data" class="lotto-row">
+        <form action="{{ url_for('lotto.lotto_predictions') }}" method="POST" enctype="multipart/form-data" class="lotto-actions">
             <input type="file" id="lotto-preds" name="predictions" accept="application/json,.json" hidden>
             <label for="lotto-preds" class="btn btn-secondary lotto-btn">📄 Choose predictions.json</label>
             <span id="lotto-preds-chosen" class="note lotto-chosen">No file chosen</span>
