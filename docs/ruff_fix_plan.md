@@ -79,6 +79,7 @@ lint.per-file-ignores = { "tests/*" = [
 > (`.github/workflows/ci.yml`), and `.pre-commit-config.yaml` provides a
 > local hook (`pip install pre-commit && pre-commit install` to enable).
 > Ruff is pinned to 0.15.20 in both places — bump them together.
+> (Bumped to 0.17.4 on 2026-11-06; still zero findings.)
 > Step 3 delivered: S113 timeout in log_poster, `utcnow()` →
 > `datetime.now(UTC).replace(tzinfo=None)` in auth.py + notesync/service.py
 > (kept naive-UTC storage semantics), tz-aware `now()` in weekly_metrics,

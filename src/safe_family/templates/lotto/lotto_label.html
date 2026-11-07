@@ -22,7 +22,7 @@
 
     <div class="lotto-editor">
         <div class="card lotto-stage-card">
-            <div class="lotto-row">
+            <div class="lotto-actions">
                 <button type="button" class="btn btn-secondary lotto-btn" id="rot-left" title="Rotate left">⟲ 90°</button>
                 <button type="button" class="btn btn-secondary lotto-btn" id="rot-right" title="Rotate right">⟳ 90°</button>
                 <label class="lotto-dim">Zoom
@@ -40,7 +40,7 @@
             <input type="hidden" name="rotation" id="f-rotation" value="{{ photo.rotation }}">
             <input type="hidden" name="boxes" id="f-boxes">
             <div class="lotto-step">Value for new boxes</div>
-            <div class="lotto-row" id="value-chips">
+            <div class="lotto-actions" id="value-chips">
                 {% for v in ticket_values %}
                 <button type="button" class="btn btn-secondary lotto-btn lotto-chipbtn" data-value="{{ v }}">${{ v }}</button>
                 {% endfor %}
@@ -63,7 +63,7 @@
             <p class="lotto-help">Picked automatically (70/15/15). <b>test</b> photos are never trained on, so they give an
                 honest accuracy score. Leave it alone unless you know why.</p>
 
-            <div class="lotto-row">
+            <div class="lotto-actions">
                 <button type="submit" name="action" value="save_next" class="btn btn-primary lotto-btn">Save &amp; next ⏎</button>
                 <button type="submit" name="action" value="save" class="btn btn-secondary lotto-btn">Save</button>
                 {% if photo.skipped %}
