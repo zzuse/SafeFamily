@@ -10,6 +10,7 @@ import uuid
 import zlib
 from collections.abc import Callable
 from datetime import datetime
+from datetime import time as dt_time
 
 from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED, JobExecutionEvent
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -295,6 +296,7 @@ scheduler.add_listener(_log_job_event, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
 scheduler.start()
 _start_schedule_listener()
 _NOTIFIED_TASK_IDS: set[int] = set()
+_STARTED_TASK_IDS: set[int] = set()
 _NOTIFIED_DATE: str | None = None
 
 
@@ -418,56 +420,71 @@ def remove_job(rule_id: int):
         logger.debug("Job %s not found: %s", job_id, str(e))
 
 
+def _parse_time_slot(time_slot: str | None) -> tuple[dt_time, dt_time] | None:
+    """Parse a "HH:MM - HH:MM" slot into (start, end) times, or None if malformed."""
+    try:
+        start_str, end_str = [t.strip() for t in time_slot.split("-")]
+        start = datetime.strptime(start_str, "%H:%M").time()
+        end = datetime.strptime(end_str, "%H:%M").time()
+    except (ValueError, AttributeError):
+        return None
+    return start, end
+
+
+def _task_message(username: str, time_slot: str | None, task: str | None) -> str:
+    if time_slot and task:
+        return f"{time_slot} - {task}"
+    return time_slot or task or username
+
+
 def notify_overdue_task_feedback():
-    """Send a desktop alert when task feedback is overdue."""
+    """Send desktop alerts when a task's time slot starts and when its feedback is overdue."""
     global _NOTIFIED_DATE  # noqa: PLW0603 - per-day notification dedup state
-    today = datetime.now(local_tz).date().isoformat()
+    now = datetime.now(local_tz)
+    today = now.date().isoformat()
     if today != _NOTIFIED_DATE:
         _NOTIFIED_DATE = today
         _NOTIFIED_TASK_IDS.clear()
+        _STARTED_TASK_IDS.clear()
 
     conn = get_db_connection()
     cur = conn.cursor()
-    today_date = datetime.now(local_tz).date()
     cur.execute(
         """
-        SELECT id, username, time_slot, task
+        SELECT id, username, time_slot, task, COALESCE(completion_status, '')
         FROM todo_list
         WHERE date = %s
-          AND COALESCE(completion_status, '') = ''
         """,
-        (today_date,),
+        (now.date(),),
     )
     rows = cur.fetchall()
     cur.close()
     conn.close()
 
-    now = datetime.now(local_tz)
-    for todo_id, username, time_slot, task in rows:
-        if todo_id in _NOTIFIED_TASK_IDS:
-            continue
-        try:
-            _, end_str = [t.strip() for t in time_slot.split("-")]
-            end_time = datetime.strptime(end_str, "%H:%M").time()
-        except (ValueError, AttributeError):
-            continue
+    now_time = now.time().replace(second=0, microsecond=0)
+    tasks = []
+    for todo_id, username, time_slot, task, completion_status in rows:
+        slot = _parse_time_slot(time_slot)
+        if slot is not None:
+            tasks.append((todo_id, *slot, _task_message(username, time_slot, task), completion_status))
 
-        end_dt = now.replace(
-            hour=end_time.hour,
-            minute=end_time.minute,
-            second=0,
-            microsecond=0,
-        )
-        if now < end_dt:
-            continue
+    # Slot end without feedback.
+    finished_alert_sent = False
+    for todo_id, _start, end_time, message, completion_status in tasks:
+        if not completion_status and todo_id not in _NOTIFIED_TASK_IDS and now_time >= end_time:
+            send_hammerspoon_alert(message)
+            _NOTIFIED_TASK_IDS.add(todo_id)
+            finished_alert_sent = True
 
-        if time_slot and task:
-            message = f"{time_slot} - {task}"
-        else:
-            message = time_slot or task or username
-
-        send_hammerspoon_alert(message)
-        _NOTIFIED_TASK_IDS.add(todo_id)
+    # Slot start: if a finished alert just went out, defer to the next tick
+    # (1 minute later) so back-to-back alerts don't overlap. Only alert while
+    # the slot is in progress, so a restart doesn't replay past start alerts.
+    if finished_alert_sent:
+        return
+    for todo_id, start_time, end_time, message, _status in tasks:
+        if todo_id not in _STARTED_TASK_IDS and start_time <= now_time < end_time:
+            send_hammerspoon_alert(f"Starting: {message}")
+            _STARTED_TASK_IDS.add(todo_id)
 
 
 @schedule_rules_bp.route("/schedule_rules", methods=["GET", "POST"])

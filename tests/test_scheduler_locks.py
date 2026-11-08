@@ -3,6 +3,8 @@
 from datetime import UTC, datetime, time
 from types import SimpleNamespace
 
+import pytest
+
 from src.safe_family.core import auth
 from src.safe_family.rules import scheduler
 
@@ -125,23 +127,85 @@ def test_notify_schedule_change_executes_query(monkeypatch):
     assert any("pg_notify" in sql for sql, _ in cursor.executed)
 
 
-def test_notify_overdue_task_feedback_sends_alert(monkeypatch):
-    time_slot = "00:00 - 00:00"
-    cursor = LockCursor(rows=[(1, "alice", time_slot, "Task")])
+def _run_task_notifier(monkeypatch, rows, now):
+    cursor = LockCursor(rows=rows)
     conn = LockConn(cursor)
     monkeypatch.setattr(scheduler, "get_db_connection", lambda: conn)
-    sent = {}
-    monkeypatch.setattr(
-        scheduler,
-        "send_hammerspoon_alert",
-        lambda msg: sent.__setitem__("msg", msg),
-    )
+    sent = []
+    monkeypatch.setattr(scheduler, "send_hammerspoon_alert", sent.append)
+
+    class FixedDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return now
+
+    monkeypatch.setattr(scheduler, "datetime", FixedDatetime)
+    scheduler.notify_overdue_task_feedback()
+    return sent
+
+
+def _reset_task_notifier_state():
     scheduler._NOTIFIED_TASK_IDS.clear()
+    scheduler._STARTED_TASK_IDS.clear()
     scheduler._NOTIFIED_DATE = None
 
-    scheduler.notify_overdue_task_feedback()
 
-    assert "msg" in sent
+def test_notify_overdue_task_feedback_sends_alert(monkeypatch):
+    _reset_task_notifier_state()
+    now = datetime(2026, 1, 1, 10, 30, tzinfo=UTC)
+    sent = _run_task_notifier(monkeypatch, [(1, "alice", "09:00 - 10:00", "Task", "")], now)
+
+    assert sent == ["09:00 - 10:00 - Task"]
+
+
+def test_notify_task_start_sends_alert_once(monkeypatch):
+    _reset_task_notifier_state()
+    rows = [(2, "alice", "10:00 - 11:00", "Math", "")]
+    now = datetime(2026, 1, 1, 10, 0, tzinfo=UTC)
+
+    first = _run_task_notifier(monkeypatch, rows, now)
+    second = _run_task_notifier(monkeypatch, rows, now.replace(minute=1))
+
+    assert first == ["Starting: 10:00 - 11:00 - Math"]
+    assert second == []
+
+
+def test_notify_task_start_waits_one_minute_after_finished_alert(monkeypatch):
+    _reset_task_notifier_state()
+    rows = [
+        (7, "alice", "09:00 - 10:00", "Read", ""),
+        (8, "alice", "10:00 - 11:00", "Math", ""),
+    ]
+    at_ten = datetime(2026, 1, 1, 10, 0, tzinfo=UTC)
+
+    first = _run_task_notifier(monkeypatch, rows, at_ten)
+    second = _run_task_notifier(monkeypatch, rows, at_ten.replace(minute=1))
+
+    assert first == ["09:00 - 10:00 - Read"]
+    assert second == ["Starting: 10:00 - 11:00 - Math"]
+
+
+def test_notify_task_start_skips_future_and_past_slots(monkeypatch):
+    _reset_task_notifier_state()
+    rows = [
+        (3, "alice", "11:00 - 12:00", "Later", ""),
+        (4, "alice", "08:00 - 09:00", "Earlier", "done"),
+        (5, "alice", "bad slot", "Broken", ""),
+    ]
+    now = datetime(2026, 1, 1, 10, 0, tzinfo=UTC)
+
+    assert _run_task_notifier(monkeypatch, rows, now) == []
+
+
+def test_notify_task_state_resets_on_new_day(monkeypatch):
+    _reset_task_notifier_state()
+    rows = [(6, "alice", "10:00 - 11:00", "", "")]
+    day1 = datetime(2026, 1, 1, 10, 0, tzinfo=UTC)
+    _run_task_notifier(monkeypatch, rows, day1)
+
+    sent = _run_task_notifier(monkeypatch, rows, day1.replace(day=2))
+
+    assert sent == ["Starting: 10:00 - 11:00"]
 
 
 def test_schedule_rules_add_rule(client, monkeypatch):
@@ -165,6 +229,51 @@ def test_schedule_rules_add_rule(client, monkeypatch):
 
     assert resp.status_code == 302
     assert any("INSERT INTO schedule_rules" in sql for sql, _ in cursor.executed)
+
+
+@pytest.mark.parametrize(
+    ("form", "expected_sql"),
+    [
+        ({"action": "update", "rule_id": "1", "start_time": "09:00", "end_time": "10:00", "day_of_week": ["0", "1"]},
+         "UPDATE schedule_rules SET start_time"),
+        ({"action": "update", "rule_id": "1", "start_time": "", "end_time": ""}, "UPDATE schedule_rules SET start_time"),
+        ({"action": "delete", "rule_id": "1"}, "DELETE FROM schedule_rules"),
+        ({"action": "enable", "rule_id": "1"}, "SET enabled = TRUE"),
+        ({"action": "disable", "rule_id": "1"}, "SET enabled = FALSE"),
+        ({"action": "assign", "rule_u1": "Rule enable all"}, "INSERT INTO user_rule_assignment"),
+    ],
+)
+def test_schedule_rules_post_actions(client, monkeypatch, form, expected_sql):
+    cursor = LockCursor(rows=[])
+    conn = LockConn(cursor)
+    monkeypatch.setattr(scheduler, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(scheduler, "load_schedules", lambda: None)
+    monkeypatch.setattr(scheduler, "notify_schedule_change", lambda: None)
+    monkeypatch.setattr(scheduler, "remove_job", lambda rule_id: None)
+    _login_admin(client, monkeypatch)
+
+    resp = client.post("/schedule_rules", data=form)
+
+    assert resp.status_code == 302
+    assert any(expected_sql in sql for sql, _ in cursor.executed)
+
+
+@pytest.mark.parametrize("calc_ok", [True, False])
+def test_schedule_rules_agile_config_actions(client, monkeypatch, calc_ok):
+    monkeypatch.setattr(scheduler, "get_db_connection", lambda: LockConn(LockCursor()))
+    saved = {}
+    monkeypatch.setattr(scheduler, "set_agile_config", saved.__setitem__)
+    monkeypatch.setattr(scheduler, "update_agile_config_by_timestamp", lambda *a: calc_ok)
+    _login_admin(client, monkeypatch)
+
+    resp1 = client.post("/schedule_rules", data={"action": "update_agile_config", "config_focus": "25"})
+    resp2 = client.post(
+        "/schedule_rules",
+        data={"action": "calc_agile_config", "timestamp_input": "08:00", "delay_input": "5", "eating_input": ""},
+    )
+
+    assert resp1.status_code == resp2.status_code == 302
+    assert saved == {"focus": "25"}
 
 
 def test_schedule_rules_get_renders(client, monkeypatch):
