@@ -150,7 +150,7 @@ def test_delete_block_deletes_row(monkeypatch, admin_session):
     conn = SimpleConn()
     monkeypatch.setattr(suspicious, "get_db_connection", lambda: conn)
 
-    resp = admin_session.get("/delete_block/10")
+    resp = admin_session.post("/delete_block/10")
 
     assert resp.status_code == 302
     assert any("DELETE FROM block_list" in sql for sql, _ in conn.cursor_obj.executed)

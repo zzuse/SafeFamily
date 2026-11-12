@@ -60,6 +60,15 @@ class SeqConnection:
 
 def _login_session(client, monkeypatch):
     monkeypatch.setattr(auth, "decode_token", lambda token: {"sub": "user"})
+    # The todo routes only act for the owner or an admin. Tests that don't set
+    # their own current user run as an admin; the owner/forbidden cases are
+    # covered in tests/test_security_fixes.py.
+    if todo.get_current_username is auth.get_current_username:
+        monkeypatch.setattr(
+            todo,
+            "get_current_username",
+            lambda: SimpleNamespace(id="u1", username="alice", role="admin"),
+        )
     with client.session_transaction() as sess:
         sess["access_token"] = "token"
 
@@ -120,7 +129,7 @@ def test_done_todo_updates_status(client, monkeypatch):
 
     # Now 12:15, slot ends 13:00: manual check before end, no default status.
     _freeze_time(monkeypatch, 12, 15)
-    conn = FakeConnection(rows=[("12:00 - 13:00", "Task", "")])
+    conn = FakeConnection(rows=[("12:00 - 13:00", "Task", "", "alice")])
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
     monkeypatch.setattr(todo, "flash", lambda *a, **k: None)
     _login_session(client, monkeypatch)
@@ -140,7 +149,7 @@ def test_done_todo_no_default_status_within_grace(client, monkeypatch):
     # Now 12:15, slot ended 12:00: inside the 30-min grace window the task is
     # auto-completed but the status stays empty so the user can still choose.
     _freeze_time(monkeypatch, 12, 15)
-    conn = FakeConnection(rows=[("11:00 - 12:00", "Math homework", "")])
+    conn = FakeConnection(rows=[("11:00 - 12:00", "Math homework", "", "alice")])
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
     monkeypatch.setattr(todo, "flash", lambda *a, **k: None)
     _login_session(client, monkeypatch)
@@ -164,7 +173,7 @@ def test_done_todo_auto_complete_true_gets_default_status(client, monkeypatch):
 
     # Now 12:15, slot ended 11:40: grace (ends 12:10) is over.
     _freeze_time(monkeypatch, 12, 15)
-    conn = FakeConnection(rows=[("11:00 - 11:40", "Math homework", "")])
+    conn = FakeConnection(rows=[("11:00 - 11:40", "Math homework", "", "alice")])
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
     monkeypatch.setattr(todo, "flash", lambda *a, **k: None)
     _login_session(client, monkeypatch)
@@ -183,7 +192,7 @@ def test_done_todo_defaults_to_mostly_done_after_grace(client, monkeypatch):
     from .conftest import FakeConnection
 
     _freeze_time(monkeypatch, 12, 15)
-    conn = FakeConnection(rows=[("11:00 - 11:40", "Math homework", "")])
+    conn = FakeConnection(rows=[("11:00 - 11:40", "Math homework", "", "alice")])
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
     monkeypatch.setattr(todo, "flash", lambda *a, **k: None)
     _login_session(client, monkeypatch)
@@ -201,7 +210,7 @@ def test_done_todo_defaults_to_skipped_for_sleep_task(client, monkeypatch):
     from .conftest import FakeConnection
 
     _freeze_time(monkeypatch, 12, 15)
-    conn = FakeConnection(rows=[("11:00 - 11:40", "Sleep early", "")])
+    conn = FakeConnection(rows=[("11:00 - 11:40", "Sleep early", "", "alice")])
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
     monkeypatch.setattr(todo, "flash", lambda *a, **k: None)
     _login_session(client, monkeypatch)
@@ -220,7 +229,7 @@ def test_done_todo_keeps_existing_status_on_auto_complete(client, monkeypatch):
 
     # Grace is over but the user already chose a status: never overwrite it.
     _freeze_time(monkeypatch, 12, 15)
-    conn = FakeConnection(rows=[("11:00 - 11:40", "Math homework", "done")])
+    conn = FakeConnection(rows=[("11:00 - 11:40", "Math homework", "done", "alice")])
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
     monkeypatch.setattr(todo, "flash", lambda *a, **k: None)
     _login_session(client, monkeypatch)

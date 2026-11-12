@@ -48,6 +48,15 @@ class SeqConnection:
 
 def _login_session(client, monkeypatch):
     monkeypatch.setattr(auth, "decode_token", lambda token: {"sub": "user"})
+    # The todo routes only act for the owner or an admin. Tests that don't set
+    # their own current user run as an admin; the owner/forbidden cases are
+    # covered in tests/test_security_fixes.py.
+    if todo.get_current_username is auth.get_current_username:
+        monkeypatch.setattr(
+            todo,
+            "get_current_username",
+            lambda: SimpleNamespace(id="u1", username="alice", role="admin"),
+        )
     with client.session_transaction() as sess:
         sess["access_token"] = "token"
 
@@ -156,7 +165,7 @@ def test_done_todo_not_found(client, monkeypatch):
 
 
 def test_done_todo_invalid_time_slot(client, monkeypatch):
-    cursor = SeqCursor(fetchone_values=[("badslot", "Task", "")])
+    cursor = SeqCursor(fetchone_values=[("badslot", "Task", "", "alice")])
     conn = SeqConnection(cursor)
     monkeypatch.setattr(todo, "get_db_connection", lambda: conn)
     _login_session(client, monkeypatch)
@@ -221,7 +230,7 @@ def test_mark_todo_status_invalid_status(client, monkeypatch):
 def test_mark_todo_status_success(client, monkeypatch):
     cursor = SeqCursor(
         fetchone_values=[
-            (None, "00:00 - 00:30", "bob", "Study", "2000-01-01 00:00:00"),
+            (None, "00:00 - 00:30", "alice", "Study", "2000-01-01 00:00:00"),
         ],
     )
     conn = SeqConnection(cursor)
@@ -255,7 +264,7 @@ def test_exec_rules_no_lock(client, monkeypatch):
     monkeypatch.setattr(
         todo,
         "get_current_username",
-        lambda: SimpleNamespace(username="user", role="user"),
+        lambda: SimpleNamespace(id="u1", username="user", role="user"),
     )
     _login_session(client, monkeypatch)
 
@@ -285,7 +294,7 @@ def test_exec_rules_disable_all_triggers_schedule(client, monkeypatch):
     monkeypatch.setattr(
         todo,
         "get_current_username",
-        lambda: SimpleNamespace(username="user", role="user"),
+        lambda: SimpleNamespace(id="u1", username="user", role="user"),
     )
 
     # Mock time to be within 16:00 - 18:00

@@ -108,8 +108,8 @@
                                     {% endfor %}
                                 </select>
                             </td>
-                            <td><button class="btn btn-secondary"><a
-                                        href="/delete_block/{{ row[0] }}?date={{ date }}">Delete</a></button>
+                            <td><button type="submit" class="btn btn-secondary" formmethod="post"
+                                    formaction="/delete_block/{{ row[0] }}?date={{ date }}">Delete</button>
                             </td>
                             <td>
                                 <button type="submit" class="btn btn-primary">Modify</button>
@@ -141,23 +141,23 @@
         <div class="card">
             <div class="card-header">Rules Toggle</div>
             <div class="btn-group">
-                <form action="/rules_toggle/enable_all">
+                <form action="/rules_toggle/enable_all" method="post">
                     <button type="submit" class="btn btn-primary">
                         Enable All Rules( Except AI, Scratch and Unity)
                     </button>
                 </form>
-                <form action="/rules_toggle/disable_all"
+                <form action="/rules_toggle/disable_all" method="post"
                     onsubmit="return confirm('Are you sure you brush teeth, take out the garbage, and wash the dishes?');">
                     <button type="submit" class="btn btn-secondary">
                         Disable All Rules
                     </button>
                 </form>
-                <form action="/rules_toggle/stop_all_traffic">
+                <form action="/rules_toggle/stop_all_traffic" method="post">
                     <button type="submit" class="btn btn-danger">
                         Stop All Traffic
                     </button>
                 </form>
-                <form action="/rules_toggle/enable_all_traffic">
+                <form action="/rules_toggle/enable_all_traffic" method="post">
                     <button type="submit" class="btn btn-primary">
                         Allow All Traffic
                     </button>
@@ -178,12 +178,12 @@
                         Analyze Logs
                     </button>
                 </form>
-                <form action="/auto_push" method="get">
+                <form action="/auto_push" method="post">
                     <button type="submit" class="btn btn-danger">
                         Push Block List to GitHub
                     </button>
                 </form>
-                <form action="/auto_import" method="get">
+                <form action="/auto_import" method="post">
                     <button type="submit" class="btn btn-secondary">
                         Import Block List from Files
                     </button>

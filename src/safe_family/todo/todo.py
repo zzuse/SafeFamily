@@ -5,7 +5,16 @@ import threading
 import time as time_module
 from datetime import UTC, date, datetime, time, timedelta
 
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask import (
+    Blueprint,
+    abort,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 from psycopg2 import extensions as pg
 
 from src.safe_family.cli import weekly_metrics
@@ -455,10 +464,21 @@ def todo_page():  # noqa: C901, PLR0915 - refactor backlog: split save/view path
     )
 
 
+def can_act_for(user: User | None, username: str | None) -> bool:
+    """Return True when ``user`` may change ``username``'s todo data.
+
+    Only the owner or an admin may: the username/id in a URL or JSON body is
+    attacker-controlled and must never be trusted on its own.
+    """
+    return user is not None and (user.role == "admin" or user.username == username)
+
+
 @todo_bp.route("/update_todo/<string:selected_username>", methods=["POST"])
 @login_required
 def update_todo(selected_username: str):
     """Update tasks for the selected user."""
+    if not can_act_for(get_current_username(), selected_username):
+        abort(403)
     todo_ids = request.form.getlist("todo_id")
 
     conn = get_db_connection()
@@ -498,6 +518,8 @@ def update_todo(selected_username: str):
 @login_required
 def delete_todo(selected_username: str, todo_id: int):
     """Delete a specific to-do item for the selected user."""
+    if not can_act_for(get_current_username(), selected_username):
+        abort(403)
     flash(f"Deleting todo: {todo_id} for user: {selected_username}", "info")
     conn = get_db_connection()
     cur = conn.cursor()
@@ -528,7 +550,7 @@ def done_todo():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
-            "SELECT time_slot, task, COALESCE(completion_status, '') FROM todo_list WHERE id = %s",
+            "SELECT time_slot, task, COALESCE(completion_status, ''), username FROM todo_list WHERE id = %s",
             (todo_id,),
         )
         row = cur.fetchone()
@@ -536,7 +558,10 @@ def done_todo():
             conn.close()
             return jsonify({"success": False, "error": "not found"}), 404
 
-        time_slot, task, existing_status = row
+        time_slot, task, existing_status, task_owner = row
+        if not can_act_for(get_current_username(), task_owner):
+            conn.close()
+            return jsonify({"success": False, "error": "forbidden"}), 403
         try:
             _, end_str = [t.strip() for t in time_slot.split("-")]
             end_time = datetime.strptime(end_str, "%H:%M").time()
@@ -718,6 +743,10 @@ def mark_todo_status():  # noqa: PLR0911 - one early return per validation step
             return jsonify({"success": False, "error": "not found"}), 404
 
         existing_status, time_slot, task_owner, task_name, log_date = row
+        if not can_act_for(user, task_owner):
+            conn.close()
+            logger.warning("mark_status: forbidden id=%s user=%s", todo_id, user)
+            return jsonify({"success": False, "error": "forbidden"}), 403
         is_admin = user is not None and user.role == "admin"
         if existing_status and not is_admin:
             conn.close()
@@ -871,6 +900,11 @@ def exec_rules(selected_user_id: str):  # noqa: C901, PLR0911, PLR0912, PLR0915 
     if user is None:
         flash("Please log in to access this feature.", "warning")
         return redirect("/auth/login-ui")
+
+    # A user may only run the rule assigned to themselves; the id in the URL
+    # is attacker-controlled.
+    if user.role != "admin" and str(user.id) != selected_user_id:
+        abort(403)
 
     if not RULE_EXEC_LOCK.acquire(blocking=False):
         flash("Rules update already in progress.", "warning")

@@ -305,7 +305,7 @@ def add_block():
     return redirect(f"/suspicious?date={date}")
 
 
-@suspicious_bp.route("/delete_block/<int:block_id>")
+@suspicious_bp.post("/delete_block/<int:block_id>")
 @admin_required
 def delete_block(block_id: int):
     """Delete a block rule based on user input.

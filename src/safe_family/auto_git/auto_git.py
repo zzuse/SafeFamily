@@ -81,7 +81,7 @@ def rule_auto_commit():
         logger.exception("Error adding files to git: %d", e.returncode)
 
 
-@auto_git_bp.route("/auto_push")
+@auto_git_bp.post("/auto_push")
 @admin_required
 def auto_push():
     """Automatically commit and push block list changes to GitHub."""
@@ -90,7 +90,7 @@ def auto_push():
     return redirect("/")
 
 
-@auto_git_bp.route("/auto_import")
+@auto_git_bp.post("/auto_import")
 @admin_required
 def auto_import():
     """Automatically import block list from files into the database."""

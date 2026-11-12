@@ -138,7 +138,7 @@ def test_auto_import_inserts_blocks(client, monkeypatch, tmp_path):
     with client.session_transaction() as sess:
         sess["access_token"] = "token"
 
-    resp = client.get("/auto_import")
+    resp = client.post("/auto_import")
 
     assert resp.status_code == 302
 
