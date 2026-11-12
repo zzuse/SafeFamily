@@ -42,8 +42,9 @@ def reject_cross_site_writes() -> tuple[Response, int] | None:
     source = request.headers.get("Origin") or request.headers.get("Referer")
     if not source:
         return None
-    host = urlsplit(source).netloc
-    if host and host != request.host:
+    # A header with no host (e.g. "Origin: null" from a sandboxed frame) is an
+    # origin we can't vouch for, so it is refused like any other foreign one.
+    if urlsplit(source).netloc != request.host:
         return jsonify({"error": "cross-site request blocked"}), 403
     return None
 

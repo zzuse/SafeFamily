@@ -288,7 +288,8 @@ def test_admin_action_still_works_by_post(admin_client, monkeypatch):
         ({"Referer": "https://evil.example/page"}, 403),
         ({"Origin": "http://localhost"}, 302),
         ({"Referer": "http://localhost/suspicious"}, 302),
-        ({"Origin": "null"}, 302),
+        ({"Origin": "null"}, 403),
+        ({"Origin": "null", "Referer": "http://localhost/suspicious"}, 403),
         ({}, 302),
     ],
 )
