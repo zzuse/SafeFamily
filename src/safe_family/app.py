@@ -1,8 +1,9 @@
 """Flask application factory for Safe Family project."""
 
 from datetime import timedelta
+from urllib.parse import urlsplit
 
-from flask import Flask, jsonify, session
+from flask import Flask, Response, jsonify, request, session
 from sqlalchemy.exc import SQLAlchemyError
 
 from config.logging import setup_logging
@@ -25,6 +26,33 @@ from src.safe_family.urls.suspicious import suspicious_bp
 from src.safe_family.users.users import user_bp
 
 MIN_SECRET_LENGTH = 32
+SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
+
+
+def reject_cross_site_writes() -> tuple[Response, int] | None:
+    """Refuse state-changing requests that a browser sent from another site.
+
+    Browsers put the page's origin in the Origin header (or Referer) of every
+    cross-site POST. If it names a different host than ours, the request was
+    not made from our own pages (CSRF). Clients that send neither header
+    (the mobile app, scripts) are not browsers being tricked and pass through.
+    """
+    if request.method in SAFE_METHODS:
+        return None
+    source = request.headers.get("Origin") or request.headers.get("Referer")
+    if not source:
+        return None
+    # A header with no host (e.g. "Origin: null" from a sandboxed frame) is an
+    # origin we can't vouch for, so it is refused like any other foreign one.
+    if urlsplit(source).netloc != request.host:
+        return jsonify({"error": "cross-site request blocked"}), 403
+    return None
+
+
+def add_security_headers(response: Response) -> Response:
+    """Stop browsers from guessing a different content type than we declared."""
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    return response
 
 
 def _require_strong_secret(name: str, value: str | None) -> None:
@@ -89,10 +117,13 @@ def create_app():
     jwt.init_app(app)
     mail.init_app(app)
 
+    app.before_request(reject_cross_site_writes)
+    app.after_request(add_security_headers)
+
     @app.context_processor
     def inject_motto() -> dict:
         """Inject the app motto into all templates."""
-        return {"motto": settings.APP_MOTTO}
+        return {"motto": settings.APP_MOTTO, "registration_open": settings.ALLOW_REGISTRATION}
 
     app.context_processor(inject_nav_user)
 

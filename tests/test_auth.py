@@ -33,7 +33,7 @@ def test_admin_required_blocks_non_admin(client, monkeypatch):
     )
     _set_session_token(client)
 
-    resp = client.get("/rules_toggle/enable_all")
+    resp = client.post("/rules_toggle/enable_all")
     assert resp.status_code == 302
     assert "/auth/login-ui" in resp.location
 

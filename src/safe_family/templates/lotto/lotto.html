@@ -15,7 +15,9 @@
         <p class="lotto-help"><b>One photo per tray</b> (not the whole case: its price corners come out too small),
             from straight above, the tray filling the frame, full resolution. Tilt the phone a little if a ceiling light
             reflects on the glass. You can pick several photos at once. Upload whenever you like: photos wait in
-            <b>To label</b> until you have time, even for weeks.</p>
+            <b>To label</b> until you have time, even for weeks.<br>
+            <b>Crop before upload:</b> after choosing, drag a frame around the tray on each preview to cut off the
+            neighbouring trays. Only the framed part is uploaded.</p>
         <div class="lotto-actions">
             <input type="file" id="lotto-photos" name="photos" accept="image/*,.heic,.heif" multiple hidden>
             <label for="lotto-photos" class="btn btn-secondary lotto-btn">📷 Choose / take photos</label>
@@ -23,6 +25,7 @@
             <button type="submit" class="btn btn-primary lotto-btn" id="lotto-upload-btn">Upload</button>
         </div>
         <p class="lotto-help" id="lotto-convert-msg" hidden></p>
+        <div id="lotto-crops" class="lotto-crops"></div>
     </form>
 
     <!-- Progress -->
@@ -186,6 +189,7 @@
             msg.hidden = true;
             if (!heif.length) {
                 chosen.textContent = files.length === 1 ? files[0].name : (files.length ? `${files.length} files chosen` : 'No photos chosen');
+                await buildEditors(files);
                 return;
             }
             uploadBtn.disabled = true;
@@ -205,6 +209,177 @@
                     'Upload them from Safari, or set iPhone Settings > Camera > Formats > Most Compatible.';
             }
             uploadBtn.disabled = n === 0;
+            await buildEditors([...kept.files]);
+        });
+
+        // ---- Crop before upload -------------------------------------------
+        // Each chosen photo gets a preview with a crop frame. On submit, photos
+        // with a frame are replaced by a JPEG of just that region, cut from the
+        // full-resolution image; photos without one are uploaded untouched.
+        const form = photos.closest('form');
+        const cropsEl = document.getElementById('lotto-crops');
+        const MAX_EDITORS = 12;
+        const MIN_SIDE = 0.05;     // a frame smaller than 5% of a side is a slip, not a crop
+        const HANDLE = 22;         // corner grab size, CSS px (finger-sized)
+        let editors = [];
+
+        const isFull = r => r.x <= 0.001 && r.y <= 0.001 && r.w >= 0.998 && r.h >= 0.998;
+        const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+
+        function drawEditor(ed) {
+            const { canvas, img, rect } = ed;
+            const ctx = canvas.getContext('2d');
+            const W = canvas.width, H = canvas.height;
+            ctx.drawImage(img, 0, 0, W, H);
+            const full = isFull(rect);
+            if (!full) {
+                const x = rect.x * W, y = rect.y * H, w = rect.w * W, h = rect.h * H;
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                ctx.fillRect(0, 0, W, y);
+                ctx.fillRect(0, y + h, W, H - y - h);
+                ctx.fillRect(0, y, x, h);
+                ctx.fillRect(x + w, y, W - x - w, h);
+                const k = W / canvas.getBoundingClientRect().width || 1;
+                ctx.lineWidth = 3 * k;
+                ctx.strokeStyle = '#ff7a2e';
+                ctx.strokeRect(x, y, w, h);
+                ctx.fillStyle = '#ff7a2e';
+                const hs = 12 * k;
+                [[x, y], [x + w, y], [x, y + h], [x + w, y + h]].forEach(([cx, cy]) => ctx.fillRect(cx - hs / 2, cy - hs / 2, hs, hs));
+            }
+            const pw = Math.round(rect.w * img.naturalWidth), ph = Math.round(rect.h * img.naturalHeight);
+            ed.info.textContent = full
+                ? `Whole photo (${img.naturalWidth}×${img.naturalHeight}). Drag on the photo to crop.`
+                : `Cropped to ${pw}×${ph} px (${Math.round(rect.w * rect.h * 100)}% of the photo).`;
+            ed.reset.hidden = full;
+        }
+
+        function attachPointer(ed) {
+            const { canvas } = ed;
+            const frac = e => {
+                const b = canvas.getBoundingClientRect();
+                return { x: clamp((e.clientX - b.left) / b.width, 0, 1), y: clamp((e.clientY - b.top) / b.height, 0, 1) };
+            };
+            let drag = null;
+            canvas.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
+                canvas.setPointerCapture(e.pointerId);
+                const p = frac(e), r = ed.rect, b = canvas.getBoundingClientRect();
+                const hx = HANDLE / b.width, hy = HANDLE / b.height;
+                const corners = [[r.x, r.y], [r.x + r.w, r.y], [r.x, r.y + r.h], [r.x + r.w, r.y + r.h]];
+                const ci = isFull(r) ? -1 : corners.findIndex(([cx, cy]) => Math.abs(p.x - cx) < hx && Math.abs(p.y - cy) < hy);
+                if (ci >= 0) {
+                    // Resize: the opposite corner stays put.
+                    const [ax, ay] = corners[3 - ci];
+                    drag = { mode: 'anchor', ax, ay };
+                } else if (!isFull(r) && p.x > r.x && p.x < r.x + r.w && p.y > r.y && p.y < r.y + r.h) {
+                    drag = { mode: 'move', start: p, orig: { ...r } };
+                } else {
+                    drag = { mode: 'anchor', ax: p.x, ay: p.y, fresh: true, before: { ...r } };
+                }
+            });
+            canvas.addEventListener('pointermove', (e) => {
+                if (!drag) return;
+                const p = frac(e);
+                if (drag.mode === 'move') {
+                    const o = drag.orig;
+                    ed.rect = { ...o, x: clamp(o.x + p.x - drag.start.x, 0, 1 - o.w), y: clamp(o.y + p.y - drag.start.y, 0, 1 - o.h) };
+                } else {
+                    ed.rect = { x: Math.min(p.x, drag.ax), y: Math.min(p.y, drag.ay), w: Math.abs(p.x - drag.ax), h: Math.abs(p.y - drag.ay) };
+                }
+                drawEditor(ed);
+            });
+            const end = () => {
+                if (!drag) return;
+                if (ed.rect.w < MIN_SIDE || ed.rect.h < MIN_SIDE) {
+                    // Too small to be a real crop: a tap keeps what was there before.
+                    ed.rect = drag.fresh ? drag.before : { x: 0, y: 0, w: 1, h: 1 };
+                }
+                drag = null;
+                drawEditor(ed);
+            };
+            canvas.addEventListener('pointerup', end);
+            canvas.addEventListener('pointercancel', end);
+        }
+
+        async function buildEditors(files) {
+            editors.forEach(ed => URL.revokeObjectURL(ed.url));
+            editors = [];
+            cropsEl.innerHTML = '';
+            for (const file of files.slice(0, MAX_EDITORS)) {
+                const url = URL.createObjectURL(file);
+                const img = new Image();
+                img.src = url;
+                try { await img.decode(); } catch (e) { URL.revokeObjectURL(url); continue; }
+                const box = document.createElement('div');
+                box.className = 'lotto-crop-editor';
+                const title = document.createElement('div');
+                title.className = 'lotto-dim';
+                title.textContent = file.name;
+                const canvas = document.createElement('canvas');
+                const scale = Math.min(1, 1400 / Math.max(img.naturalWidth, img.naturalHeight));
+                canvas.width = Math.round(img.naturalWidth * scale);
+                canvas.height = Math.round(img.naturalHeight * scale);
+                const row = document.createElement('div');
+                row.className = 'lotto-actions';
+                const info = document.createElement('span');
+                info.className = 'lotto-dim';
+                const reset = document.createElement('button');
+                reset.type = 'button';
+                reset.className = 'btn btn-secondary lotto-btn';
+                reset.textContent = 'Use whole photo';
+                row.append(info, reset);
+                box.append(title, canvas, row);
+                cropsEl.append(box);
+                const ed = { file, img, url, canvas, info, reset, rect: { x: 0, y: 0, w: 1, h: 1 } };
+                reset.addEventListener('click', () => { ed.rect = { x: 0, y: 0, w: 1, h: 1 }; drawEditor(ed); });
+                attachPointer(ed);
+                editors.push(ed);
+                drawEditor(ed);
+            }
+            if (files.length > MAX_EDITORS) {
+                const note = document.createElement('p');
+                note.className = 'lotto-help';
+                note.textContent = `Only the first ${MAX_EDITORS} photos can be cropped here; the rest upload whole.`;
+                cropsEl.append(note);
+            }
+        }
+
+        async function cropFile(ed) {
+            const { img, rect, file } = ed;
+            const sx = Math.round(rect.x * img.naturalWidth), sy = Math.round(rect.y * img.naturalHeight);
+            const sw = Math.max(1, Math.round(rect.w * img.naturalWidth)), sh = Math.max(1, Math.round(rect.h * img.naturalHeight));
+            const scale = Math.min(1, Math.sqrt(MAX_PIXELS / (sw * sh)));
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.round(sw * scale);
+            canvas.height = Math.round(sh * scale);
+            canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+            if (!blob || blob.size < 1000) throw new Error('encode failed');
+            const name = file.name.replace(/\.[^.]+$/, '') + '-crop.jpg';
+            return new File([blob], name, { type: 'image/jpeg', lastModified: file.lastModified });
+        }
+
+        form.addEventListener('submit', async (e) => {
+            const cropped = editors.filter(ed => !isFull(ed.rect));
+            if (!cropped.length) return;           // nothing to crop: normal upload
+            e.preventDefault();
+            uploadBtn.disabled = true;
+            chosen.textContent = `Cropping ${cropped.length} photo(s)…`;
+            const out = new DataTransfer();
+            const failed = [];
+            for (const file of photos.files) {
+                const ed = cropped.find(c => c.file === file);
+                if (!ed) { out.items.add(file); continue; }
+                try { out.items.add(await cropFile(ed)); } catch (err) { out.items.add(file); failed.push(file.name); }
+            }
+            if (failed.length && !confirm(`Could not crop ${failed.join(', ')}. Upload the whole photo instead?`)) {
+                uploadBtn.disabled = false;
+                chosen.textContent = `${photos.files.length} photo(s) ready`;
+                return;
+            }
+            photos.files = out.files;
+            form.submit();
         });
     })();
 </script>

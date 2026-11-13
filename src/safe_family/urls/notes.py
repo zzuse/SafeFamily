@@ -23,6 +23,9 @@ from src.safe_family.core.models import Media, Note, Tag
 
 notes_bp = Blueprint("notes", __name__)
 
+INLINE_MEDIA_PREFIXES = ("image/", "audio/", "video/")
+SCRIPTABLE_MEDIA_TYPES = {"image/svg+xml"}
+
 
 def _attach_local_timestamp(note: Note) -> None:
     updated_at = note.updated_at
@@ -177,12 +180,19 @@ def notes_media(media_id: str):
         if not is_public:
             abort(404)
 
-    mimetype = media.content_type
+    mimetype = (media.content_type or "").split(";")[0].strip().lower()
     if media.filename.lower().endswith(".m4a"):
         mimetype = "audio/mp4"
 
-    return send_file(
+    # The content type was chosen by the uploader. Anything a browser could
+    # run as a page (HTML, SVG, XML, ...) is sent as a download instead of
+    # being rendered on this site's origin with the viewer's login.
+    inline = mimetype.startswith(INLINE_MEDIA_PREFIXES) and mimetype not in SCRIPTABLE_MEDIA_TYPES
+    response = send_file(
         io.BytesIO(media.data),
-        mimetype=mimetype,
+        mimetype=mimetype if inline else "application/octet-stream",
         download_name=media.filename,
+        as_attachment=not inline,
     )
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response

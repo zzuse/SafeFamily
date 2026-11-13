@@ -614,7 +614,7 @@
                     class="{% if request.endpoint in ('index.calc_guide', 'index.recipes', 'index.recipe_detail') %}active{% endif %}">Sheet</a>
                 {% else %}
                 <a href="{{ url_for('auth.show_login_form') }}">Login</a>
-                <a href="{{ url_for('auth.session_register') }}">Register</a>
+                {% if registration_open %}<a href="{{ url_for('auth.session_register') }}">Register</a>{% endif %}
                 {% endif %}
             </nav>
             <div class="sf-user">

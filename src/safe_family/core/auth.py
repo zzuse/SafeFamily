@@ -44,6 +44,8 @@ from src.safe_family.utils.constants import HTTP_CREATED, HTTP_OK, SCOPES
 logger = logging.getLogger(__name__)
 auth_bp = Blueprint("auth", __name__)
 OAUTH_STATE_TTL_SECONDS = 600
+MIN_PASSWORD_LENGTH = 8
+REGISTRATION_CLOSED = "Registration is closed. Ask the admin to add you."
 
 
 def require_api_key(view_func: Callable) -> Callable:
@@ -114,17 +116,30 @@ def build_notesync_callback_url(code: str, client: str = "ios") -> str:
 @auth_bp.post("/register")
 def register_user():
     """Register a new user."""
-    data = getattr(g, "_json_data", None) or request.get_json()
-    user = User.get_user_by_username(username=data.get("username"))
+    if not settings.ALLOW_REGISTRATION:
+        return jsonify({"message": REGISTRATION_CLOSED}), 403
+    data = getattr(g, "_json_data", None) or request.get_json(silent=True) or {}
+    username = (data.get("username") or "").strip()
+    email = (data.get("email") or "").strip()
+    password = data.get("password") or ""
+    if not username or not email:
+        return jsonify({"message": "Username and email are required"}), 400
+    if len(password) < MIN_PASSWORD_LENGTH:
+        return jsonify(
+            {"message": f"Password must be at least {MIN_PASSWORD_LENGTH} characters"},
+        ), 400
+    user = User.get_user_by_username(username=username)
 
     if user is not None:
         return jsonify({"message": "Username already exists"}), 400
+    if User.query.filter_by(email=email).first() is not None:
+        return jsonify({"message": "Email already in use"}), 400
     new_user = User(
-        username=data.get("username"),
-        email=data.get("email"),
+        username=username,
+        email=email,
         role="user",  # never trust a client-supplied role
     )
-    new_user.set_password(data.get("password"))
+    new_user.set_password(password)
     new_user.save()
     return jsonify({"message": "User registered successfully"}), HTTP_CREATED
 
@@ -214,6 +229,9 @@ def logout():
 @auth_bp.route("/session-register", methods=["GET", "POST"])
 def session_register():
     """Register a new user via HTML form."""
+    if not settings.ALLOW_REGISTRATION:
+        flash(REGISTRATION_CLOSED, "warning")
+        return redirect("/auth/login-ui")
     if request.method == "POST":
         username = request.form["username"]
         email = request.form["email"]
@@ -221,7 +239,7 @@ def session_register():
         confirmed_password = request.form["confirm_password"]
         if password != confirmed_password:
             flash("Passwords do not match", "danger")
-            return render_template("register.html")
+            return render_template("auth/register.html")
 
         json_data = {
             "username": username,
@@ -235,10 +253,10 @@ def session_register():
         # remove the temp data
         del g._json_data  # noqa: SLF001 - our own attr on flask.g  # noqa: SLF001 - our own attr on flask.g
 
-        _data, status_code = response
+        data, status_code = response
         if status_code != HTTP_CREATED:
-            flash("Invalid username or password", "danger")
-            return render_template("register.html")
+            flash(data.get_json().get("message", "Registration failed"), "danger")
+            return render_template("auth/register.html")
         flash("Registration successful! Please log in.", "success")
         return redirect("/auth/login-ui")
     return render_template("/auth/register.html")
@@ -647,6 +665,10 @@ def github_callback():  # noqa: C901, PLR0911, PLR0912, PLR0915 - refactor backl
     if not user:
         user = User.query.filter_by(email=email).first()
 
+    if not user and not settings.ALLOW_REGISTRATION:
+        flash(REGISTRATION_CLOSED, "warning")
+        return redirect("/auth/login-ui")
+
     if not user:
         new_user = User(
             id=github_id,
@@ -704,6 +726,10 @@ def google_callback():
     if not user:
         user = User.query.filter_by(email=email).first()
 
+    if not user and not settings.ALLOW_REGISTRATION:
+        flash(REGISTRATION_CLOSED, "warning")
+        return redirect("/auth/login-ui")
+
     if not user:
         new_user = User(
             id=google_id,
@@ -730,12 +756,16 @@ def google_callback():
 def notesync_callback():
     """Fallback page for notesync universal link callback."""
     code = request.args.get("code", "")
+    plain = {"Content-Type": "text/plain; charset=utf-8"}
     if not code:
-        return "Missing auth code. Return to the app and try again.", 400
+        return "Missing auth code. Return to the app and try again.", 400, plain
+    # The code comes straight from the URL: send it as plain text so a crafted
+    # link can never run script in the page (reflected XSS).
     return (
         (
             "Auth code received. You can return to the app to finish login. "
             f"If needed, copy this code: {code}"
         ),
         200,
+        plain,
     )

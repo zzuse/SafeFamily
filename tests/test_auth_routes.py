@@ -28,7 +28,7 @@ def test_register_user_success(client, monkeypatch):
             "username": "alice",
             "email": "a@a.com",
             "role": "user",
-            "password": "secret",
+            "password": "secret-pw",
         },
     )
     assert resp.status_code == 201
@@ -43,7 +43,7 @@ def test_register_user_duplicate(client, monkeypatch):
             "username": "alice",
             "email": "a@a.com",
             "role": "user",
-            "password": "secret",
+            "password": "secret-pw",
         },
     )
     assert resp.status_code == 400
@@ -259,7 +259,7 @@ def test_register_user_ignores_client_role(client, monkeypatch):
 
     resp = client.post(
         "/auth/register",
-        json={"username": "probe", "email": "p@p.com", "role": "admin", "password": "secret"},
+        json={"username": "probe", "email": "p@p.com", "role": "admin", "password": "secret-pw"},
     )
 
     assert resp.status_code == 201

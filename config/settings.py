@@ -114,6 +114,11 @@ class Settings:
         "APP_MOTTO",
     )
 
+    # New accounts (form, API and first-time Google/GitHub sign-in) are refused
+    # unless this is "True". Existing accounts can always log in. Turn it on
+    # only while adding a family member, then off again.
+    ALLOW_REGISTRATION = os.environ.get("ALLOW_REGISTRATION", "False") == "True"
+
     # Countdown page settings (date in YYYY-MM-DD)
     COUNTDOWN_DATE = os.environ.get("COUNTDOWN_DATE", "")
     COUNTDOWN_DESCRIPTION = os.environ.get("COUNTDOWN_DESCRIPTION", "")

@@ -53,6 +53,8 @@ def _patch_test_secrets(monkeypatch):
     monkeypatch.setattr("config.settings.settings.APP_SECRET_KEY", TEST_SECRET)
     monkeypatch.setattr("config.settings.settings.JWT_SECRET_KEY", TEST_SECRET)
     monkeypatch.setattr("config.settings.settings.ADMIN_IDENTITY", "admin")
+    # Registration is closed by default; most tests exercise it while open.
+    monkeypatch.setattr("config.settings.settings.ALLOW_REGISTRATION", True)
 
 
 @pytest.fixture

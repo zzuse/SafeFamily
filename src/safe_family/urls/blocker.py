@@ -398,7 +398,7 @@ def rule_status_gateway():
     return response
 
 
-@rules_toggle_bp.route("/rules_toggle/enable_all")
+@rules_toggle_bp.post("/rules_toggle/enable_all")
 @admin_required
 def rules_toggle_enable():
     """Enable all blocking rules except AI."""
@@ -411,7 +411,7 @@ def rules_toggle_enable():
     return redirect("/")
 
 
-@rules_toggle_bp.route("/rules_toggle/disable_all")
+@rules_toggle_bp.post("/rules_toggle/disable_all")
 @admin_required
 def rules_toggle_disable():
     """Disable all blocking rules."""
@@ -449,7 +449,7 @@ def rules_disable_ai():
     return redirect("/")
 
 
-@rules_toggle_bp.route("/rules_toggle/stop_all_traffic")
+@rules_toggle_bp.post("/rules_toggle/stop_all_traffic")
 @admin_required
 def stop_all_traffic():
     """Stop all traffic by disabling the gateway on the router."""
@@ -458,7 +458,7 @@ def stop_all_traffic():
     return redirect("/")
 
 
-@rules_toggle_bp.route("/rules_toggle/enable_all_traffic")
+@rules_toggle_bp.post("/rules_toggle/enable_all_traffic")
 @admin_required
 def enable_all_traffic():
     """Allow all traffic by enabling the gateway on the router."""

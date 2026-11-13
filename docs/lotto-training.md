@@ -101,6 +101,13 @@ Open `/lotto` on your phone, tap **Choose / take photos**, then **Upload**.
 * The ceiling lights make round white reflections on the glass. Tilt the phone
   a little so they don't sit on a row of price corners. A little glare is OK:
   real photos have it, so the model must learn it.
+* **Crop before upload.** A tray photo usually catches the edge of the
+  neighbouring trays, and their tickets must not be counted twice. After you
+  choose photos, each one shows a preview: drag a frame around the tray, drag
+  inside the frame to move it, drag a corner to resize, or press **Use whole
+  photo** to undo. Only the framed part is uploaded, cut from the
+  full-resolution photo, so the price corners stay as sharp as in the original.
+  Photos you don't frame are uploaded untouched.
 * **HEIC (iPhone's default format) is converted to JPEG in the browser**
   before upload, because the training scripts can't read HEIC. iPhone Safari
   usually sends JPEG anyway. A browser that can't decode HEIC (e.g. Chrome on

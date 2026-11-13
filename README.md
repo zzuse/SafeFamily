@@ -343,6 +343,12 @@ Example `DB_PARAMS`:
 {"dbname":"safefamily","user":"safefamily","password":"secret","host":"localhost","port":5432}
 ```
 
+Accounts:
+- `ALLOW_REGISTRATION`: new accounts are refused unless this is `True`. That
+  covers the register form, `POST /auth/register`, and first-time Google/GitHub
+  sign-in. Existing accounts can always log in. Set it to `True` only while
+  adding a family member, then remove it and restart the app.
+
 Notesync:
 - `NOTESYNC_API_KEY`
 - `NOTESYNC_AUTH_CODE_TTL_SECONDS`
