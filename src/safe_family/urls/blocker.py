@@ -88,8 +88,6 @@ BLOCKED_SERVICE_IDS_DISABLE = [
     "douban",
     "dropbox",
     "ebay",
-    "electronic_arts",
-    "epic_games",
     "espn",
     "facebook",
     "fifa",
@@ -194,6 +192,8 @@ BLOCKED_SERVICE_IDS_ENABLE = [
     "discord",
     "youtube",
     "roblox",
+    "electronic_arts",
+    "epic_games",
 ]
 
 BLOCKED_SERVICE_IDS_ENABLE_JOINT = list(
