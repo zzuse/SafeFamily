@@ -586,3 +586,9 @@ def test_lotto_styles_leave_store_calculator_rows_alone():
     assert ".lotto-row" not in css
     calculator = (root / "templates" / "miscellaneous" / "store_calculator.html").read_text()
     assert 'class="lotto-row' in calculator
+
+
+def test_upload_form_offers_crop_before_upload(user_client):
+    page = user_client.get("/lotto").get_data(as_text=True)
+    assert 'id="lotto-crops"' in page
+    assert "Crop before upload" in page

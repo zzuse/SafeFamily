@@ -1989,3 +1989,28 @@ td form button {
     margin: 0;
     padding: 8px 16px;
 }
+
+.lotto-crops {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.lotto-crop-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Height is capped so there is always page left to scroll with a finger:
+   touches on the canvas itself draw the crop frame instead of scrolling. */
+.lotto-crop-editor canvas {
+    display: block;
+    align-self: flex-start;
+    max-width: 100%;
+    max-height: 70vh;
+    touch-action: none;
+    cursor: crosshair;
+    border-radius: var(--sf-radius-sm);
+    background: var(--sf-surface-3);
+}
