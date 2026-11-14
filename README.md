@@ -56,8 +56,14 @@ pip install -e .
 (both the SQLAlchemy ones and the raw-SQL ones), so it is the shortest path:
 ```bash
 psql -d safefamily < scripts/schema.sql
+python scripts/migrate.py
 ```
-Regenerate it from a live database with `python scripts/db_export.py schema`.
+`migrate.py` is required, not optional: it adds what is newer than the
+`schema.sql` snapshot (for example `users.is_approved`, which every login reads,
+and the `lotto_photos` table). It is safe to re-run, so run it after every
+update too.
+
+Regenerate `schema.sql` from a live database with `python scripts/db_export.py schema`.
 
 If you would rather build it piecemeal:
 - SQLAlchemy models expect tables for users and notes.

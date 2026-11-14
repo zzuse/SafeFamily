@@ -31,7 +31,7 @@ MIGRATIONS = [
         ELSE
             CREATE UNIQUE INDEX IF NOT EXISTS uq_users_username ON users (username);
         END IF;
-    END
+    END;
     $$
     """,
     # Speeds up per-user history scans (week strip / activity heatmap on /todo)
