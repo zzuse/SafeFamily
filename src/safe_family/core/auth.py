@@ -46,6 +46,79 @@ auth_bp = Blueprint("auth", __name__)
 OAUTH_STATE_TTL_SECONDS = 600
 MIN_PASSWORD_LENGTH = 8
 REGISTRATION_CLOSED = "Registration is closed. Ask the admin to add you."
+NOT_APPROVED = "Your account is waiting for the admin's approval, so this is not available yet."
+EMAIL_TAKEN = (
+    "An account with this email already exists. Log in with your username and "
+    "password instead."
+)
+EMAIL_UNVERIFIED = "Your email address is not verified with this provider, so it can't be used to sign in."
+
+
+def is_family(user: User | None) -> bool:
+    """Return True for the admin and for accounts the admin has approved.
+
+    Sign-up is open, so being logged in proves nothing about who you are.
+    Anything that affects the household (the network filter, notifications,
+    public posts) must check this, not just login.
+    """
+    return user is not None and (user.role == "admin" or bool(getattr(user, "is_approved", False)))
+
+
+def family_required(view_func: Callable) -> Callable:
+    """Require a logged-in, admin-approved account for a view."""
+
+    @wraps(view_func)
+    def wrapped(*args: object, **kwargs: object) -> object:
+        if not is_family(get_current_username()):
+            flash(NOT_APPROVED, "warning")
+            return redirect("/")
+        return view_func(*args, **kwargs)
+
+    return login_required(wrapped)
+
+
+def unique_username(wanted: str) -> str:
+    """Return ``wanted``, or ``wanted-2``, ``wanted-3``... if it is taken.
+
+    Todo lists are keyed by username, so two accounts must never share one.
+    Google/GitHub display names are not unique ("Alex"), hence the suffix.
+    """
+    base = (wanted or "").strip() or "user"
+    candidate, n = base, 1
+    while User.get_user_by_username(username=candidate) is not None:
+        n += 1
+        candidate = f"{base}-{n}"
+    return candidate
+
+
+def _created_by_oauth(user: User) -> bool:
+    """Return True for accounts first created by a Google/GitHub sign-in.
+
+    Those get the provider's numeric account id as their id; password sign-ups
+    get a UUID. Only provider-created accounts have an email the provider
+    verified, so only they may be matched by email.
+    """
+    return str(user.id).isdigit()
+
+
+def find_oauth_user(provider_id: str, email: str, *, email_verified: bool) -> tuple[User | None, str | None]:
+    """Find the account for a Google/GitHub sign-in: (user, refusal message).
+
+    The provider's own account id always matches. An email only matches when
+    the provider verified it AND the existing account was itself created by a
+    provider. An email typed into the sign-up form was never verified, so
+    letting a later Google/GitHub login land in such an account would hand it
+    to whoever registered first with someone else's address.
+    """
+    user = User.query.filter_by(id=provider_id).first()
+    if user is not None:
+        return user, None
+    existing = User.query.filter_by(email=email).first()
+    if existing is None:
+        return None, None
+    if email_verified and _created_by_oauth(existing):
+        return existing, None
+    return None, EMAIL_TAKEN
 
 
 def require_api_key(view_func: Callable) -> Callable:
@@ -293,6 +366,8 @@ def session_login():
     session["refresh_token"] = tokens.get("refresh_token")
 
     flash("Login successful!", "success")
+    if not is_family(get_current_username()):
+        flash(NOT_APPROVED, "info")
     return redirect("/")
 
 
@@ -641,29 +716,24 @@ def github_callback():  # noqa: C901, PLR0911, PLR0912, PLR0915 - refactor backl
     if emails_response.status_code == HTTP_OK:
         emails = emails_response.json()
 
-    email = user_info.get("email")
-    if not email and emails:
-        primary_verified = [
-            entry for entry in emails if entry.get("primary") and entry.get("verified")
-        ]
-        verified = [entry for entry in emails if entry.get("verified")]
-        selection = (
-            primary_verified[0]
-            if primary_verified
-            else verified[0]
-            if verified
-            else emails[0]
-        )
-        email = selection.get("email")
-    if not email:
+    # Only an address GitHub has verified identifies the person. An
+    # unverified one can be typed in by anyone, so it is never used.
+    verified = [entry for entry in emails if entry.get("verified") and entry.get("email")]
+    primary = [entry for entry in verified if entry.get("primary")]
+    email_verified = bool(verified)
+    if verified:
+        email = (primary or verified)[0]["email"]
+    else:
+        # GitHub's own per-account placeholder: nobody else can hold it.
         login_name = user_info.get("login", "github_user")
         email = f"{login_name}@users.noreply.github.com"
 
     github_id = str(user_info.get("id"))
     name = user_info.get("name") or user_info.get("login") or email.split("@")[0]
-    user = User.query.filter_by(id=github_id).first()
-    if not user:
-        user = User.query.filter_by(email=email).first()
+    user, refusal = find_oauth_user(github_id, email, email_verified=email_verified)
+    if refusal:
+        flash(refusal, "warning")
+        return redirect("/auth/login-ui")
 
     if not user and not settings.ALLOW_REGISTRATION:
         flash(REGISTRATION_CLOSED, "warning")
@@ -672,7 +742,7 @@ def github_callback():  # noqa: C901, PLR0911, PLR0912, PLR0915 - refactor backl
     if not user:
         new_user = User(
             id=github_id,
-            username=name,
+            username=unique_username(name),
             email=email,
         )
         new_user.set_password(secrets.token_urlsafe(48))
@@ -688,11 +758,13 @@ def github_callback():  # noqa: C901, PLR0911, PLR0912, PLR0915 - refactor backl
     session["access_token"] = create_access_token(identity=user.id)
     session["refresh_token"] = create_refresh_token(identity=user.id)
     flash("Login successful!", "success")
+    if not is_family(get_current_username()):
+        flash(NOT_APPROVED, "info")
     return redirect("/")
 
 
 @auth_bp.get("/google/callback")
-def google_callback():
+def google_callback():  # noqa: PLR0911 - one early return per refusal
     """Handle the Google OAuth callback and create the session."""
     state = request.args.get("state")
     state_payload = _read_oauth_state(state)
@@ -721,10 +793,14 @@ def google_callback():
     )
     google_id = id_info["sub"]
     email = id_info["email"]
-    name = id_info.get("name", "")
-    user = User.query.filter_by(id=google_id).first()
-    if not user:
-        user = User.query.filter_by(email=email).first()
+    name = id_info.get("name", "") or email.split("@")[0]
+    if not id_info.get("email_verified"):
+        flash(EMAIL_UNVERIFIED, "warning")
+        return redirect("/auth/login-ui")
+    user, refusal = find_oauth_user(google_id, email, email_verified=True)
+    if refusal:
+        flash(refusal, "warning")
+        return redirect("/auth/login-ui")
 
     if not user and not settings.ALLOW_REGISTRATION:
         flash(REGISTRATION_CLOSED, "warning")
@@ -733,7 +809,7 @@ def google_callback():
     if not user:
         new_user = User(
             id=google_id,
-            username=name,
+            username=unique_username(name),
             email=email,
         )
         new_user.set_password(secrets.token_urlsafe(48))
@@ -749,6 +825,8 @@ def google_callback():
     session["access_token"] = create_access_token(identity=user.id)
     session["refresh_token"] = create_refresh_token(identity=user.id)
     flash("Login successful!", "success")
+    if not is_family(get_current_username()):
+        flash(NOT_APPROVED, "info")
     return redirect("/")
 
 

@@ -72,7 +72,7 @@ def test_todo_page_saves_tasks_and_notifies(client, monkeypatch):
     monkeypatch.setattr(
         todo,
         "get_current_username",
-        lambda: SimpleNamespace(username="alice", role="user"),
+        lambda: SimpleNamespace(username="alice", role="user", is_approved=True),
     )
     monkeypatch.setattr(todo, "generate_time_slots", lambda *a, **k: ["09:00 - 10:00"])
     monkeypatch.setattr(todo, "render_template", lambda *a, **k: ("ok", 200))
@@ -119,7 +119,7 @@ def test_todo_page_highlights_current_task_by_time(client, monkeypatch):
     monkeypatch.setattr(
         todo,
         "get_current_username",
-        lambda: SimpleNamespace(username="alice", role="user"),
+        lambda: SimpleNamespace(username="alice", role="user", is_approved=True),
     )
     monkeypatch.setattr(todo, "generate_time_slots", lambda *a, **k: ["09:00 - 10:00"])
     monkeypatch.setattr(
@@ -189,7 +189,7 @@ def test_split_slot_success(client, monkeypatch):
     monkeypatch.setattr(
         todo,
         "get_current_username",
-        lambda: SimpleNamespace(username="alice", role="user"),
+        lambda: SimpleNamespace(username="alice", role="user", is_approved=True),
     )
     _login_session(client, monkeypatch)
 
@@ -203,7 +203,7 @@ def test_split_slot_forbidden(client, monkeypatch):
     monkeypatch.setattr(
         todo,
         "get_current_username",
-        lambda: SimpleNamespace(username="alice", role="user"),
+        lambda: SimpleNamespace(username="alice", role="user", is_approved=True),
     )
     _login_session(client, monkeypatch)
 
@@ -217,7 +217,7 @@ def test_mark_todo_status_invalid_status(client, monkeypatch):
     monkeypatch.setattr(
         todo,
         "get_current_username",
-        lambda: SimpleNamespace(username="alice", role="user"),
+        lambda: SimpleNamespace(username="alice", role="user", is_approved=True),
     )
     _login_session(client, monkeypatch)
 
@@ -239,7 +239,7 @@ def test_mark_todo_status_success(client, monkeypatch):
     monkeypatch.setattr(
         todo,
         "get_current_username",
-        lambda: SimpleNamespace(username="alice", role="user"),
+        lambda: SimpleNamespace(username="alice", role="user", is_approved=True),
     )
     monkeypatch.setattr(todo, "send_discord_notification", lambda *a, **k: None)
     _login_session(client, monkeypatch)
@@ -264,7 +264,7 @@ def test_exec_rules_no_lock(client, monkeypatch):
     monkeypatch.setattr(
         todo,
         "get_current_username",
-        lambda: SimpleNamespace(id="u1", username="user", role="user"),
+        lambda: SimpleNamespace(id="u1", username="user", role="user", is_approved=True),
     )
     _login_session(client, monkeypatch)
 
@@ -294,7 +294,7 @@ def test_exec_rules_disable_all_triggers_schedule(client, monkeypatch):
     monkeypatch.setattr(
         todo,
         "get_current_username",
-        lambda: SimpleNamespace(id="u1", username="user", role="user"),
+        lambda: SimpleNamespace(id="u1", username="user", role="user", is_approved=True),
     )
 
     # Mock time to be within 16:00 - 18:00

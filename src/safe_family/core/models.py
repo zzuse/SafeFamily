@@ -13,11 +13,15 @@ class User(db.Model):
 
     __tablename__ = "users"
 
-    id = db.Column(db.String(), primary_key=True, default=(uuid.uuid4))
+    id = db.Column(db.String(), primary_key=True, default=lambda: str(uuid.uuid4()))
     username = db.Column(db.String(), nullable=False)
     email = db.Column(db.String(), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(20))
+    # Anyone may sign up, but only accounts the admin has approved count as
+    # family: they may change the shared network filter, send notifications and
+    # publish public posts. New accounts start unapproved.
+    is_approved = db.Column(db.Boolean(), nullable=False, default=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     updated_at = db.Column(
         db.DateTime,

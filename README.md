@@ -113,8 +113,30 @@ data instead.
 
 ### 3. Key Mounts and Overrides
 - **Logs**: Backend logs are mirrored to the local `./logs` directory.
-- **SSH Keys**: Local `~/.ssh` is mounted read-only to `/root/.ssh` in the `app` container to support Git operations.
+- **SSH Keys**: `SSH_KEY_DIR` (default `~/.ssh`) is mounted read-only to `/home/app/.ssh` in the `app` container to support Git operations. Prefer a folder that holds only a deploy key for the rules repository; see [Running as a non-root user](#running-as-a-non-root-user).
 - **AdGuard Rules**: The directory specified by `HOST_ADGUARD_RULE_PATH` in your `.env` is mounted to allow rule manipulation.
+
+#### Running as a non-root user
+The `app` container runs as the unprivileged user `app`, not root. Files it
+touches on the host must belong to the same uid/gid:
+
+```bash
+# .env — only needed when `id -u` / `id -g` are not 1000
+APP_UID=1000
+APP_GID=1000
+# A folder with just the rules repo's deploy key, instead of all of ~/.ssh
+SSH_KEY_DIR=/home/you/.ssh-safefamily
+```
+
+- `./logs` and the `HOST_ADGUARD_RULE_PATH` repo must be writable by that user
+  (`sudo chown -R $(id -u):$(id -g) logs` if an older root-run container
+  created them).
+- Rebuild after changing the uid: `docker-compose up -d --build app`.
+- To use a dedicated deploy key: `ssh-keygen -t ed25519 -f ~/.ssh-safefamily/id_ed25519`,
+  add the `.pub` as a **deploy key with write access** on the rules repository
+  only, and copy your `known_hosts` into the same folder. A leaked deploy key
+  can push to that one repository and nothing else.
+- Commands that need root inside the container: `docker exec -u root safefamily_app ...`.
 
 ### 4. Useful Commands
 - **Start / Stop (daily use)**: `docker compose start` / `docker compose stop`
@@ -344,10 +366,20 @@ Example `DB_PARAMS`:
 ```
 
 Accounts:
-- `ALLOW_REGISTRATION`: new accounts are refused unless this is `True`. That
-  covers the register form, `POST /auth/register`, and first-time Google/GitHub
-  sign-in. Existing accounts can always log in. Set it to `True` only while
-  adding a family member, then remove it and restart the app.
+- Sign-up is open, but a new account is **unapproved**: it gets its own todo
+  list, notes and draft blog posts, and nothing else. Approve family members
+  under **MGMT → Accounts**. Only approved accounts (and the admin) can use the
+  rule buttons that change the network filter, trigger email/Discord
+  notifications, or publish public blog posts.
+- `ALLOW_REGISTRATION`: set to `False` to refuse new accounts entirely (register
+  form, `POST /auth/register`, and first-time Google/GitHub sign-in). Default
+  `True`.
+- Google/GitHub sign-in only uses an email the provider has verified, and only
+  matches an existing account by email if that account was itself created by
+  Google/GitHub sign-in. An account made with the register form is reached with
+  its password only.
+- Usernames are unique. A Google/GitHub display name that is already taken gets
+  a suffix (`Alex-2`).
 
 Notesync:
 - `NOTESYNC_API_KEY`
