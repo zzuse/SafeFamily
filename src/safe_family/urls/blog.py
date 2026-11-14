@@ -16,7 +16,7 @@ from sqlalchemy import or_
 from sqlalchemy.orm import selectinload
 
 from config.settings import settings
-from src.safe_family.core.auth import get_current_username, login_required
+from src.safe_family.core.auth import get_current_username, is_family, login_required
 from src.safe_family.core.extensions import db, local_tz
 from src.safe_family.core.models import BlogPost, BlogTag
 from src.safe_family.utils.markdown_render import markdown_excerpt, render_markdown
@@ -76,6 +76,17 @@ def _read_form() -> tuple[dict, str | None]:
         limit_kb = settings.BLOG_MAX_MARKDOWN_BYTES // 1024
         return values, f"Post is too large ({size // 1024} KB); the limit is {limit_kb} KB."
     return values, None
+
+
+def _apply_publish_rule(values: dict, user: object) -> None:
+    """Keep posts from unapproved accounts as drafts.
+
+    Public posts are readable without logging in, so with open sign-up they
+    would let anyone publish on this site.
+    """
+    if values["is_public"] and not is_family(user):
+        values["is_public"] = False
+        flash("Saved as a draft: publishing needs the admin's approval of your account.", "warning")
 
 
 def _get_own_post(post_id: str, user_id: str) -> BlogPost:
@@ -155,6 +166,7 @@ def blog_create():
     if error:
         flash(error, "warning")
         return _render_editor(None, values, 400)
+    _apply_publish_rule(values, user)
 
     now = datetime.now(UTC).replace(tzinfo=None)
     post = BlogPost(
@@ -230,6 +242,7 @@ def blog_update(post_id: str):
         flash(error, "warning")
         return _render_editor(post, values, 400)
 
+    _apply_publish_rule(values, user)
     post.title = values["title"]
     post.markdown = values["markdown"]
     post.is_public = values["is_public"]

@@ -12,6 +12,28 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src.safe_family.core.extensions import get_db_connection
 
 MIGRATIONS = [
+    # Admin approval for accounts (see User.is_approved). Accounts that exist
+    # when this first runs stay approved; accounts created afterwards start
+    # unapproved. Both statements are safe to re-run.
+    """
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS is_approved BOOLEAN NOT NULL DEFAULT TRUE
+    """,
+    """
+    ALTER TABLE users ALTER COLUMN is_approved SET DEFAULT FALSE
+    """,
+    # The todo lists are keyed by username, so usernames must be unique. Skipped
+    # (with a notice) while duplicates exist: rename them, then re-run.
+    """
+    DO $$
+    BEGIN
+        IF EXISTS (SELECT 1 FROM users GROUP BY username HAVING count(*) > 1) THEN
+            RAISE NOTICE 'users.username has duplicates: unique index NOT created';
+        ELSE
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_users_username ON users (username);
+        END IF;
+    END;
+    $$
+    """,
     # Speeds up per-user history scans (week strip / activity heatmap on /todo)
     # and the existing per-day lookups.
     """

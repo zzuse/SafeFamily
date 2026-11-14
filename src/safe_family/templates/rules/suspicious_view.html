@@ -7,6 +7,33 @@
             <a class="btn btn-secondary mgmt-tool-link" href="{{ url_for('lotto.lotto_home') }}">🎟️ Lotto ticket counter</a>
             <span class="lotto-help">Collect and label display photos, export training data, upload predictions.</span>
         </div>
+        <div class="card mgmt-accounts">
+            <div class="card-header">Accounts</div>
+            <p class="lotto-help">Anyone can sign up, but only accounts you approve count as family: they can use
+                the rule buttons, send notifications and publish public posts. Unapproved accounts only get their own
+                todo list, notes and draft posts.</p>
+            <table>
+                <thead>
+                    <tr><th>User</th><th>Email</th><th>Status</th><th>Action</th></tr>
+                </thead>
+                <tbody>
+                    {% for account in accounts %}
+                    <tr>
+                        <td>{{ account.username }}</td>
+                        <td>{{ account.email }}</td>
+                        <td>{{ 'Family' if account.is_approved else 'Waiting' }}</td>
+                        <td>
+                            <form method="post" action="{{ url_for('users.approve_user', user_id=account.id) }}">
+                                <input type="hidden" name="approved" value="{{ '0' if account.is_approved else '1' }}">
+                                <button type="submit" class="btn {{ 'btn-secondary' if account.is_approved else 'btn-primary' }} mgmt-tool-link">
+                                    {{ 'Remove approval' if account.is_approved else 'Approve' }}</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
         <div class="card">
             <div class="card-header">
                 Suspicious Logs for {{ date }}

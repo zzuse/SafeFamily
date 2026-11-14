@@ -11,9 +11,11 @@ from flask import (
     render_template,
     request,
 )
+from sqlalchemy.exc import SQLAlchemyError
 
 from src.safe_family.core.auth import admin_required
 from src.safe_family.core.extensions import get_db_connection, local_tz
+from src.safe_family.users.users import accounts_for_admin
 from src.safe_family.utils.exceptions import DatabaseConnectionError
 from src.safe_family.utils.validators import (
     MAX_LINES_PER_REQUEST,
@@ -25,6 +27,16 @@ from src.safe_family.utils.validators import (
     safe_date,
     split_lines,
 )
+
+
+def _accounts() -> list:
+    """Accounts for the approval card; empty if the users table is unreachable."""
+    try:
+        return accounts_for_admin()
+    except SQLAlchemyError:
+        logger.exception("Could not list accounts")
+        return []
+
 
 suspicious_bp = Blueprint("suspicious", __name__)
 logger = logging.getLogger(__name__)
@@ -162,6 +174,7 @@ def view_suspicious():
             block_types=block_types,
             date=date,
             error=error,
+            accounts=_accounts(),
         )
     except DatabaseConnectionError as e:
         logger.exception("Error viewing suspicious")

@@ -24,7 +24,7 @@ SETTINGS = "config.settings.settings"
 
 
 def _make_user(user_id, username):
-    user = User(id=user_id, username=username, email=f"{username}@example.com", role="user")
+    user = User(id=user_id, username=username, email=f"{username}@example.com", role="user", is_approved=True)
     user.set_password("long-enough-password")
     db.session.add(user)
     db.session.commit()

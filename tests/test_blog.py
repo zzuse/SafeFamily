@@ -10,7 +10,7 @@ from src.safe_family.utils.markdown_render import markdown_excerpt, render_markd
 
 
 def _make_user(user_id, username):
-    user = User(id=user_id, username=username, email=f"{username}@example.com", role="user")
+    user = User(id=user_id, username=username, email=f"{username}@example.com", role="user", is_approved=True)
     user.set_password("secret")
     db.session.add(user)
     db.session.commit()
