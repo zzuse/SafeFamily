@@ -114,10 +114,11 @@ class Settings:
         "APP_MOTTO",
     )
 
-    # New accounts (form, API and first-time Google/GitHub sign-in) are refused
-    # unless this is "True". Existing accounts can always log in. Turn it on
-    # only while adding a family member, then off again.
-    ALLOW_REGISTRATION = os.environ.get("ALLOW_REGISTRATION", "False") == "True"
+    # Sign-up is open by default: a new account only gets its own todo list,
+    # notes and draft posts until the admin approves it on the MGMT page (see
+    # User.is_approved). Set this to "False" to refuse new accounts entirely
+    # (form, API and first-time Google/GitHub sign-in).
+    ALLOW_REGISTRATION = os.environ.get("ALLOW_REGISTRATION", "True") == "True"
 
     # Countdown page settings (date in YYYY-MM-DD)
     COUNTDOWN_DATE = os.environ.get("COUNTDOWN_DATE", "")

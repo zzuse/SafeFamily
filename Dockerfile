@@ -23,13 +23,31 @@ RUN pip install --upgrade pip && \
 
 # Install Firefox (and its system libraries) for Playwright gas price snapshots.
 # Firefox, not Chromium: cbc.ca's CDN blocks headless Chromium (ERR_HTTP2_PROTOCOL_ERROR).
-RUN playwright install --with-deps firefox
+# A shared path (not /root/.cache) so the unprivileged app user can launch it.
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN playwright install --with-deps firefox && chmod -R a+rX /ms-playwright
+
+# The app runs as an unprivileged user, not root: a bug that lets someone run
+# code in the container then can't read root-only files, install packages or
+# change the image. Its uid/gid should match the host user that owns the
+# mounted folders (./logs, the AdGuard rules repo, the SSH key folder), so set
+# APP_UID / APP_GID in .env to `id -u` / `id -g` if they aren't 1000.
+ARG APP_UID=1000
+ARG APP_GID=1000
+# safe.directory: the rules repo is bind-mounted from the host, so tell git it
+# is expected at that path.
+RUN groupadd --non-unique --gid ${APP_GID} app \
+    && useradd --non-unique --create-home --uid ${APP_UID} --gid ${APP_GID} app \
+    && git config --system --add safe.directory /app/adguard_rules
 
 # Copy the project files
-COPY . .
+COPY --chown=app:app . .
 
 # Create logs directory
-RUN mkdir -p logs
+RUN mkdir -p logs && chown app:app /app /app/logs
+
+USER app
+ENV HOME=/home/app
 
 # Expose the port the app runs on
 EXPOSE 8000

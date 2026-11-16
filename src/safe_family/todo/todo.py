@@ -19,8 +19,10 @@ from psycopg2 import extensions as pg
 
 from src.safe_family.cli import weekly_metrics
 from src.safe_family.core.auth import (
+    NOT_APPROVED,
     admin_required,
     get_current_username,
+    is_family,
     login_required,
 )
 from src.safe_family.core.extensions import db, get_db_connection, local_tz
@@ -404,7 +406,8 @@ def todo_page():  # noqa: C901, PLR0915 - refactor backlog: split save/view path
         (today_date, selected_user),
     )
     today_tasks = cur.fetchall()
-    if request.method == "POST" and message != "":
+    # Notifications go to the family's inbox and Discord: approved accounts only.
+    if request.method == "POST" and message != "" and is_family(user):
         send_email_notification(
             selected_user,
             [{"time_slot": t[1], "task": t[2]} for t in today_tasks],
@@ -504,8 +507,9 @@ def update_todo(selected_username: str):
         {"time_slot": r[0], "task": r[1], "completion_status": r[2]}
         for r in cur.fetchall()
     ]
-    send_email_notification(selected_username, tasks)
-    send_discord_notification(selected_username, tasks)
+    if is_family(get_current_username()):
+        send_email_notification(selected_username, tasks)
+        send_discord_notification(selected_username, tasks)
     conn.close()
     flash("Task updated successfully!", "success")
     return redirect(url_for("todo.todo_page"))
@@ -786,16 +790,17 @@ def mark_todo_status():  # noqa: PLR0911 - one early return per validation step
             (status, True, todo_id),
         )
         conn.commit()
-        send_discord_notification(
-            task_owner,
-            [
-                {
-                    "time_slot": time_slot,
-                    "task": task_name,
-                    "completion_status": status,
-                },
-            ],
-        )
+        if is_family(user):
+            send_discord_notification(
+                task_owner,
+                [
+                    {
+                        "time_slot": time_slot,
+                        "task": task_name,
+                        "completion_status": status,
+                    },
+                ],
+            )
         conn.close()
         return jsonify({"success": True})
     except Exception as e:
@@ -900,6 +905,11 @@ def exec_rules(selected_user_id: str):  # noqa: C901, PLR0911, PLR0912, PLR0915 
     if user is None:
         flash("Please log in to access this feature.", "warning")
         return redirect("/auth/login-ui")
+
+    # Rules change the household's network filter: approved accounts only.
+    if not is_family(user):
+        flash(NOT_APPROVED, "warning")
+        return redirect(url_for("todo.todo_page"))
 
     # A user may only run the rule assigned to themselves; the id in the URL
     # is attacker-controlled.

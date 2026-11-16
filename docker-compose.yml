@@ -15,7 +15,12 @@ services:
       - ./deploy/init_db:/docker-entrypoint-initdb.d
 
   app:
-    build: .
+    build:
+      context: .
+      args:
+        # Match the host user that owns ./logs, the rules repo and the SSH keys.
+        APP_UID: ${APP_UID:-1000}
+        APP_GID: ${APP_GID:-1000}
     container_name: safefamily_app
     restart: always
     depends_on:
@@ -25,8 +30,10 @@ services:
       - ./logs:/app/logs
       # Mount your local AdGuard repo directory
       - ${HOST_ADGUARD_RULE_PATH}:/app/adguard_rules
-      # Mount SSH keys for git push operations
-      - ~/.ssh:/root/.ssh:ro
+      # SSH key for pushing the rules repo, read-only, for the unprivileged app
+      # user. Point SSH_KEY_DIR at a folder holding ONLY a deploy key for that
+      # one repo (plus known_hosts/config) instead of your whole ~/.ssh.
+      - ${SSH_KEY_DIR:-~/.ssh}:/home/app/.ssh:ro
     environment:
       - PYTHONUNBUFFERED=1
       - GUNICORN_WORKERS=4

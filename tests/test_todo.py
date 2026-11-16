@@ -261,7 +261,7 @@ def test_mark_status_success_within_grace(client, monkeypatch):
     monkeypatch.setattr(
         todo,
         "get_current_username",
-        lambda: SimpleNamespace(username="kid", role="user"),
+        lambda: SimpleNamespace(username="kid", role="user", is_approved=True),
     )
     _login_session(client, monkeypatch)
 
@@ -287,7 +287,7 @@ def test_mark_status_rejected_before_slot_end(client, monkeypatch):
     monkeypatch.setattr(
         todo,
         "get_current_username",
-        lambda: SimpleNamespace(username="kid", role="user"),
+        lambda: SimpleNamespace(username="kid", role="user", is_approved=True),
     )
     _login_session(client, monkeypatch)
 
@@ -309,7 +309,7 @@ def test_mark_status_rejected_when_status_locked(client, monkeypatch):
     monkeypatch.setattr(
         todo,
         "get_current_username",
-        lambda: SimpleNamespace(username="kid", role="user"),
+        lambda: SimpleNamespace(username="kid", role="user", is_approved=True),
     )
     _login_session(client, monkeypatch)
 
@@ -356,7 +356,7 @@ def test_todo_page_uses_parameterized_date(client, monkeypatch):
     monkeypatch.setattr(
         todo,
         "get_current_username",
-        lambda: SimpleNamespace(username="user", role="user"),
+        lambda: SimpleNamespace(username="user", role="user", is_approved=True),
     )
     monkeypatch.setattr(todo, "render_template", lambda *a, **k: ("ok", 200))
     _login_session(client, monkeypatch)

@@ -9,7 +9,7 @@ import requests
 from flask import Blueprint, flash, redirect
 
 from config.settings import settings
-from src.safe_family.core.auth import admin_required, login_required
+from src.safe_family.core.auth import admin_required, family_required
 from src.safe_family.utils.constants import HTTP_OK
 
 logger = logging.getLogger(__name__)
@@ -425,7 +425,7 @@ def rules_toggle_disable():
 
 
 @rules_toggle_bp.route("/rules_toggle/disable_ai", methods=["POST"])
-@login_required
+@family_required
 def rules_disable_ai():
     """Disable AI rules."""
     if not DISABLE_AI_LOCK.acquire(blocking=False):

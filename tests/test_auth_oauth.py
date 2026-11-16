@@ -200,7 +200,7 @@ def test_google_callback_web_sets_session(client, monkeypatch):
     monkeypatch.setattr(
         auth.id_token,
         "verify_oauth2_token",
-        lambda *a, **k: {"sub": "g1", "email": "user@example.com", "name": "User"},
+        lambda *a, **k: {"sub": "g1", "email": "user@example.com", "email_verified": True, "name": "User"},
     )
     monkeypatch.setattr(auth.User, "query", FakeQuery(), raising=False)
     monkeypatch.setattr(auth, "create_access_token", lambda identity: "access")
