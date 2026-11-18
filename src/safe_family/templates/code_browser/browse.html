@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section>
+    {% if missing_root %}
+    <article class="card blog-post">
+        <h1 class="blog-post-title">Code browser</h1>
+        <p>The configured folder does not exist. Set <code>CODE_BROWSER_ROOT</code>
+            (or <code>HOST_CODE_BROWSER_PATH</code> for Docker) and restart the app.</p>
+    </article>
+    {% else %}
+    <nav class="code-crumbs">
+        <a href="/code/">{{ root_name }}</a>
+        {% for name, url in crumbs %}
+        <span>/</span>
+        {% if loop.last and file_name %}<strong>{{ name }}</strong>{% else %}<a href="{{ url }}">{{ name }}</a>{% endif %}
+        {% endfor %}
+    </nav>
+
+    {% if file_name %}
+    <article class="card blog-post code-view">
+        {% if body_html is none %}
+        <p>This file is larger than 2 MB and is not shown.</p>
+        {% else %}
+        <div class="blog-prose code-{{ file_kind }}">{{ body_html }}</div>
+        {% endif %}
+    </article>
+    {% else %}
+    <article class="card code-listing">
+        {% if not dirs and not files %}
+        <p class="code-empty">No folders, .md or .py files here.</p>
+        {% endif %}
+        <ul>
+            {% for name in dirs %}
+            <li><a href="{{ name | urlencode }}/">📁 {{ name }}/</a></li>
+            {% endfor %}
+            {% for name in files %}
+            <li><a href="{{ name | urlencode }}">{{ '🐍' if name.endswith('.py') else '📄' }} {{ name }}</a></li>
+            {% endfor %}
+        </ul>
+    </article>
+    {% if readme_html %}
+    <article class="card blog-post code-view">
+        <div class="blog-prose">{{ readme_html }}</div>
+    </article>
+    {% endif %}
+    {% endif %}
+    {% endif %}
+</section>
+
+{% endblock %}

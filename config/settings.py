@@ -83,6 +83,11 @@ class Settings:
         os.environ.get("BLOG_MAX_MARKDOWN_BYTES", "524288"),
     )
 
+    # Code browser (/code/, admin only): read-only folder of .md/.py files.
+    # In Docker this is the container mount point; choose the host folder
+    # with HOST_CODE_BROWSER_PATH in .env instead.
+    CODE_BROWSER_ROOT = os.environ.get("CODE_BROWSER_ROOT", "/srv/code")
+
     # Notesync settings
     NOTESYNC_API_KEY = os.environ.get("NOTESYNC_API_KEY", "")
     NOTESYNC_AUTH_CODE_TTL_SECONDS = int(

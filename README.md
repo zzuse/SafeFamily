@@ -18,6 +18,8 @@ integrations.
 - Todo planner with time slots and a completion heatmap.
 - Notifications via email, Discord webhooks, and local Hammerspoon alerts.
 - Auto Git export/import for block list rules.
+- Read-only code browser (`/code/`, admin only) that renders a folder of `.md`
+  and `.py` files for code reading.
 
 ## Architecture
 - Nginx -> Gunicorn -> Flask -> PostgreSQL
@@ -330,7 +332,29 @@ docker compose up -d                      # Grafana on https://<site>/grafana/ (
 sudo systemctl start safefamily-backup    # after the one-time setup in the doc
 ```
 
-### 8. Host Maintenance Notes
+### 8. Code Browser
+Browse a folder of code explanations at `https://<site>/code/`. Admins only: the
+**Code** link appears in the top bar for admins; everyone else is sent to login.
+
+```bash
+# .env: pick the host folder to show (mounted read-only at /srv/code)
+HOST_CODE_BROWSER_PATH=/home/zzuse/code/armpi_ultra
+
+docker-compose up -d --build app   # first time: picks up the new code
+docker compose up -d app           # later: after changing the folder in .env
+```
+
+- Folders list their subfolders plus `.md` and `.py` files, and show the
+  folder's `README.md` below the list.
+- `.md` files are rendered like blog posts (sanitized, relative links and
+  images work); `.py` files get syntax colours and clickable line numbers, so
+  `.../demo.py#L-42` links straight to line 42.
+- Files are read fresh on every request (no cache, no restart after edits).
+  Hidden names (`.git`, `.env`), `__pycache__`, paths outside the folder, and
+  files over 2 MB are not served.
+- Running without Docker: set `CODE_BROWSER_ROOT=/path/to/folder` instead.
+
+### 9. Host Maintenance Notes
 - Snap auto-refreshes Docker several times a day (`snap refresh --time`). A
   refresh restarts the daemon and briefly stops containers; `restart: always`
   brings them back, but the timing is not under your control. Use
@@ -402,6 +426,8 @@ Integrations (optional, feature-specific):
 - Hammerspoon: `HAMMERSPOON_ALERT_URL`
 - OAuth: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GOOGLE_CLIENT_ID`,
   `GOOGLE_CLIENT_SECRET`, `GOOGLE_CLIENT_PROJECT_ID`, `GOOGLE_CALLBACK_ROUTE`
+- Code browser: `HOST_CODE_BROWSER_PATH` (Docker: host folder to mount) or
+  `CODE_BROWSER_ROOT` (folder path read by the app; default `/srv/code`)
 
 ## API
 - Notesync endpoints live under `/api` and require `X-API-Key` + JWT.

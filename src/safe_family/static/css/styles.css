@@ -1366,6 +1366,47 @@ td form button {
 .codehilite .nb, .codehilite .bp, .codehilite .nd { color: #ffa657; }
 .codehilite .o, .codehilite .p { color: #e6edf3; }
 
+/* Code browser (/code/) */
+.code-crumbs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35em;
+    margin-bottom: 1rem;
+    font-family: var(--sf-mono);
+    font-size: 0.9rem;
+    word-break: break-all;
+}
+
+.code-listing ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    columns: 2 18rem;
+}
+
+.code-listing li {
+    padding: 3px 0;
+    break-inside: avoid;
+    font-family: var(--sf-mono);
+    font-size: 0.9rem;
+}
+
+.code-listing + .code-view {
+    margin-top: 1rem;
+}
+
+.code-python pre {
+    font-size: 0.85rem;
+}
+
+.codehilite .linenos,
+.codehilite .linenos a {
+    color: #6e7681;
+    text-decoration: none;
+    user-select: none;
+    margin-right: 1em;
+}
+
 /* Recipes (Sheet section) */
 /* Two classes: base.html's inline styles (loaded after this file) reset
    .card-header margins. */

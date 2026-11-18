@@ -34,6 +34,9 @@ services:
       # user. Point SSH_KEY_DIR at a folder holding ONLY a deploy key for that
       # one repo (plus known_hosts/config) instead of your whole ~/.ssh.
       - ${SSH_KEY_DIR:-~/.ssh}:/home/app/.ssh:ro
+      # Folder shown read-only at /code/ (admin only). Change it by setting
+      # HOST_CODE_BROWSER_PATH in .env, then: docker compose up -d app
+      - ${HOST_CODE_BROWSER_PATH:-./docs}:/srv/code:ro
     environment:
       - PYTHONUNBUFFERED=1
       - GUNICORN_WORKERS=4
@@ -45,6 +48,7 @@ services:
       - DB_USER=${DB_USER:-user}
       - DB_PASSWORD=${DB_PASSWORD:-pass}
       - DB_PORT=5432
+      - CODE_BROWSER_ROOT=/srv/code
 
   proxy:
     image: nginx:alpine

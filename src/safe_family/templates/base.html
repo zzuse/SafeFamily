@@ -606,6 +606,10 @@
                     class="{% if request.endpoint == 'notes.notes_view' %}active{% endif %}">Notes</a>
                 <a href="{{ url_for('blog.blog_list') }}"
                     class="{% if request.endpoint and request.endpoint.startswith('blog.') %}active{% endif %}">Blog</a>
+                {% if nav_user and nav_user.is_admin %}
+                <a href="{{ url_for('code_browser.code_browse') }}"
+                    class="{% if request.endpoint == 'code_browser.code_browse' %}active{% endif %}">Code</a>
+                {% endif %}
                 <a href="{{ url_for('suspicious.view_suspicious') }}"
                     class="{% if request.endpoint == 'suspicious.view_suspicious' or (request.endpoint and request.endpoint.startswith('lotto.')) %}active{% endif %}">MGMT</a>
                 <a href="{{ url_for('schedule_rules.schedule_rules') }}"
